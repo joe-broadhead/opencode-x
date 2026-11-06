@@ -38,6 +38,32 @@ describe("docs", () => {
     expect(text(file)).not.toMatch(/provisional|not yet (?:checked|published|signed)|private package|TODO/i)
   })
 
+  test("the README and the configuration guide cover the three sign-up models and the team recipe", () => {
+    const readme = text("README.md")
+    expect(readme).toContain("## Who signs up for what")
+    expect(readme).toContain("Your own app (the default)")
+    expect(readme).toContain("A team app")
+    expect(readme).toContain("The plugin ships **no client ID**")
+    const guide = text("docs/configuration.md")
+    expect(guide).toContain("## Team app")
+    for (const words of [
+      "Native App",
+      "http://127.0.0.1:8766/callback",
+      "http://localhost:8766/callback",
+      "Pay-per-use → Production",
+      "spending limit",
+      "owned-reads discount",
+      "Enterprise plan",
+      "Developer Agreement",
+      "Never** put a client secret in managed config",
+    ]) {
+      expect(guide).toContain(words)
+    }
+    expect(text("SECURITY.md")).toContain("A public client ID is not a secret")
+    expect(text("SECURITY.md")).toContain("must never be distributed")
+    expect(readme).toContain("A public client's refresh token is unconfirmed live")
+  })
+
   test("the README's Known limits says the tool table is provisional, and nowhere else does", () => {
     const readme = readFileSync(join(ROOT, "README.md"), "utf8")
     const limits = readme.split("## Known limits")[1]?.split("## Uninstall")[0] ?? ""
@@ -114,7 +140,7 @@ describe("docs", () => {
   })
 
   test("the docs use the plugin's own X app, never a shipped client, and never print a secret or a token", () => {
-    expect(text("README.md")).toContain("you bring your own X app")
+    expect(text("README.md")).toContain("a sign-in always goes through some developer's X app")
     expect(text("docs/configuration.md")).toContain("X has no dynamic client registration and no client metadata documents")
     for (const file of FILES) {
       expect(text(file)).not.toMatch(/Bearer (?!\{env:)[A-Za-z0-9_-]{8,}|X_CLIENT_SECRET=\S+|client_secret"\s*:\s*"[A-Za-z0-9]{8,}/)
@@ -128,7 +154,7 @@ describe("docs", () => {
     expect(text("README.md")).toContain("5 November 2026")
     expect(text("skills/x/SKILL.md")).toContain("Every call costs money")
     expect(text("docs/scripting.md")).toContain("Every call costs money")
-    expect(text("docs/configuration.md")).toContain("X bills every tool call to your API credits")
+    expect(text("docs/configuration.md")).toContain("X bills every tool call to the X developer account that owns the app")
   })
 
   // Once the plugin is removed and OpenCode reloads, `mcp logout x` finds no server: sign out first.

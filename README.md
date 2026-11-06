@@ -12,7 +12,8 @@ Unofficial; not affiliated with X Corp.
 - macOS or Linux, and a browser for the sign-in.
 - An X account and an **X developer account** at [console.x.com](https://console.x.com), with the Developer Agreement
   accepted.
-- An **X app** with OAuth 2.0 user authentication enabled, these scopes, and this exact callback URI:
+- An **X app** with OAuth 2.0 user authentication enabled (your own, or your team's), these scopes, and this exact
+  callback URI:
 
   ```text
   tweet.read users.read bookmark.read bookmark.write tweet.write offline.access
@@ -21,9 +22,9 @@ Unofficial; not affiliated with X Corp.
 
   X matches the callback exactly: no wildcard, no other port. If your console refuses `127.0.0.1`, register
   `http://localhost:8766/callback` instead and set `oauth.redirect_uri` to the same URL.
-- The app in **Pay-per-use** and the **Production** environment, with **credits** and a spending limit. Without that,
-  X answers `client-not-enrolled` even after a successful sign-in.
-- **X bills every tool call** to your developer account. Current rates, from
+- The app in **Pay-per-use** and the **Production** environment, with **credits** and a spending limit (the app admin
+  sets these). Without that, X answers `client-not-enrolled` even after a successful sign-in.
+- **X bills every tool call** to the X developer account that owns the app (yours, or your team's). Current rates, from
   [X's pricing page](https://docs.x.com/x-api/getting-started/pricing) on 5 November 2026, are about $0.005 per post
   read, $0.010 per user read, $0.001 per read of your own posts, mentions or bookmarks, $0.005 per bookmark change,
   and $0.015 per post created ($0.200 when it contains a URL). A 100-post search costs about $0.50. X sets the prices
@@ -48,15 +49,29 @@ credentials.
 **Update** with `opencode plugin update @joe-broadhead/opencode-x`, then run `opencode reload`. An entry pinned to a
 version does not update: remove the `@version` from its `plugins` entry first.
 
+## Who signs up for what
+
+- **Your own app (the default).** You create one X app, keep its client ID and, for a confidential app, its secret, and
+  save them in `/connect` → **X app**. Every call bills your own X developer account.
+- **A team app.** An admin creates one **public** X app (a Native App: a client ID, no secret) and puts the client ID
+  in the organisation's managed OpenCode config. Members run `/connect` → X and log in; nothing else. Every call bills
+  the team's X developer account, capped by its spending limit. The
+  [team recipe](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/configuration.md#team-app) has the admin's
+  steps and the consequences.
+- **No app at all.** The plugin ships **no client ID**, so installing it never signs anyone in and never bills an
+  account by surprise. Until an app is configured, status says `not configured`.
+
 ## Sign in
 
-X has no way for an app to register itself, so you bring your own X app. Its client ID and, for a confidential
-(Web App) app, its client secret are the sign-in.
+X has no way for an app to register itself, so a sign-in always goes through some developer's X app. Its client ID,
+and for a confidential (Web App) app its client secret, are the sign-in.
 
-1. In [console.x.com](https://console.x.com), open your app's **User authentication settings**, set OAuth 2.0 on,
-   choose **Web App** (recommended; the no-secret **Native App**, a public client, is untested here), add the callback and scopes above, and
-   copy the **Client ID** and **Client secret**.
-2. In OpenCode, run `/connect` and choose **X app**. Paste the client ID; paste the secret in the optional field.
+1. For your own app, create it in [console.x.com](https://console.x.com): open **User authentication settings**, set
+   OAuth 2.0 on, choose **Web App** (a confidential client), add the callback and scopes above, and copy the **Client
+   ID** and **Client secret**. A **Native App** (public client, no secret) is what a team app uses: the plugin's
+   checks cover its sign-in against a fake, but whether X issues it a refresh token is unconfirmed until a live test.
+2. In OpenCode, run `/connect` and choose **X app**. Paste the client ID; paste the secret in the optional field. If an
+   organisation already set the client ID in managed config, there is no X app step: go to step 3.
 3. Run `/connect` and choose **X**, then press `o` or Enter to open the link. Sign in and approve the scopes.
 
 From a terminal, `opencode mcp auth x` opens the link automatically. `/mcps` also offers the same sign-in. No bearer
@@ -123,7 +138,11 @@ publishing one. No tool X offers today is off. A tool X adds later that messages
 post, changes a list or changes the account is off, by the plugin's rule. Each change's sentence, and whom it
 reaches, is in the `x-write` skill.
 Publishing is the only one that reaches other people: anyone can read the Article, and it appears on your profile and
-in followers' timelines. The plugin has no tool to unpublish it.
+in followers' timelines. The plugin has no tool to unpublish it. To turn publishing off for one agent:
+
+```json
+{ "agents": { "build": { "permissions": [{ "action": "x_article_publish", "resource": "*", "effect": "deny" }] } } }
+```
 
 Everything that comes later than these rules still wins: an agent's own stricter rules (Explore cannot use X), your
 `permissions` in `opencode.json`, and your saved "Always allow" answers. In an unattended run such as
@@ -155,7 +174,7 @@ Set options with the object form of the plugin entry:
 | Option | Values | Default | Effect |
 | --- | --- | --- | --- |
 | `oauth.client_id` | Your X app's client ID | none | The app OpenCode signs in with. Set in managed config, it replaces the `/connect` X app entry. |
-| `oauth.client_secret` | Your X app's client secret, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out only for a Native App, which is untested here. |
+| `oauth.client_secret` | Your X app's client secret, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out for a Native App (public client): its sign-in is covered, but X's refresh token for it is unconfirmed live. |
 | `oauth.redirect_uri` | A URL registered in the app | `http://127.0.0.1:8766/callback` | Must match X's registered callback exactly. |
 | `oauth.callback_port` | `1`–`65535` | none | Only with an `https:` redirect: the local port a proxy forwards to. |
 | `oauth.scopes` | X OAuth 2.0 scopes | `tweet.read users.read bookmark.read bookmark.write tweet.write offline.access` | Dropping `bookmark.write` or `tweet.write` makes those tools fail with `403`; dropping `offline.access` means no refresh token, so the sign-in expires within two hours. |
@@ -170,26 +189,27 @@ including your own `mcp.servers.x` entry, permission recipes and every error.
 
 ## Organisation rollout
 
-Because X has no dynamic registration, an organisation can set its one X app in managed config, so members skip the
-**X app** step and only sign in. Put the plugin entry in the system config:
-`/Library/Application Support/opencode/opencode.json` on macOS, or `/etc/opencode/opencode.json` on Linux. This
-example also turns Article publishing off for everyone:
+Because X has no dynamic registration, an organisation can share one **public** X app: the admin creates a Native App
+(client ID, no secret), registers both callbacks and the scopes, moves it to **Pay-per-use → Production**, and sets
+credits and a spending limit. The client ID goes in the system config: `/Library/Application Support/opencode/opencode.json`
+on macOS, or `/etc/opencode/opencode.json` on Linux. Members then only run `/connect` and choose X.
 
 ```json
 {
   "plugins": [
     {
       "package": "@joe-broadhead/opencode-x",
-      "options": { "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" } }
+      "options": { "oauth": { "client_id": "YOUR_TEAM_APP_CLIENT_ID" } }
     }
-  ],
-  "permissions": [{ "action": "x_article_publish", "resource": "*", "effect": "deny" }]
+  ]
 }
 ```
 
-The app's callback and scopes are set once, in the X portal. Members then run `/connect` and choose X, then press `o`
-or Enter. Each member's calls are billed to the developer account that owns the app, so set a spending limit. Under
-X's terms, your organisation answers for the app and for how its members use X content.
+No secret goes in managed config: a public app has none, and a client secret must never be distributed. Every
+member's calls bill the team's X developer account, the owned-reads discount applies only to the app's owner, and the
+admin answers under X's Developer Agreement for how the app is used. X describes pay-per-use for applications with
+limited end-users, so a larger team may need its Enterprise plan. The
+[team recipe](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/configuration.md#team-app) has the full steps.
 
 ## Troubleshooting
 
@@ -239,6 +259,10 @@ A script's errors from the tools RPC have their own codes, listed in
   recorded list and X's OpenAPI operation ids. X may list a different set for your app's scopes, and a tool it marks
   as changing data could run here as a read until a release reconciles it. `test/unit/x-tools.json` records the
   list, and `npm run drift -- <tools.json> --strict` is the check that reconciles it.
+- **A public client's refresh token is unconfirmed live.** X is expected to issue one to a Native App when the request
+  includes `offline.access`, and the plugin's checks show OpenCode asking for it and refreshing without a secret, but
+  this release has not tested it against X. A team app on a public client may need a new sign-in every two hours until
+  then; a confidential app with a secret is the safe choice for a long session.
 - **There is no unpublish tool.** An Article published by mistake is deleted in the X app.
 - **X's `xurl` bridge is an alternative, not this plugin's route.** X documents
   `npx -y @xdevplatform/xurl mcp https://api.x.com/mcp`, which holds your app, opens a browser at the first tool call,

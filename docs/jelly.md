@@ -48,8 +48,8 @@ A feed of posts would put other people's words on a dashboard and call billed to
 ## Signing in
 
 `jelly.signIns` declares one sign-in, `x`, for X's MCP server `x`, which signs in with OpenCode's MCP
-OAuth. The user's own X app supplies the client: set `oauth.client_id` and `oauth.client_secret` in
-this plugin's options, or save them in `/connect` → **X app**, before signing in.
+OAuth. An X app supplies the client: an organisation can set a team app's public client ID in managed config, or the
+user can save their own app in `/connect` → **X app**, before signing in.
 
 Jelly folds the declared sign-in into this plugin's one card, which shows it as Connected, Not signed in or Sign in again (expired or revoked), and starts, renews and signs out of it. An agent's `jelly_connection_request`, or a tool result that names this plugin's "Run /connect and choose …" next step, opens the same card. The plugin still signs in through OpenCode, as it does without Jelly; the declaration only tells Jelly which of the engine's integrations and servers are this plugin's.
 
