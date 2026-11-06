@@ -132,13 +132,19 @@ describe("skills", () => {
     expect(text).toContain("A post that links to a page: the page is the source")
   })
 
-  test("x dates a window in the tool's format, at the user's local day or week, end exclusive", () => {
+  test("x dates a window in the tool's format, at the user's local day or week, end exclusive or clamped to now", () => {
     const text = flat("x")
     expect(text).toContain("A window always sets both bounds, as RFC 3339 UTC instants ending `Z`")
     expect(text).toContain("local day or week, not the machine's")
+    expect(text).toContain("a time tool gives the zone, and the answer names it")
+    expect(text).toContain("start_time` is the first local midnight (or Monday)")
+    expect(text).toContain("end_time` is the earlier of the next local midnight and now minus 10 seconds")
+    expect(text).toContain("because X rejects a later one")
+    expect(text).toContain("for a past day")
     expect(text).toContain("Never leave `end_time` off, and never use a rolling 48 hours")
     expect(text).toContain("2026-03-09T23:00:00Z")
     expect(text).toContain("2026-03-10T23:00:00Z")
+    expect(text).toContain("an open one runs to now")
     // The web-search operators X does not accept are named as absent, never offered.
     expect(text).toContain("there is no `since:`, `until:` or `min_faves:` (X rejects it)")
     expect(text).toContain("`min_likes:`")
@@ -155,8 +161,18 @@ describe("skills", () => {
     expect(text).toContain("Before a user search or a broad post search, say it is billed")
     expect(text).toContain("$0.05 for ten posts")
     expect(text).toContain("$1.00 for a full user page")
+    expect(text).toContain("A widening is a new billed search: before it, say what you changed and the new total")
+    expect(text).toContain("`expansions` such as `author_id` bills a user read for each author")
+    expect(text).toContain("ten posts with ten authors is about $0.15")
+    expect(text).toContain("skip an expansion unless the answer needs it")
     expect(text).toContain("Never page past the first page unasked, and never loop")
     expect(text).toContain("read one page of ten, say it is a sample, and offer more; never propose or recommend a 100-record page")
+  })
+
+  test("x prices an Owned Read and stops on an empty one", () => {
+    const text = flat("x")
+    expect(text).toContain("are Owned Reads (~$0.001 a post): say that rate and the count you read")
+    expect(text).toContain("If one comes back empty, report that for the window and stop; widen only if asked")
   })
 
   test("x keeps every call lean, and says when a search is billed", () => {
