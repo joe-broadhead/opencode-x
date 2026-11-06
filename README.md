@@ -31,8 +31,10 @@ Unofficial; not affiliated with X Corp.
 - **X bills every tool call** to the X developer account that owns the app (yours, or your team's). Current rates, from
   [X's pricing page](https://docs.x.com/x-api/getting-started/pricing) on 5 November 2026, are about $0.005 per post
   read, $0.010 per user read, $0.001 per read of your own posts, mentions or bookmarks, $0.005 per bookmark change,
-  and $0.015 per post created ($0.200 when it contains a URL). A 100-post search costs about $0.50. X sets the prices
-  and can change them.
+  and $0.015 per post created ($0.200 when it contains a URL). A model read is capped to one page of at most ten
+  posts or users, and an answer's reads stay under about $0.20, including one widening; every answer that read ends
+  with its actual cost, such as "Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15." A 100-post search costs about
+  $0.50. X sets the prices and can change them.
 - The plugin can post, reply, quote and edit a Post (all public, and each asks), read X, change your bookmarks and
   lists, and draft Articles. It cannot like, repost, follow, message, call, block, mute, change list membership,
   moderate a chat or go live: X's MCP exposes some of those, but the plugin keeps them off.
@@ -242,7 +244,7 @@ Run `/x-status` first. Its last line is the next step.
 | Tools: unknown | X added tools the plugin does not know yet. They ask before they run. A known tool missing from the count is normal: X may list fewer tools for a token with fewer scopes. |
 | Access: default rules missing or not added | Some agents lack the default rules (see the agents row), or OpenCode could not add them (see the OpenCode row). Follow the next step. |
 | Account: account name not reported | Nothing is wrong: status makes no X call, and OpenCode keeps no name on this sign-in. X answers follow the account you signed in as. |
-| Answers cost more than expected | Every call is billed per resource returned. Keep the result count to ten unless the answer needs more, don't page a whole search, and read your own mentions and bookmarks instead of searching for them. |
+| Answers cost more than expected | Every call is billed per resource returned. A model read is capped to one page of ten, one widening, about $0.20 an answer, and each answer reports its actual cost; a script pays the same rates, so keep its result count small and never page in a loop. |
 | Posting asks first | `x_create_posts` is public and asks every time. Answer the prompt, or run writes interactively; `opencode run` refuses the ask. |
 | How much credit is left | Ask the model to call `x_get_usage_credits`; it returns the payer's developer-platform balance in USD. |
 | `429` | X's rate limit for that endpoint is used up. Wait for the reset X returns, and make fewer calls. |

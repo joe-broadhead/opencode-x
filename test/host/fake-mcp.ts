@@ -95,6 +95,8 @@ export interface FakeMcp {
   readonly calls: string[]
   /** Each tool call with the path it was sent to, in order. */
   readonly called: { readonly tool: string; readonly path: string }[]
+  /** The arguments of each tool call, in order, aligned with `calls`. */
+  readonly callArguments: Record<string, unknown>[]
   /** The `x-x-test` header of every MCP request, to tell whose server config the host used. */
   readonly markers: (string | undefined)[]
   /** The `authorization` header of every MCP request. */
@@ -107,6 +109,7 @@ type Message = { jsonrpc: "2.0"; id?: number | string; method: string; params?: 
 export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMcp> {
   const calls: string[] = []
   const called: { tool: string; path: string }[] = []
+  const callArguments: Record<string, unknown>[] = []
   const markers: (string | undefined)[] = []
   const authorizations: (string | undefined)[] = []
   const registrations: Record<string, unknown>[] = []
@@ -128,6 +131,12 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
         calls.push(name)
         called.push({ tool: name, path })
         const args = message.params?.arguments ?? {}
+        callArguments.push(args)
+        if (name === "search_posts_all" && String(args.query ?? "") === "cost") {
+          const data = Array.from({ length: 10 }, (_, index) => ({ id: String(index), author_id: String(index), created_at: "2026-11-06T00:00:00Z" }))
+          const users = Array.from({ length: 10 }, (_, index) => ({ id: String(index), username: `user${index}` }))
+          return reply({ content: [{ type: "text", text: JSON.stringify({ data, includes: { users }, meta: { result_count: 10 } }) }], structuredContent: { data, includes: { users }, meta: { result_count: 10 } } })
+        }
         if (String(args.query ?? "").startsWith("fail")) return reply({ content: [{ type: "text", text: UPSTREAM_FAILURE }], isError: true })
         if (String(args.query ?? "").startsWith("text")) return reply({ content: [{ type: "text", text: `text from ${name}` }] })
         return reply({ content: [{ type: "text", text: `called ${name}` }], structuredContent: { tool: name, path, arguments: args } })
@@ -242,6 +251,7 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
     authorizationScopes,
     calls,
     called,
+    callArguments,
     markers,
     authorizations,
     close: () => new Promise<void>((resolve) => (server.closeAllConnections(), server.close(() => resolve()))),

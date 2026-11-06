@@ -107,7 +107,9 @@ Each member runs `/connect` and chooses X, then presses `o` or Enter. Status sho
 
 **The consequences, plainly:**
 
-- Every member's calls bill the team's X developer account, capped only by the app's spending limit.
+- Every member's calls bill the team's X developer account. A model read is capped to one page of at most ten posts
+  or users, one widening, about $0.20 an answer, and the answer ends with its actual cost line; a script is not capped,
+  so the app's spending limit is the backstop.
 - The owned-reads discount (about $0.001 a post) applies only when the authenticated user owns the app. Other members'
   timeline, mention and bookmark reads bill at the full rate.
 - X describes pay-per-use as for "applications with limited end-users". A larger team may need X's Enterprise plan.

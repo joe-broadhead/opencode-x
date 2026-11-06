@@ -185,12 +185,11 @@ describe("setup", () => {
       "Read the x skill before the first call",
       "the earlier of the next local midnight and now minus 10 seconds",
       "a time tool gives the zone, and the answer names it",
-      'one sentence starting "This read costs about $…"',
-      "the page size and the upper bound, expansions included",
-      "X returns authors and parents unbidden",
-      "Never ask whether to spend: state the price and call",
-      "A signature lookup and the billed call never share one execute",
-      "A widening or an expansion is billed too: say the new total before it",
+      "Reads are automatic and capped: one page of at most ten",
+      "an answer's reads total about $0.20 at most, one widening included",
+      "Never ask whether to spend: make the call",
+      'such as "Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15."',
+      "never an estimate",
       "Bookmark, list and Article-draft changes ask first",
       "load x-write and say in your reply what it does and whom it reaches",
       "Every call is billed to the X developer account that owns the app",
@@ -208,8 +207,8 @@ describe("setup", () => {
     }
     expect(NAMESPACE_DESCRIPTION).not.toContain(ENDPOINT)
     expect([...rpc].sort()).toEqual(["x.posts", "x.posts.tools"])
-    // The tools RPC's one evaluate hook, and no tool hook: X has no result to capture.
-    expect(hooks.sort()).toEqual(["evaluate"])
+    // The tools RPC's one evaluate hook, and the two tool hooks that cap a read and add its cost line.
+    expect(hooks.sort()).toEqual(["evaluate", "tool:execute.after", "tool:execute.before"])
     expect(typeof cleanup).toBe("function")
     await cleanup!()
     expect(rpc).toEqual(["x.posts"])

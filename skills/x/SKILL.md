@@ -12,22 +12,16 @@ outside the billed-read block, one `search()`, for the tool you are about to cal
 X bills each call to the X developer account that owns the app (yours or your team's): a post read about $0.005,
 user read $0.010, your own reads about $0.001, bookmark change $0.005, and post create $0.015, or $0.200 with a URL.
 
-Every billed read, in the same turn: (1) one sentence starting "This read costs about $…" naming what you read, the
-page size and the upper bound with every expansion you request; X may return authors and parents unbidden, so ten
-posts plus ten authors is about $0.15. (2) the one call. (3) if the billed count differs, say so.
-A billed call with no price sentence is a bug: never claim afterwards that you gave one.
+Reads are automatic and capped: one small page per read, `max_results` at most 10, only the expansions the answer
+needs, and no next-page token unless the user asks. An answer's billed reads total about $0.20 at most, including one
+widening. Never ask whether to spend: make the call.
 
-If you read a signature first, the price sentence follows that `search()` and precedes the call: a lookup and a
-billed call never share one `execute`. If your text above this call has no "$", write the price sentence now; never
-write "as estimated" or "my estimate" unless that sentence is earlier in the reply.
-
-- Never ask whether to spend: state the price in one sentence, then call.
-- Pass `max_results` every time: without it, up to 100 users, $1.00. Ten is enough; with no budget read one page of
-  ten, say it is a sample, and offer more; never propose a 100-record page, page unasked, or loop.
+Every answer that made a billed read ends with one line computed from what X returned: "Cost: 10 posts ($0.05) +
+10 authors ($0.10) = $0.15." An Owned Read uses its own rate. Never mention an estimate.
 
 ## The billed reads
 
-Make the call first, after one price sentence. Every post read sends `expansions` "author_id", `post.fields` "created_at" and `user.fields` "username".
+Make the call; the block saves a lookup. Every post read sends `expansions` "author_id", `post.fields` "created_at" and `user.fields` "username".
 
 - A handle question starts with `get_users_by_username`: `username`, `user.fields` "username,name,public_metrics";
   $0.010, one call, never a post search first. A miss: only "not found", ask which account; posts only if asked.
@@ -46,8 +40,8 @@ A window always sets both bounds, as RFC 3339 UTC instants ending `Z`, from the 
 machine's: a time tool gives the zone, and the answer names it. `start_time` is the first local midnight (or Monday);
 `end_time` the earlier of the next local midnight and now minus 10 seconds (X rejects a later one), or that day's own
 end. Never leave `end_time` off or use a rolling 48 hours for "the last two days"; say the window runs to now.
-An empty result means the query, the window or access: say which you ruled out, then widen once, saying what changed
-and that another ten posts is about $0.05 before the call.
+An empty result means the query, the window or access: say which you ruled out, then widen once, still one page of
+ten; the answer's cost line then covers both reads.
 
 ## Answering
 
