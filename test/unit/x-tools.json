@@ -1,0 +1,84 @@
+{
+  "$comment": "The provisional tool list: X's MCP capability table, a third party's recorded tools/list (24 read and bookmark names) and X's OpenAPI operation ids. No live tools/list has been recorded, so there are no schemas or annotations. npm run drift compares a saved list with src/x-tools.ts.",
+  "fetched": "2026-11-05",
+  "tools": [
+    {
+      "name": "get_news"
+    },
+    {
+      "name": "get_posts_by_id"
+    },
+    {
+      "name": "get_posts_by_ids"
+    },
+    {
+      "name": "get_posts_counts_recent"
+    },
+    {
+      "name": "get_posts_liking_users"
+    },
+    {
+      "name": "get_posts_quoted_posts"
+    },
+    {
+      "name": "get_posts_reposted_by"
+    },
+    {
+      "name": "get_trends_by_woeid"
+    },
+    {
+      "name": "get_users_bookmark_folders"
+    },
+    {
+      "name": "get_users_bookmarks"
+    },
+    {
+      "name": "get_users_bookmarks_by_folder_id"
+    },
+    {
+      "name": "get_users_by_id"
+    },
+    {
+      "name": "get_users_by_username"
+    },
+    {
+      "name": "get_users_by_usernames"
+    },
+    {
+      "name": "get_users_me"
+    },
+    {
+      "name": "get_users_mentions"
+    },
+    {
+      "name": "get_users_posts"
+    },
+    {
+      "name": "get_users_timeline"
+    },
+    {
+      "name": "search_news"
+    },
+    {
+      "name": "search_posts_all"
+    },
+    {
+      "name": "search_users"
+    },
+    {
+      "name": "article_create_draft"
+    },
+    {
+      "name": "create_users_bookmark"
+    },
+    {
+      "name": "create_users_bookmark_folder"
+    },
+    {
+      "name": "delete_users_bookmark"
+    },
+    {
+      "name": "article_publish"
+    }
+  ]
+}
