@@ -130,7 +130,7 @@ export function costLine(cost: ReadCost): string | undefined {
   const noun = parts.length > 0 ? (cost.users === 1 ? "author" : "authors") : cost.users === 1 ? "user" : "users"
   if (cost.users > 0) parts.push(`${cost.users} ${noun} (${money(cost.users * USER)})`)
   if (cost.counts > 0) parts.push(`${cost.counts} count ${cost.counts === 1 ? "read" : "reads"} (${money(cost.counts * COUNT)})`)
-  return parts.length === 0 ? undefined : `Cost: ${parts.join(" + ")} = ${money(cost.total)}.`
+  return parts.length === 0 ? "Cost: 0 posts + 0 authors = $0.00." : `Cost: ${parts.join(" + ")} = ${money(cost.total)}.`
 }
 
 const append = (result: Result, line: string) => {
