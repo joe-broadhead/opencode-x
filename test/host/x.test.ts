@@ -171,10 +171,11 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
 
   test("H5: /x-status reports the connection, client, callback, scopes, tools, the unguarded agent and its fix", async () => {
     await xTools(host)
+    const before = host.fake.calls.length
     const text = await status(host, await session(host))
     expect(text).toContain(`- Connection: connected (${host.fake.url}, registered by this plugin)`)
     expect(text).toContain("- Account: account name not reported by X's MCP\n")
-    expect(text).toContain("- Access: reads run without asking; 11 tools ask first (bookmarks, lists, an Article draft, source keys and a public Post); 40 are off (DMs and chat, calls, follows, blocks, mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the app; default rules missing in the agents listed below\n")
+    expect(text).toContain("- Access: reads run without asking; 9 tools ask first (bookmarks, lists, an Article draft and a public Post); 40 are off (DMs and private chat conversations, calls, follows, blocks, mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the app; default rules missing in the agents listed below\n")
     expect(text).toContain("- Tools: 12 available, 1 unknown: shiny_new_tool (unknown tools ask before running); off by default: add_lists_member, send_chat_message and users_id_block\n")
     expect(text).toContain(`- Client: client-1 (configured app, confidential; set in plugin options)\n`)
     expect(text).toContain(`- Callback: ${REDIRECT_URI} (register exactly this URL in the app's User authentication settings)\n`)
@@ -183,8 +184,11 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     expect(text).toContain(`- Next step: ${AGENTS_NEXT_STEP}`)
     expect(text).toContain(`- OpenCode: ${HOST_VERSION} (${TESTED_HOSTS.includes(HOST_VERSION) ? "tested" : "untested"}; supported range ${SUPPORTED_HOST})`)
     expect(text).not.toContain("secret-1")
+    // Status and its RPC promise no X call; the fake's log is the proof.
+    expect(host.fake.calls.length).toBe(before)
     const output = await statusRpc(host)
-    expect(output).toMatchObject({ state: "connected", tools: 12, deniedTools: [...DENIED_SAMPLE], unknownCount: 1, listing: false, unguardedAgents: ["reviewer"], client: { id: "client-1", mode: "confidential", source: "options" } })
+    expect(host.fake.calls.length).toBe(before)
+    expect(output).toMatchObject({ state: "connected", tools: 12, deniedTools: [...DENIED_SAMPLE], deniedCount: 3, unknownCount: 1, listing: false, unguardedAgents: ["reviewer"], client: { id: "client-1", mode: "confidential", source: "options" } })
     expect(JSON.stringify(output)).not.toContain("secret-1")
     expect(output).not.toHaveProperty("account")
   })

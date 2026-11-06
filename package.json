@@ -91,7 +91,7 @@
   },
   "jelly": {
     "title": "X",
-    "summary": "Search and read X, your bookmarks, news and trends, and draft Articles.",
+    "summary": "Search and read X, post publicly with approval, manage bookmarks and lists, and draft Articles.",
     "icon": "assets/icon.svg",
     "tools": [
       {
@@ -187,6 +187,12 @@
       {
         "name": "x.get_scheduled_broadcast",
         "permission": "x_get_scheduled_broadcast",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_source",
+        "permission": "x_get_source",
         "effect": "allow",
         "readOnly": true
       },
@@ -359,6 +365,12 @@
         "readOnly": true
       },
       {
+        "name": "x.list_sources",
+        "permission": "x_list_sources",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
         "name": "x.search_communities",
         "permission": "x_search_communities",
         "effect": "allow",
@@ -386,18 +398,6 @@
         "name": "x.search_users",
         "permission": "x_search_users",
         "effect": "allow",
-        "readOnly": true
-      },
-      {
-        "name": "x.get_source",
-        "permission": "x_get_source",
-        "effect": "ask",
-        "readOnly": true
-      },
-      {
-        "name": "x.list_sources",
-        "permission": "x_list_sources",
-        "effect": "ask",
         "readOnly": true
       },
       {

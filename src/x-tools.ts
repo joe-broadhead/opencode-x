@@ -25,6 +25,7 @@ export const READ_TOOLS: readonly string[] = [
   "get_posts_quoted_posts",
   "get_posts_reposted_by",
   "get_scheduled_broadcast",
+  "get_source",
   "get_scheduled_call",
   "get_spaces_by_creator_ids",
   "get_spaces_by_id",
@@ -53,20 +54,12 @@ export const READ_TOOLS: readonly string[] = [
   "list_broadcasts",
   "list_scheduled_broadcasts",
   "list_scheduled_calls",
+  "list_sources",
   "search_communities",
   "search_news",
   "search_posts_all",
   "search_spaces",
   "search_users",
-]
-
-/**
- * Reads that ask because their output can carry a secret: an X stream source holds the RTMP URL and its stream key.
- * The captured output schema is empty, so the plugin cannot confirm the shape and keeps them ask.
- */
-export const ASK_READ_TOOLS: readonly string[] = [
-  "get_source",
-  "list_sources",
 ]
 
 /** Private writes that ask: bookmarks, a private Article draft, and the user's own lists. */
@@ -87,7 +80,7 @@ export const PUBLIC_TOOLS: readonly string[] = [
 ]
 
 /**
- * Off by default, from the live list: DMs and chat (reads included), follows, blocks, mutes, list membership,
+ * Off by default, from the live list: DMs and private chat conversations (reads included), follows, blocks, mutes, list membership,
  * moderator roles, scheduled calls, and live video with its ingest sources. A user turns one on with a later `ask`
  * rule in an agent's own permissions.
  */
@@ -153,16 +146,27 @@ export const DENY_PATTERNS: readonly string[] = [
   "add_conversation_keys",
   "get_users_public_key*",
   "chat_media_*",
+  "create_chat_*",
+  "update_chat_*",
+  "delete_chat_*",
+  "add_chat_*",
+  "remove_chat_*",
   "add_chat_moderator",
   "remove_chat_moderator",
   "follow_*",
   "unfollow_*",
+  "users_*_follow*",
+  "users_*_unfollow*",
   "create_follow*",
   "delete_follow*",
   "block_*",
   "unblock_*",
+  "users_*_block*",
+  "users_*_unblock*",
   "mute_*",
   "unmute_*",
+  "users_*_mute*",
+  "users_*_unmute*",
   "delete_post*",
   "delete_tweet*",
   "add_*list_member*",
@@ -299,11 +303,10 @@ export const PARAMETERS: Readonly<Record<string, readonly string[]>> = {
   "users_id_unblock": ["source_user_id*:string", "target_user_id*:string"],
 }
 
-export type ToolClass = "read" | "ask_read" | "write" | "public" | "denied" | "unknown"
+export type ToolClass = "read" | "write" | "public" | "denied" | "unknown"
 
 export function classify(name: string): ToolClass {
   if (READ_TOOLS.includes(name)) return "read"
-  if (ASK_READ_TOOLS.includes(name)) return "ask_read"
   if (WRITE_TOOLS.includes(name)) return "write"
   if (PUBLIC_TOOLS.includes(name)) return "public"
   if (deniedByDefault(name)) return "denied"

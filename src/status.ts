@@ -1,7 +1,7 @@
 import type { Plugin, Rpc } from "@opencode/plugin"
 import { DISPLAY_NAME, ENDPOINT, PLUGIN_ID, SCOPES, SERVER_NAME, TESTED_HOSTS } from "./constants.js"
 import { isSupportedHost, type HostCheck } from "./host-version.js"
-import { ASK_READ_TOOLS, classify, DENY_TOOLS, PUBLIC_TOOLS, WRITE_TOOLS } from "./x-tools.js"
+import { classify, DENY_TOOLS, PUBLIC_TOOLS, WRITE_TOOLS } from "./x-tools.js"
 import { defaultRules, unguardedAgents, type Rule } from "./permissions.js"
 import { cut, oneLine, shortReason } from "./redact.js"
 import { clientMode } from "./server.js"
@@ -88,8 +88,10 @@ export interface Status {
   readonly scopes?: readonly string[]
   /** How many X tools OpenCode lists and the default rules let run or ask: the listed ones that are not denied. */
   readonly tools: number
-  /** The listed tools that the default rules deny; a later rule of the user's can turn one on. Empty today. */
+  /** The listed tools that the default rules deny, by their safe plain names, at most 20; `deniedCount` is exact. */
   readonly deniedTools: readonly string[]
+  /** How many listed tools the default rules deny; a later rule of the user's can turn one on. */
+  readonly deniedCount: number
   /** True while a server that just connected may still be listing its tools. */
   readonly listing: boolean
   /** How many of them the plugin does not know. */
@@ -173,7 +175,9 @@ export function buildStatus(facts: StatusFacts): Status {
     ...(client && own ? { client: { id: client.id, mode: clientMode(client), source: client.source } } : {}),
     ...(facts.options && own ? { callback: facts.options.redirectUri, ...(facts.options.callbackPort === undefined ? {} : { callbackPort: facts.options.callbackPort }), scopes: facts.options.scopes } : {}),
     tools: listed.length - denied.length,
-    deniedTools: denied,
+    // Names are server content: strip controls and bidi, keep only plain tool names, and cap the printed list.
+    deniedTools: [...new Set(denied.map((name) => oneLine(name)).filter((name) => SAFE_NAME.test(name)))].slice(0, LISTED_UNKNOWN),
+    deniedCount: denied.length,
     listing: state === "connected" && listed.length === 0 && facts.settling === true,
     unknownCount: unknown.length,
     unknownTools: unknown.filter((name) => SAFE_NAME.test(name)).slice(0, LISTED_UNKNOWN),
@@ -219,9 +223,11 @@ function nextStepOf(status: Omit<Status, "nextStep">, setupNext: string | undefi
       return "Check your network, then run /x-status again."
   }
   if (status.listing) return "X is still listing its tools. Run /x-status again in a few seconds."
-  if (status.tools === 0 && status.deniedTools.length === 0) return NO_TOOLS
+  if (status.tools === 0 && status.deniedCount === 0) return NO_TOOLS
+  // A failed block insert needs the restart, not the paste; its own next step comes before the agent fix.
+  const rulesProblem = status.problems.find((problem) => problem.startsWith(RULES_NOT_ADDED))?.split(" Next step: ")[1]
+  if (rulesProblem) return rulesProblem
   if (status.unguardedAgents.length) return AGENTS_NEXT_STEP
-  // A problem reads `CODE: What happened. Next step: What to do.`; its own next step becomes the status's.
   const problem = status.problems[0]?.split(" Next step: ")[1]
   if (problem) return problem
   if (status.shadowedSkills?.length) {
@@ -252,9 +258,10 @@ function serverText(source: ServerSource) {
   return `your mcp.servers.${SERVER_NAME} points at ${source.url}`
 }
 
-function toolsText({ tools, unknownCount, unknownTools, deniedTools, listing }: Status) {
+function toolsText({ tools, unknownCount, unknownTools, deniedTools, deniedCount, listing }: Status) {
   if (listing) return "none listed yet (X is still listing them)"
-  const off = deniedTools.length ? `; off by default: ${list(deniedTools)}` : ""
+  const hiddenDenied = deniedCount - deniedTools.length
+  const off = deniedCount ? `; off by default: ${list(deniedTools)}${hiddenDenied > 0 ? ` and ${hiddenDenied} more` : ""}` : ""
   if (unknownCount === 0) return `${tools} available, 0 unknown${off}`
   const more = unknownCount - unknownTools.length
   const names = unknownTools.length ? `: ${unknownTools.join(", ")}${more > 0 ? ` and ${more} more` : ""}` : ""
@@ -267,8 +274,8 @@ const list = (names: readonly string[]) => (names.length < 2 ? names.join("") : 
  * The permission posture the default rules fix, derived from the tool lists so it cannot go stale, and whether those
  * rules are in place: facts status can check, not a fixed claim. The last clause is X's cost, in one clause (D10).
  */
-const ASK_COUNT = WRITE_TOOLS.length + ASK_READ_TOOLS.length + PUBLIC_TOOLS.length
-const POSTURE = `reads run without asking; ${ASK_COUNT} tools ask first (bookmarks, lists, an Article draft, source keys and a public Post); ${DENY_TOOLS.length} are off (DMs and chat, calls, follows, blocks, mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the app`
+const ASK_COUNT = WRITE_TOOLS.length + PUBLIC_TOOLS.length
+const POSTURE = `reads run without asking; ${ASK_COUNT} tools ask first (bookmarks, lists, an Article draft and a public Post); ${DENY_TOOLS.length} are off (DMs and private chat conversations, calls, follows, blocks, mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the app`
 
 function accessText({ problems, unguardedAgents }: Status) {
   const rules = problems.some((problem) => problem.startsWith(RULES_NOT_ADDED))
@@ -327,8 +334,14 @@ function callbackRow(callback: string, port: number | undefined): string {
   return `${callback} (${register}, and forward it to http://127.0.0.1:${port}${new URL(callback).pathname}, where OpenCode listens)`
 }
 
-export function formatStatus(status: Status) {
-  return ["X status", ...rows(status).map((row) => `- ${row.label}: ${row.value}`)].join("\n")
+export function formatStatus(status: Status, options: { readonly compactRules?: boolean } = {}) {
+  const lines = rows(status).map((row) => {
+    if (!options.compactRules || row.label !== "Agents without default rules" || row.value === "none") return `- ${row.label}: ${row.value}`
+    // The dialog shows a count and points at /x-status; the full block is 130+ rules.
+    const [names] = row.value.split("\n")
+    return `- ${row.label}: ${names}\n  ${defaultRules().length} rules; run /x-status to copy the block.`
+  })
+  return ["X status", ...lines].join("\n")
 }
 
 export interface StatusContext {
@@ -401,7 +414,7 @@ export const StatusRpc = {
       input: { type: "object" },
       output: {
         type: "object",
-        required: ["version", "state", "tools", "deniedTools", "listing", "unknownCount", "unknownTools", "unguardedAgents", "host", "problems", "nextStep"],
+        required: ["version", "state", "tools", "deniedTools", "deniedCount", "listing", "unknownCount", "unknownTools", "unguardedAgents", "host", "problems", "nextStep"],
         properties: {
           version: { type: "string" },
           state: { enum: ["connected", "sign_in_required", "connecting", "disabled", "failed", "not_configured", "conflict", "host_untested"] },
@@ -424,6 +437,7 @@ export const StatusRpc = {
           scopes: strings,
           tools: count,
           deniedTools: strings,
+          deniedCount: count,
           listing: { type: "boolean" },
           unknownCount: count,
           unknownTools: strings,

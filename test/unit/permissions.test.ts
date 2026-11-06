@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { ASK_READ_TOOLS, DENY_PATTERNS, DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { DENY_PATTERNS, DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, evaluate, hasDefaultRules, insertRules, registerDefaultRules, unguardedAgents, type Rule } from "../../src/permissions.js"
 import { agentEditor, allow, builtInAgents, transforms, type AgentEditor, type FakeAgent } from "./fake.js"
 
@@ -20,8 +20,8 @@ describe("defaultRules", () => {
   })
 
   test("reads allow; every write, the public Post and the source reads ask; the off tools deny", () => {
-    expect(effects([allow("*"), ...defaultRules()])).toEqual(["allow", "allow", "ask", "ask", "ask", "deny", "deny", "ask"])
-    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS, ...ASK_READ_TOOLS]) expect({ tool, effect: evaluate([allow("*"), ...defaultRules()], `x_${tool}`) }).toEqual({ tool, effect: "ask" })
+    expect(effects([allow("*"), ...defaultRules()])).toEqual(["allow", "allow", "ask", "ask", "allow", "deny", "deny", "ask"])
+    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS,]) expect({ tool, effect: evaluate([allow("*"), ...defaultRules()], `x_${tool}`) }).toEqual({ tool, effect: "ask" })
   })
 
   test("the off list and its patterns are all denied, including the live names the first patterns missed", () => {
@@ -78,14 +78,14 @@ describe("insertRules", () => {
     insertRules(explore.permissions, defaultRules())
     expect(effects(explore.permissions)).toEqual(["deny", "deny", "deny", "deny", "deny", "deny", "deny", "deny"])
     insertRules(plan.permissions, defaultRules())
-    expect(effects(plan.permissions)).toEqual(["allow", "allow", "ask", "ask", "ask", "deny", "deny", "ask"])
+    expect(effects(plan.permissions)).toEqual(["allow", "allow", "ask", "ask", "allow", "deny", "deny", "ask"])
   })
 
   test("the user's rules come later and win, both ways", () => {
     const permissions = [allow("*")]
     insertRules(permissions, defaultRules())
     permissions.push(allow("x_create_users_bookmark"), { action: "x_create_posts", resource: "*", effect: "deny" }, deny("x_search_*"))
-    expect(effects(permissions)).toEqual(["deny", "allow", "allow", "deny", "ask", "deny", "deny", "ask"])
+    expect(effects(permissions)).toEqual(["deny", "allow", "allow", "deny", "allow", "deny", "deny", "ask"])
   })
 })
 

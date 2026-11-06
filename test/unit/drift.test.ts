@@ -6,14 +6,14 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { ASK_READ_TOOLS, classify, DENY_TOOLS, PARAMETERS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { classify, DENY_TOOLS, PARAMETERS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 
 const SCRIPT = fileURLToPath(new URL("../../scripts/check-x-tools.mjs", import.meta.url))
 const FIXTURE = fileURLToPath(new URL("./x-live-tools.json", import.meta.url))
 const dir = mkdtempSync(join(tmpdir(), "x-drift-"))
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 
-const ALL = [...READ_TOOLS, ...ASK_READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
+const ALL = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
 type LiveTool = { name: string; description?: string; inputSchema?: unknown; annotations?: Record<string, boolean> }
 const live = () => JSON.parse(readFileSync(FIXTURE, "utf8")) as { tools: LiveTool[] }
 
@@ -58,7 +58,7 @@ describe("npm run drift", () => {
   })
 
   test("an annotation that contradicts a read is drift when the list carries annotations", () => {
-    const tools = structuredClone(live().tools).map((tool) => ({ ...tool, annotations: { readOnlyHint: classify(tool.name) === "read" || classify(tool.name) === "ask_read", destructiveHint: false } }))
+    const tools = structuredClone(live().tools).map((tool) => ({ ...tool, annotations: { readOnlyHint: classify(tool.name) === "read", destructiveHint: false } }))
     tools.find((tool) => tool.name === "get_users_me")!.annotations = { readOnlyHint: false, destructiveHint: false }
     const { code, out } = drift({ tools }, ["--strict"])
     expect(code).toBe(1)
