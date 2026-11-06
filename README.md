@@ -233,6 +233,11 @@ A script's errors from the tools RPC have their own codes, listed in
   as changing data could run here as a read until a release reconciles it. `test/unit/x-tools.json` records the
   list, and `npm run drift -- <tools.json> --strict` is the check that reconciles it.
 - **There is no unpublish tool.** An Article published by mistake is deleted in the X app.
+- **X's `xurl` bridge is an alternative, not this plugin's route.** X documents
+  `npx -y @xdevplatform/xurl mcp https://api.x.com/mcp`, which holds your app, opens a browser at the first tool call,
+  and caches the token in `~/.xurl`. It moves the sign-in outside `/connect`, needs a Node download and a child
+  process, and OpenCode cannot see its sign-in state, so this plugin does not use it. It remains a working fallback if
+  you need a local bridge and accept that.
 - **A script's read can cross projects.** A script's session may belong to another directory than the OpenCode
   server answering it, and the read then runs under the serving location's agent rules; only a `deny` is refused in
   between. Run scripts in the project whose agent you mean. This is in the module shared with the other plugins, not
