@@ -6,21 +6,25 @@ description: Load before any X (Twitter) change - posting, replying, quoting or 
 
 ## The one rule
 
-Make a change only when the user asked for it. Before the call, write one sentence in your reply on what it does and
-whom it reaches, then make the one call in the same turn. The permission prompt is the user's yes.
+Make a change only when the user asked for it. For `create_posts`, in the same turn and before the call, your reply
+gives, in this order:
+1. the draft text;
+2. one sentence: "This will be public: anyone on X can see it. It costs $0.015 ($0.200 with a link).";
+3. then the one call.
+The permission prompt is the user's yes. After a decline, nothing was posted: say so, and offer the draft.
 
-Ask in chat first only when something must be chosen: which post, which list, which draft. After a decline, say that
-nothing changed and offer the draft or a retry. Never work around a decline with another tool, a shell command, a link
-or a screenshot.
+For any other change, write one sentence in your reply on what it does and whom it reaches, then make the one call in
+the same turn. Ask in chat first only when something must be chosen: which post, which list, which draft. Never work
+around a decline with another tool, a shell command, a link or a screenshot.
 
 ## Whom each change reaches
 
 - `create_posts`: public. Anyone can read it, not only followers: it appears on the profile and in followers'
-  timelines. Show the exact text first, then say: "This posts '…' publicly to anyone; it costs $0.015, or $0.200 if it
-  contains a link." A reply (`reply.in_reply_to_tweet_id`) or a quote (`quote_tweet_id`) only when the user explicitly
-  asks for that one reply or quote, and say the author is notified. Editing (`edit_options.previous_post_id`) changes a
-  published post: show the new text. One call, never a loop. `nullcast` keeps a Post out of the public timeline and
-  `for_super_followers_only` limits it: use either only when the user asks.
+  timelines. Use the three steps above: the exact text, then "This will be public: anyone on X can see it. It costs
+  $0.015 ($0.200 with a link).", then one call. A reply (`reply.in_reply_to_tweet_id`) or a quote (`quote_tweet_id`)
+  only when the user explicitly asks for that one reply or quote, and say the author is notified. Editing
+  (`edit_options.previous_post_id`) changes a published post: show the new text. One call, never a loop. `nullcast`
+  keeps a Post out of the public timeline and `for_super_followers_only` limits it: use either only when the user asks.
 - Bookmarks: `create_users_bookmark`, `delete_users_bookmark` and `create_users_bookmark_folder` reach only the user.
   Private, reversible, no notification. Say the post's author and opening words.
 - `article_create_draft`: private. Nothing is public. There is no publish tool: it stays a draft, and publishing is done
@@ -33,8 +37,9 @@ or list change, and a post create at $0.015, or $0.200 with a link.
 
 ## Posting
 
-Draft from what the user gave you, not from fetched posts unless they asked. State the exact text and that it is
-public, then make one call. Only on an explicit request: never post, reply or quote in a loop, and keep to X's rules.
+Draft from what the user gave you, not from fetched posts unless they asked. Give the exact text and the
+public-and-price sentence first, then make one call. Only on an explicit request: never post, reply or quote in a loop,
+and keep to X's rules.
 AI-generated replies need X's prior approval; replies are allowed only when the author summoned the replier. Likes are
 not a tool here.
 
