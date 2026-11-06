@@ -27,7 +27,7 @@ const CLIENT = { client: { id: "client-1", source: "options" as const }, invalid
 const base: StatusFacts = { server: { status: "connected" }, source: { type: "plugin", url: URL, signIn: "oauth" }, host, client: CLIENT, options: OPTS, tools: ["search_posts_all"] }
 const guarded = { id: "build", permissions: [allow("*"), ...defaultRules()] }
 const RULES = "no agent runs new X tools unasked"
-const POSTURE = "reads run without asking; bookmark changes, Article drafts and publishing ask first; a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the account is off; X bills every tool call to your API credits"
+const POSTURE = "reads run without asking; bookmark changes, Article drafts and publishing ask first; a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the account is off; X bills every tool call to the X developer account that owns the app"
 const ACCESS = `${POSTURE}; ${RULES}`
 
 describe("buildStatus", () => {
@@ -58,7 +58,7 @@ describe("buildStatus", () => {
         "- Account: Example account",
         `- Access: ${ACCESS}`,
         `- Server: x at ${URL}`,
-        "- Client: client-1 (public, PKCE; set in plugin options)",
+        "- Client: client-1 (configured app, public; set in plugin options)",
         `- Callback: ${REDIRECT_URI} (register exactly this URL in the app's User authentication settings)`,
         `- Scopes: ${SCOPES.join(" ")}`,
         "- Tools: 1 available, 0 unknown",
@@ -82,7 +82,16 @@ describe("buildStatus", () => {
     const status = buildStatus({ ...base, client: { client: { id: "client-1", secret: "secret-1", source: "connect" }, invalid: false }, options: parsed({ client_id: "client-1", client_secret: "secret-1" }) })
     expect(status.client).toEqual({ id: "client-1", mode: "confidential", source: "connect" })
     for (const text of [formatStatus(status), JSON.stringify(status)]) expect(text).not.toContain("secret-1")
-    expect(formatStatus(status)).toContain("- Client: client-1 (confidential, secret set; saved in /connect)")
+    expect(formatStatus(status)).toContain("- Client: client-1 (your own app, confidential; saved in /connect)")
+  })
+
+  test("the Client row names the kind of app and its source, never a secret", () => {
+    const own = buildStatus({ ...base, client: { client: { id: "client-1", source: "connect" }, invalid: false }, options: parsed({ client_id: "client-1" }) })
+    expect(formatStatus(own)).toContain("- Client: client-1 (your own app, public; saved in /connect)")
+    const ownSecret = buildStatus({ ...base, client: { client: { id: "client-1", secret: "secret-1", source: "connect" }, invalid: false }, options: parsed({ client_id: "client-1", client_secret: "secret-1" }) })
+    expect(formatStatus(ownSecret)).toContain("- Client: client-1 (your own app, confidential; saved in /connect)")
+    expect(JSON.stringify(ownSecret)).not.toContain("secret-1")
+    expect(formatStatus(buildStatus(base))).toContain("- Client: client-1 (configured app, public; set in plugin options)")
   })
 
   test.each([
@@ -180,7 +189,7 @@ describe("buildStatus", () => {
   test("the Access row says whether the default rules are in place, from what status can see", () => {
     expect(formatStatus(buildStatus(base))).toContain(`- Access: ${ACCESS}\n`)
     expect(ACCESS).toContain("bookmark changes, Article drafts and publishing ask first")
-    expect(ACCESS).toContain("X bills every tool call to your API credits")
+    expect(ACCESS).toContain("X bills every tool call to the X developer account that owns the app")
     const missing = buildStatus({ ...base, agents: [{ id: "reviewer", permissions: [allow("*")] }] })
     expect(formatStatus(missing)).toContain(`- Access: ${POSTURE}; default rules missing in the agents listed below\n`)
     const problem = "RULES_NOT_ADDED: X's default permission rules could not be added (boom), so X tools may run without asking. Next step: Restart OpenCode."

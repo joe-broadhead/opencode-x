@@ -46,6 +46,8 @@ export interface FakeMcpOptions {
    * credential in place, as X does when the authorization request lacks `offline.access`.
    */
   readonly refreshTokens?: boolean
+  /** Answer the first access token with 401, so the client refreshes it, as an expired token would. */
+  readonly expireFirstAccessToken?: boolean
 }
 
 /** The scripted model's id, as the fake's model API lists it. */
@@ -209,7 +211,7 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
     if (route.startsWith("/.well-known/") || route.startsWith("/i/oauth2") || route.startsWith("/2/oauth2")) return signIn(request, response, route)
     markers.push(header(request, "x-x-test"))
     authorizations.push(header(request, "authorization"))
-    if (fake.challenge) {
+    if (fake.challenge || (options.expireFirstAccessToken && header(request, "authorization") === "Bearer fake-access-1")) {
       const metadata = `${fake.origin}/.well-known/oauth-protected-resource`
       return void response
         .writeHead(401, { "content-type": "application/json", "www-authenticate": `Bearer resource_metadata="${metadata}"` })

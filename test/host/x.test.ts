@@ -168,9 +168,9 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     const text = await status(host, await session(host))
     expect(text).toContain(`- Connection: connected (${host.fake.url}, registered by this plugin)`)
     expect(text).toContain("- Account: account name not reported by X's MCP\n")
-    expect(text).toContain("- Access: reads run without asking; bookmark changes, Article drafts and publishing ask first; a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the account is off; X bills every tool call to your API credits; default rules missing in the agents listed below\n")
+    expect(text).toContain("- Access: reads run without asking; bookmark changes, Article drafts and publishing ask first; a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the account is off; X bills every tool call to the X developer account that owns the app; default rules missing in the agents listed below\n")
     expect(text).toContain("- Tools: 8 available, 1 unknown: shiny_new_tool (unknown tools ask before running)\n")
-    expect(text).toContain(`- Client: client-1 (confidential, secret set; set in plugin options)\n`)
+    expect(text).toContain(`- Client: client-1 (configured app, confidential; set in plugin options)\n`)
     expect(text).toContain(`- Callback: ${REDIRECT_URI} (register exactly this URL in the app's User authentication settings)\n`)
     expect(text).toContain(`- Scopes: ${SCOPES.join(" ")}\n`)
     expect(text).toContain(`- Agents without default rules: reviewer\n${AGENT_RULES}\n`)
@@ -239,6 +239,20 @@ describe("the user's own x server, with a secret in its headers", () => {
     }
   })
 })
+
+/** Signs in through OpenCode's own flow: the authorization endpoint redirects the pinned loopback callback. */
+async function signIn(host: Host) {
+  const { data: servers } = await host.client.mcp.list({ location: host.location })
+  const integrationID = servers.find((item) => item.name === "x")!.integrationID!
+  const { data: integration } = await host.client.integration.get({ integrationID, location: host.location })
+  const oauth = (host.client.integration as unknown as { oauth: Record<"connect", (input: object) => Promise<{ data: { attemptID: string; url: string } }>> }).oauth
+  const { data: attempt } = await oauth.connect({ integrationID, methodID: (integration.methods as { id: string }[])[0]!.id, location: host.location })
+  const redirect = await fetch(attempt.url, { redirect: "manual" })
+  const callback = redirect.headers.get("location")
+  expect(callback).toMatch(/^http:\/\/127\.0\.0\.1:8766\/callback/)
+  await fetch(callback!)
+  return attempt.url
+}
 
 const scripted = (host: Host) => host.client.sessions as unknown as {
   create: (input: object) => Promise<{ id: string }>
@@ -414,25 +428,12 @@ describe("a server that asks for a sign-in", () => {
     return (data as unknown as { connections?: { status?: { status: string; message?: string } }[] }).connections ?? []
   }
 
-  /** Signs in through OpenCode's own flow: the authorization endpoint redirects the pinned loopback callback. */
-  const signIn = async () => {
-    const { data: servers } = await host.client.mcp.list({ location: host.location })
-    const integrationID = servers.find((item) => item.name === "x")!.integrationID!
-    const { data: integration } = await host.client.integration.get({ integrationID, location: host.location })
-    const oauth = (host.client.integration as unknown as { oauth: Record<"connect", (input: object) => Promise<{ data: { attemptID: string; url: string } }>> }).oauth
-    const { data: attempt } = await oauth.connect({ integrationID, methodID: (integration.methods as { id: string }[])[0]!.id, location: host.location })
-    const redirect = await fetch(attempt.url, { redirect: "manual" })
-    const callback = redirect.headers.get("location")
-    expect(callback).toMatch(/^http:\/\/127\.0\.0\.1:8766\/callback/)
-    await fetch(callback!)
-  }
-
   test("is sign-in required, with the /connect next step, in the RPC and in /x-status", async () => {
     await xTools(host)
     expect(await statusRpc(host)).toMatchObject({ state: "connected" })
     // A real sign-in leaves a credential: the account /connect marks when X stops accepting it.
     host.fake.challenge = true
-    await signIn()
+    await signIn(host)
     await until("the sign-in stores a token", async () => host.fake.tokens.length === 1)
     expect(host.fake.tokens[0]).toMatchObject({ grant_type: "authorization_code" })
     expect(host.fake.tokens[0]).not.toHaveProperty("refresh_token")
@@ -539,6 +540,47 @@ describe("an X app client saved in /connect", () => {
     // The registered entry carries the client and never shows it in status.
     expect(await xTools(host)).toHaveLength(8)
     expect(JSON.stringify(await status())).not.toContain("secret-2")
+  })
+})
+
+// A public X app (Native App) has a client ID and no secret. The owner's team model shares one through managed
+// config, so the sign-in must work with PKCE and `none` token authentication, and a refresh must carry no secret.
+describe("a public client signs in", () => {
+  let host: Host
+  beforeAll(async () => {
+    host = await startHost({ oauth: true, options: appOptions(false), fake: { expireFirstAccessToken: true } })
+  })
+  afterAll(() => host?.close())
+
+  test("uses PKCE and a body client_id with no secret, and refreshes the same way", async () => {
+    await xTools(host)
+    host.fake.challenge = true
+    const url = new URL(await signIn(host))
+    expect(url.searchParams.get("code_challenge_method")).toBe("S256")
+    expect(url.searchParams.get("code_challenge")).toBeString()
+    expect(url.searchParams.get("client_id")).toBe("client-1")
+    expect(url.searchParams.get("redirect_uri")).toBe(REDIRECT_URI)
+    expect(url.searchParams.get("scope")).toBe(X_SCOPES)
+    await until("the public client's token", async () => host.fake.tokens.length === 1)
+    expect(host.fake.tokens[0]).toMatchObject({ grant_type: "authorization_code", client_id: "client-1" })
+    expect(host.fake.tokens[0]).not.toHaveProperty("client_secret")
+    expect(host.fake.tokens[0]!.code_verifier).toBeString()
+    expect(host.fake.tokenAuthorizations[0]).toBeUndefined()
+    host.fake.challenge = false
+    await until("the server is connected after the public sign-in", async () => {
+      const { data } = await host.client.mcp.list({ location: host.location })
+      return data.find((item) => item.name === "x")?.status.status === "connected"
+    })
+    // The fake rejects the first access token with 401, so the next request refreshes it, still with no secret.
+    await host.probe().mcp.reload()
+    await until("the refresh request", async () => host.fake.tokens.length >= 2, 30_000)
+    expect(host.fake.tokens[1]).toMatchObject({ grant_type: "refresh_token", client_id: "client-1" })
+    expect(host.fake.tokens[1]).not.toHaveProperty("client_secret")
+    expect(host.fake.tokens[1]).not.toHaveProperty("code_verifier")
+    expect(host.fake.tokenAuthorizations[1]).toBeUndefined()
+    // Status names the app kind and never a secret, which a public client does not have.
+    const text = await status(host, await session(host))
+    expect(text).toContain("- Client: client-1 (configured app, public; set in plugin options)")
   })
 })
 

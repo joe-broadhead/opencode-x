@@ -268,7 +268,7 @@ const list = (names: readonly string[]) => (names.length < 2 ? names.join("") : 
  * rules are in place: facts status can check, not a fixed claim. The last clause is X's cost, in one clause (D10).
  */
 const DENIED_EFFECT = DENY_PATTERNS.length > 0 ? "a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the account is off; " : ""
-const POSTURE = `reads run without asking; bookmark changes, Article drafts and publishing ask first; ${DENIED_EFFECT}X bills every tool call to your API credits`
+const POSTURE = `reads run without asking; bookmark changes, Article drafts and publishing ask first; ${DENIED_EFFECT}X bills every tool call to the X developer account that owns the app`
 
 function accessText({ problems, unguardedAgents }: Status) {
   const rules = problems.some((problem) => problem.startsWith(RULES_NOT_ADDED))
@@ -291,6 +291,7 @@ function hostText({ host, problems }: Status) {
 }
 
 const CLIENT_SOURCE = { options: "set in plugin options", connect: "saved in /connect" } as const
+const CLIENT_APP = { options: "configured app", connect: "your own app" } as const
 
 /** The rows shared by `/x-status` and the dialog, in the standard order with X's own rows after Access. */
 function rows(status: Status): { readonly label: string; readonly value: string }[] {
@@ -303,7 +304,11 @@ function rows(status: Status): { readonly label: string; readonly value: string 
     { label: "Access", value: accessText(status) },
     { label: "Server", value: `${SERVER_NAME} at ${ENDPOINT}` },
   ]
-  if (client !== undefined) out.push({ label: "Client", value: `${client.id} (${client.mode === "public_pkce" ? "public, PKCE" : "confidential, secret set"}; ${CLIENT_SOURCE[client.source]})` })
+  if (client !== undefined) {
+    // Status cannot tell managed config from a user's own options, so it names the source and the mode, not a team.
+    const app = `${CLIENT_APP[client.source]}, ${client.mode === "public_pkce" ? "public" : "confidential"}`
+    out.push({ label: "Client", value: `${client.id} (${app}; ${CLIENT_SOURCE[client.source]})` })
+  }
   if (status.callback !== undefined) out.push({ label: "Callback", value: callbackRow(status.callback, status.callbackPort) })
   if (status.scopes !== undefined) out.push({ label: "Scopes", value: status.scopes.join(" ") })
   out.push(
