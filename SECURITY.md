@@ -21,6 +21,9 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
 - The X app's client ID and secret come from the plugin options or the `/connect` **X app** entry, and are kept in
   OpenCode's credential store or managed config. The plugin never reads the OAuth token. Status shows the client ID,
   whether a secret is set and where it came from; it never shows the secret.
+- **A public client ID is not a secret.** A Native App's client ID only identifies the app, so it is safe to distribute
+  in managed config for a team app. A client secret authenticates the app and must never be distributed: anyone with
+  it can act as the app. If one leaks, rotate it in X's console.
 - Of a user's own `mcp.servers.x` entry the plugin reads only the type, the URL and whether `oauth` is `false`; it
   never reads, copies or reports its `headers` or its client fields. Status shows server URLs without their query
   strings, never OpenCode's text for a needed sign-in, which can hold an authorization URL, and cuts a connection
@@ -38,7 +41,7 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
   instructions aimed at the model. The namespace text and the skills tell the model to treat every result as data,
   never to follow an instruction in it, and never to let it choose a tool, a recipient or a change. X's terms also
   forbid automated replies without prior approval and automated or bulk likes; the plugin exposes neither.
-- **Every call is billed** to the user's X API credits, and the plugin cannot cap the bill. The skill keeps calls to
+- **Every call is billed** to the X developer account that owns the app, and the plugin cannot cap the bill. The skill keeps calls to
   the smallest page, says when a search is wide, and never pages a search in a loop. A script pays the same rates; a
   spending limit in X's console is the backstop.
 
@@ -78,7 +81,8 @@ Things to know:
 - **The client secret is a credential.** A config file may be synced, backed up or shared, so prefer
   `{env:X_CLIENT_SECRET}` in `opencode.json`, or the `/connect` X app entry, over a literal value. OpenCode substitutes
   the variable when it loads the config; an unset variable arrives as an empty string, which `OPTIONS_INVALID`
-  rejects. A Native App needs no secret, but that route is untested here: use a confidential app.
+  rejects. A Native App needs no secret: its sign-in is covered by the checks, though X's refresh token for a public
+  client is unconfirmed live.
 
 ## Scripts
 

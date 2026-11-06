@@ -33,8 +33,8 @@ so it needs the app's OAuth 2.0 client. The values go in the plugin options (man
 
 | Key | Values | Default | Notes |
 | --- | --- | --- | --- |
-| `client_id` | A non-empty string without spaces | none | The app's **Client ID**. Without it, status is `not configured` and asks for the X app. |
-| `client_secret` | A non-empty string, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out only for a Native App, a public client with PKCE and no secret; that route is untested here. Needs `client_id`. |
+| `client_id` | A non-empty string without spaces | none | The app's **Client ID**. A public client ID is what a team app shares in managed config. Without it, status is `not configured`. |
+| `client_secret` | A non-empty string, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out for a Native App, a public client with PKCE and no secret; the checks cover its sign-in, but X's refresh token for it is unconfirmed live (see the README's Known limits). Needs `client_id`. |
 | `redirect_uri` | An `http:` loopback URL with an explicit port and a path, or an `https:` URL | `http://127.0.0.1:8766/callback` | X matches it exactly. Register the same URL in the app's **User authentication settings**. |
 | `callback_port` | `1`–`65535` | none | Only, and always, with an `https:` redirect: the local port a proxy forwards the callback to. With a loopback redirect, OpenCode listens on the redirect's own port. |
 | `scopes` | A non-empty list of X OAuth 2.0 scopes | `tweet.read users.read bookmark.read bookmark.write tweet.write offline.access` | `offline.access` is what makes X issue a refresh token. Dropping `bookmark.write` or `tweet.write` makes those tools fail with `403`, or removes them from the list. |
@@ -71,6 +71,48 @@ range in its `OpenCode` row, for example `2.2.5 (tested; supported range >=2.2.3
 - **Outside the range with `"allowUntestedHost": true`:** it starts anyway, and `/x-status` and `/x` show a warning.
 
 To narrow what the model may do in X, use permission rules; see [Permissions](#permissions).
+
+## Team app
+
+One admin creates one **public** X app and shares its **client ID**. Members then only sign in: there is no X app step,
+no secret, and no per-member app.
+
+**The admin, once:**
+
+1. In [console.x.com](https://console.x.com), create an app and open **User authentication settings**. Set OAuth 2.0
+   on, choose **Native App** (a public client: client ID only, no secret), and register **both** callbacks:
+   `http://127.0.0.1:8766/callback` and `http://localhost:8766/callback`.
+2. Add the scopes `tweet.read users.read bookmark.read bookmark.write tweet.write offline.access`.
+3. Move the app to **Pay-per-use → Production**. Without it, X answers `client-not-enrolled`.
+4. Buy **credits** and set a **spending limit**. Every member's calls draw on them.
+
+**The members' config.** Put the client ID in the organisation's managed config, with no secret:
+`/Library/Application Support/opencode/opencode.json` on macOS, or `/etc/opencode/opencode.json` on Linux.
+
+```json
+{
+  "plugins": [
+    {
+      "package": "@joe-broadhead/opencode-x",
+      "options": { "oauth": { "client_id": "YOUR_TEAM_APP_CLIENT_ID" } }
+    }
+  ]
+}
+```
+
+Each member runs `/connect` and chooses X, then presses `o` or Enter. Status shows
+`configured app, public; set in plugin options`, and the `X app` entry is not used.
+
+**The consequences, plainly:**
+
+- Every member's calls bill the team's X developer account, capped only by the app's spending limit.
+- The owned-reads discount (about $0.001 a post) applies only when the authenticated user owns the app. Other members'
+  timeline, mention and bookmark reads bill at the full rate.
+- X describes pay-per-use as for "applications with limited end-users". A larger team may need X's Enterprise plan.
+- Under X's Developer Agreement, the admin is responsible for how the app is used and for the content it reads.
+- A public client ID is not a secret and is safe to distribute. **Never** put a client secret in managed config.
+- X issuing a refresh token to a public client is unconfirmed until a live test; if it does not, a member signs in
+  again every two hours. A confidential app with a secret is the safe choice for a long session.
 
 ## Your own `mcp.servers.x`
 
@@ -296,7 +338,7 @@ meanings:
 | `error` | For a failed connection only: OpenCode's reason, on one line of at most 160 characters, with any URL cut before its query. The text for a needed sign-in can hold an authorization URL, so it is never shown. |
 | `source` | `type` (`plugin`, `adopted` or `conflict`), `url`, `signIn` (`oauth`, or `own` for your own entry with `"oauth": false`), and for a conflict the `expected` URL |
 | `account` | The name OpenCode keeps on the active sign-in, on one line of at most 80 characters; absent when it keeps none. Status makes no X call, so the plugin learns nothing else about the account. |
-| `client` | `id`, `mode` (`public_pkce` for a Native App, `confidential` when a secret is set) and `source` (`options` or `connect`). The secret is never shown. |
+| `client` | `id`, `mode` (`public_pkce` for a Native App, `confidential` when a secret is set) and `source` (`options` or `connect`). The `Client` row names `your own app` when it came from `/connect`, or `configured app` when it came from plugin options, as a team app does; status cannot tell managed config from a user's own options. The secret is never shown. |
 | `callback`, `callbackPort`, `scopes` | The redirect URI the app must have registered, the local port for an `https:` redirect, and the scopes OpenCode requests |
 | `tools` | How many X tools OpenCode lists that the default rules let run or ask: the listed ones, without the denied ones |
 | `deniedTools` | The listed tools that the default rules deny, by name or by the owner's effect patterns; empty for today's list. The `Tools` row shows them as "off by default" |
@@ -310,7 +352,7 @@ meanings:
 
 The `Access` row states the posture the default rules fix: "reads run without asking; bookmark changes, Article
 drafts and publishing ask first; a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the
-account is off; X bills every tool call to your API credits". Then it says whether those rules are in place: "no agent runs new X tools unasked", "default rules missing in the agents listed below", or "default rules
+account is off; X bills every tool call to the X developer account that owns the app". Then it says whether those rules are in place: "no agent runs new X tools unasked", "default rules missing in the agents listed below", or "default rules
 not added (see the OpenCode row)".
 
 When the status cannot be read, the method answers with its error `unavailable`: the message

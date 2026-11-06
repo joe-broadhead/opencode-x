@@ -18,7 +18,7 @@ never sees the OAuth token. X's bookmark changes, `create_users_bookmark_folder`
 
 ## Every call costs money
 
-X bills every call to the user's X API credits. A post read is about $0.005, a user read about $0.010, a read of the
+X bills every call to the X developer account that owns the app. A post read is about $0.005, a user read about $0.010, a read of the
 user's own posts, mentions or bookmarks about $0.001, and a bookmark change about $0.005. A search page holds 10 to
 100 posts, so a 100-post page is about $0.50.
 
@@ -128,7 +128,7 @@ added later, and `rpc.invalid_input` for a body that is not the envelope above, 
 - Call a tool that is not one of the known reads, even with an allow rule.
 - Answer an approval prompt, or use a tool that asks.
 - Use a token or key: the plugin has none to give.
-- Read X without a bill: every call is charged to the user's credits.
+- Read X without a bill: every call is charged to the developer account that owns the app.
 
 A script's calls write nothing to the session, and OpenCode's `execute.before` and `execute.after` tool hooks, from any
 plugin, do not run for them.

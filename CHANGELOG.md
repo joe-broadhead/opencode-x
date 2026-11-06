@@ -12,6 +12,12 @@ All notable changes to this project are documented in this file. It follows
   OAuth client: the client ID and secret from the plugin options or the `/connect` **X app** entry, the callback
   `http://127.0.0.1:8766/callback` and the scopes `tweet.read users.read bookmark.read bookmark.write tweet.write
   offline.access` pinned, and no client shipped.
+- Public (Native App) client sign-in, with PKCE and no secret, so an organisation can share one team app through
+  managed config: members only run `/connect` → X, and their calls bill the team's X developer account. The checks
+  cover the public sign-in and a refresh; whether X issues a public client a refresh token is unconfirmed live.
+- A team rollout in the configuration guide, with the admin's X-portal steps, both callbacks, the billing
+  consequences, and the warning that a client secret must never be distributed.
+- Status names the kind of app in use, and its source, and never shows a secret.
 - Default permission rules: the read tools run, every bookmark change, Article draft and Article publish asks, and a
   tool X adds later asks.
 - `/x-status` and the `/x` status dialog, covering the connection, account, access, the app and its callback and
