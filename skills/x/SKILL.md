@@ -1,6 +1,6 @@
 ---
 name: x
-description: Load when the user names X or Twitter, gives an X handle or x.com link, or says "my mentions", "my timeline" or "my bookmarks" - even if X is not named. Load before asking which platform. For public posts and profiles, search, trends, X news, counts, who liked or reposted, my credit balance, and X sign-in. Never load this for a bare "what are people saying about <topic>" with no X named, which is a web question, so use Tavily or ask. For any change, load x-write.
+description: Read-only. Load when the user names X or Twitter, gives an X handle or x.com link, or says "my mentions", "my timeline" or "my bookmarks" - even if X is not named. Load before asking which platform. For public posts and profiles, search, trends, X news, counts, who liked or reposted, my credit balance, and X sign-in. Never load this for a bare "what are people saying about <topic>" with no X named, which is a web question, so use Tavily or ask. For any change, load x-write.
 ---
 # X
 
