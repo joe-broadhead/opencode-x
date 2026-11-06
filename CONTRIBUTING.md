@@ -41,6 +41,7 @@ npm run check
 | `typecheck` | `tsc --noEmit` over `src/` and `test/`, strict, with unused names as errors |
 | `unit` | `bun test ./test/unit`: every module in `src/`, the docs' counts and error table, and the Jelly declaration |
 | `build` | `node scripts/build.mjs`: deletes `dist/` and bundles `src/index.ts` and `src/tui.ts` with esbuild into the self-contained `dist/index.js` and `dist/tui.js`. Fails if a bundle imports anything the host does not provide |
+| `icons` | `node scripts/check-icons.mjs`: the SVG is clean and exact, the 128 and 256 PNGs exist, and exports and files agree |
 | `host` | `bun test ./test/host`: the plugin inside an embedded OpenCode host, once on each tested release (`@opencode/sdk` 2.2.3, 2.2.4 and 2.2.5) |
 | `pack` | `bun test ./test/pack`: builds, packs and installs the package, imports both entry points, and loads it in stock OpenCode 2.2.3, 2.2.4 and 2.2.5 |
 | `forbidden` | `node scripts/check-forbidden.mjs`: scans `src/`, `test/`, `scripts/` and `dist/` for forbidden APIs and machine-local paths |
@@ -104,7 +105,7 @@ check, and never save a token, a client secret or X content in this repository.
 ## X's tools
 
 `src/x-tools.ts` is the one record of the X tools the plugin knows: `READ_TOOLS` run without a prompt and are the
-tools RPC's methods; `ASK_READ_TOOLS` are reads whose output can carry a secret; `WRITE_TOOLS` are private writes that
+tools RPC's methods; `WRITE_TOOLS` are private writes that
 ask; `PUBLIC_TOOLS` reach other people and ask; `DENY_TOOLS` are off; `DENY_PATTERNS` is a safety net for a future
 tool of a denied effect; and `PARAMETERS` holds each tool's input parameters. The default rules, the tools RPC,
 status's unknown and denied tools, the fake server in the host and pack tests, and the checks of `jelly.tools`, the
@@ -127,7 +128,7 @@ it, and it never calls X or reads a credential. Save the tool list first, by eit
 - an MCP client's `tools/list` result for `https://api.x.com/mcp`, saved as JSON, which also carries X's annotations.
 
 A list in the research form, `{ "tools": [{ "name", "annotations", "inputs": ["name*:type", …] }] }`, works too, and
-`annotations` and `inputs` may be missing, as in `test/unit/x-tools.json`. Keep a saved list out of this repository,
+`annotations` and `inputs` may be missing, as in `test/unit/x-live-tools.json`. Keep a saved list out of this repository,
 except as that fixture, which lists names and input schemas only. Then:
 
 ```sh
@@ -161,8 +162,8 @@ line with no local path) when X changes its tools.
    user's own account and reaches nobody to `WRITE_TOOLS`. Add a tool that posts, replies, quotes, reposts, publishes,
    mentions or messages anyone to `PUBLIC_TOOLS`. Add a tool that sends a DM or chat message, follows or unfollows,
    blocks or mutes, deletes a post, changes list membership, changes a moderator role, schedules a call, goes live,
-   manages a stream source, changes account settings, or sends data to X's team to `DENY_TOOLS`. A read whose output
-   can carry a secret goes to `ASK_READ_TOOLS`. Leave a tool out if you are not sure: it then asks before every call,
+   manages a stream source, changes account settings, or sends data to X's team to `DENY_TOOLS`. Leave a tool out if
+   you are not sure: it then asks before every call,
    and scripts cannot call it.
 4. Update `PARAMETERS` from the schemas, `jelly.tools` in `package.json`, and any skill text that names a changed tool.
    With parameters recorded, a skill may give a literal call such as `search_posts_all({ … })`, and the skills test

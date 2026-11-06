@@ -13,16 +13,19 @@ All notable changes to this project are documented in this file. It follows
   `http://127.0.0.1:8766/callback` and the scopes `tweet.read users.read bookmark.read bookmark.write tweet.write
   offline.access` pinned, and no client shipped.
 - Public (Native App) client sign-in, with PKCE and no secret, so an organisation can share one team app through
-  managed config: members only run `/connect` → X, and their calls bill the team's X developer account. The checks
-  cover the public sign-in and a refresh; whether X issues a public client a refresh token is unconfirmed live.
+  managed config: members only run `/connect` → X, and their calls bill the team's X developer account. X issued a
+  public client a refresh token in the live test, and OpenCode refreshed it.
+- The pinned scopes cover every allowed read and asked write, including `follows.read`, `like.read`, `block.read`,
+  `list.read`, `list.write`, `space.read`, `broadcast.read` and `calls.read`; no denied tool's scope is requested.
 - A team rollout in the configuration guide, with the admin's X-portal steps, both callbacks, the billing
   consequences, and the warning that a client secret must never be distributed.
 - Status names the kind of app in use, and its source, and never shows a secret.
+- The two stream-source tools are allowed reads; X's descriptions say the stream key is not in their response.
 - The family icon kit's Neutral slate mark, with `opencode.icons` (SVG, 128 and 256 PNG), the
   `opencode.vendor` declaration for X, and the three asset `exports`.
-- Default permission rules: the 49 read tools run; the bookmark, list, Article-draft and public-Post writes and the
-  two source reads ask; the 40 tools for DMs and chat, calls, follows, blocks, mutes, list membership, moderators and
-  live video are off; a tool X adds later asks.
+- Default permission rules: the 51 read tools run; the bookmark, list, Article-draft and public-Post writes ask; the
+  40 tools for DMs and private chat conversations, calls, follows, blocks, mutes, list membership, moderators and live
+  video are off; a tool X adds later asks.
 - `/x-status` and the `/x` status dialog, covering the connection, account, access, the app and its callback and
   scopes, the tools, agents without the default rules, the OpenCode check, and one next step.
 - Two skills, `x` and `x-write`: searching and citing X posts, the cost of every call, your own timeline and

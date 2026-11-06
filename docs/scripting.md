@@ -22,7 +22,8 @@ X bills every call to the X developer account that owns the app. A post read is 
 user's own posts, mentions or bookmarks about $0.001, and a bookmark change about $0.005. A search page holds 10 to
 100 posts, so a 100-post page is about $0.50.
 
-- Set the smallest result count the tool's schema allows; `describe` gives the field names.
+- Pass `max_results` on every call and keep it small: without it X sends its whole default page. `describe` gives the
+field names.
 - Never page in a loop. A script that pages through 500 posts costs the user about $2.50 for one run.
 - The same resource read twice in a 24-hour window is charged once; a new page is not.
 

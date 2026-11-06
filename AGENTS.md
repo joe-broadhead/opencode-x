@@ -51,7 +51,7 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
   Everything else derives from it;
   `jelly.tools` and the skills are checked against it. Its names are the live list captured on 2026-11-06, with no
   annotations, and `PARAMETERS` comes from its input schemas: reconciling is a change to that file,
-  `test/unit/x-tools.json`, `jelly.tools` and the skills, which `npm run drift` guides. `src/constants.ts` has no
+  `test/unit/x-live-tools.json`, `jelly.tools` and the skills, which `npm run drift` guides. `src/constants.ts` has no
   imports at all: `scripts/check.mjs` loads it with Node's type stripping.
 - **Every call is billed.** Docs, skills, status and the namespace text say so plainly. The skills keep result counts
   small, never page a search in a loop, and say when a wide search will cost money. The plugin cannot cap the bill.
@@ -67,7 +67,7 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
   and the `icon`, with only the keys Jelly reads: its contracts drop an unknown top-level key, and refuse an unknown
   key inside a tool, sign-in or `contributes` entry. `test/unit/jelly.test.ts` keeps it in step with the tool lists and
   the default rules.
-- **The icon** `assets/icon.svg` is a neutral speech bubble with a search lens on a slate tile: no X logo, no "𝕏"
+- **The icon** `assets/icon.svg` is a Neutral slate tile with a spine, three nodes and three rules: no X logo, no "𝕏"
   glyph and no brand black, because the plugin is unofficial. It uses only the drawing elements Jelly's icon cleaner
   keeps, and no `<title>`, which the cleaner refuses.
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
