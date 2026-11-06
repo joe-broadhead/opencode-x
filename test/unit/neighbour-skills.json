@@ -1,0 +1,14 @@
+{
+  "skills": {
+    "metaview": "Load before the first Metaview tool call. For the user's recruiting interviews and candidates: what a candidate said in an interview, scorecards, a candidate brief, sourcing, screening and job posts.",
+    "metaview-candidate-brief": "Prep me for my interview with a candidate, build a debrief or evidence pack, compare finalists, or check a scorecard against the transcript.",
+    "wisprflow": "Load before the first Wispr Flow tool call. For the user's recorded meetings in Wispr Flow Notetaker, transcripts, Flow Summaries, Scratchpad notes and the calendar Wispr Flow holds.",
+    "granola": "Load before the first Granola tool call. For questions about the user's Granola meetings: what was said, decided or assigned, notes, transcripts and follow-ups.",
+    "linear": "Read before the first Linear tool call. For the user's Linear issues, projects, cycles, initiatives, documents and comments.",
+    "slack-search": "Find, read, summarise or cite anything in the user's Slack: messages, threads, channels, people, canvases, lists or files.",
+    "opencode-gws": "For the user's Gmail, Google Calendar, Drive, Docs, Sheets, Tasks and other Google Workspace data: check my inbox, what's on my calendar, find that doc, send this email.",
+    "opencode-plaud": "Plaud voice recordings: list, search and read recordings with their transcripts, notes and highlights.",
+    "tavily": "Search the web and read web pages: current facts, news, documentation, mapping or crawling a site, and gathering cited sources.",
+    "xurl": "Use X's xurl command-line bridge for the X API: authenticate, and run X API requests from a shell."
+  }
+}
