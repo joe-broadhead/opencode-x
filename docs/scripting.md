@@ -75,12 +75,13 @@ key is allowed.
 ```sh
 opencode api post /api/rpc/x.posts.tools/search_posts_all -d '{"input":{
   "sessionID":"ses_…",
-  "input":{"query":"from:example since:2026-01-01","max_results":10}
+  "input":{"query":"from:example","start_time":"2026-01-01T00:00:00Z","end_time":"2026-01-08T00:00:00Z","max_results":10}
 }}'
 ```
 
 The tool's input is X's, and X defines its fields and may change them: `describe` shows each tool's schema as
-OpenCode lists it now. Check it rather than guess a field name or a filter's shape.
+OpenCode lists it now. Check it rather than guess a field name or a filter's shape. A date window is RFC 3339 UTC
+(`start_time` and `end_time`, ending in `Z`); X's search has no web-style date operator.
 
 ```sh
 opencode api post /api/rpc/x.posts.tools/describe -d '{"input":{}}'
