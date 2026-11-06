@@ -142,8 +142,8 @@ The writes, which ask:
   not the post.
 - `x_create_users_bookmark_folder` creates a folder that only the user sees in their X app.
 - `x_article_create_draft` saves a private Article draft. Nothing is public yet.
-- `x_article_publish` publishes the draft on the user's profile and in followers' timelines. The plugin has no tool
-  to unpublish it: removal means deleting the post in the X app.
+- `x_article_publish` publishes the draft: anyone can read it, and it appears on the user's profile and in
+  followers' timelines. The plugin has no tool to unpublish it: removal means deleting the post in the X app.
 
 A deny also hides the tool from the model. No tool X offers today is denied, but `DENY_PATTERNS` denies a future tool
 that messages, follows, blocks, mutes, deletes a post, changes a list or changes the account. Turning one on takes a
@@ -309,8 +309,8 @@ meanings:
 | `nextStep` | Exactly one next step: the `Next step` row, `Nothing to do.` when nothing is needed |
 
 The `Access` row states the posture the default rules fix: "reads run without asking; bookmark changes, Article
-drafts and publishing ask first; X bills every tool call to your API credits". Then it says whether those rules are
-in place: "no agent runs new X tools unasked", "default rules missing in the agents listed below", or "default rules
+drafts and publishing ask first; a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the
+account is off; X bills every tool call to your API credits". Then it says whether those rules are in place: "no agent runs new X tools unasked", "default rules missing in the agents listed below", or "default rules
 not added (see the OpenCode row)".
 
 When the status cannot be read, the method answers with its error `unavailable`: the message

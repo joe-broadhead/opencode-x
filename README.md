@@ -122,8 +122,8 @@ So reads run, and every change asks: bookmarking, unbookmarking, creating a book
 publishing one. No tool X offers today is off. A tool X adds later that messages, follows, blocks, mutes, deletes a
 post, changes a list or changes the account is off, by the plugin's rule. Each change's sentence, and whom it
 reaches, is in the `x-write` skill.
-Publishing is the only one that reaches other people: the Article appears on your profile and in followers'
-timelines, and the plugin has no tool to unpublish it.
+Publishing is the only one that reaches other people: anyone can read the Article, and it appears on your profile and
+in followers' timelines. The plugin has no tool to unpublish it.
 
 Everything that comes later than these rules still wins: an agent's own stricter rules (Explore cannot use X), your
 `permissions` in `opencode.json`, and your saved "Always allow" answers. In an unattended run such as
@@ -242,9 +242,9 @@ A script's errors from the tools RPC have their own codes, listed in
 - **There is no unpublish tool.** An Article published by mistake is deleted in the X app.
 - **X's `xurl` bridge is an alternative, not this plugin's route.** X documents
   `npx -y @xdevplatform/xurl mcp https://api.x.com/mcp`, which holds your app, opens a browser at the first tool call,
-  and caches the token in `~/.xurl`. It moves the sign-in outside `/connect`, needs a Node download and a child
-  process, and OpenCode cannot see its sign-in state, so this plugin does not use it. It remains a working fallback if
-  you need a local bridge and accept that.
+  and caches the token in `~/.xurl`. It moves the sign-in outside `/connect` and its calls outside these permission
+  rules, needs a Node download and a child process, and OpenCode cannot see its sign-in state, so this plugin does not
+  use it. It remains a working fallback if you need a local bridge and accept that.
 - **A script's read can cross projects.** A script's session may belong to another directory than the OpenCode
   server answering it, and the read then runs under the serving location's agent rules; only a `deny` is refused in
   between. Run scripts in the project whose agent you mean. This is in the module shared with the other plugins, not

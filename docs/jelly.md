@@ -23,8 +23,8 @@ choice replaces it), and denies a read-only helper every tool not marked `readOn
 
 - Ask: `x_create_users_bookmark` (bookmarks a post for the user only), `x_delete_users_bookmark`
   (removes that bookmark, not the post), `x_create_users_bookmark_folder` (a folder only the user
-  sees), `x_article_create_draft` (a private draft) and `x_article_publish` (**public**: the Article
-  appears on the user's profile and in followers' timelines, and the plugin cannot unpublish it).
+  sees), `x_article_create_draft` (a private draft) and `x_article_publish` (**public**: anyone can read the Article,
+  it appears on the user's profile and in followers' timelines, and the plugin cannot unpublish it).
 - Nothing X offers today is off. The plugin itself denies a future DM, follow, block, mute, post-delete, list-membership or account tool, but Jelly does not: it declares no such tool, so set it to deny there.
 - Everything else runs, as the plugin's own rules let it.
 
