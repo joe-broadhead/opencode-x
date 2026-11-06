@@ -1,0 +1,111 @@
+{
+  "name": "@joe-broadhead/opencode-x",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Unofficial OpenCode plugin for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, and draft long-form Articles, through X's official MCP server",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "x",
+    "twitter"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joe-broadhead/opencode-x.git"
+  },
+  "homepage": "https://github.com/joe-broadhead/opencode-x#readme",
+  "bugs": {
+    "url": "https://github.com/joe-broadhead/opencode-x/issues"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./tui": "./dist/tui.js"
+  },
+  "files": [
+    "dist",
+    "assets/icon.svg",
+    "skills",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "opencode": {
+    "host": ">=2.2.3 <2.3.0"
+  },
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "typecheck": "node scripts/check.mjs typecheck",
+    "build": "node scripts/check.mjs build",
+    "test": "node scripts/check.mjs unit",
+    "test:host": "node scripts/check.mjs host",
+    "test:pack": "node scripts/check.mjs pack",
+    "lint": "node scripts/check.mjs forbidden",
+    "drift": "node scripts/check-x-tools.mjs"
+  },
+  "devDependencies": {
+    "@opencode/client": "2.2.3",
+    "@opencode/plugin": "2.2.3",
+    "@opencode/sdk": "2.2.3",
+    "@opentui/core": "0.8.0",
+    "@opentui/solid": "0.8.0",
+    "@types/bun": "1.4.4",
+    "@types/node": "24.19.2",
+    "esbuild": "0.28.2",
+    "solid-js": "1.9.17",
+    "typescript": "5.9.3"
+  },
+  "jelly": {
+    "title": "X",
+    "summary": "Search and read X, your bookmarks, news and trends, and draft Articles.",
+    "icon": "assets/icon.svg",
+    "tools": [
+      { "name": "x.get_news", "permission": "x_get_news", "effect": "allow", "readOnly": true },
+      { "name": "x.get_posts_by_id", "permission": "x_get_posts_by_id", "effect": "allow", "readOnly": true },
+      { "name": "x.get_posts_by_ids", "permission": "x_get_posts_by_ids", "effect": "allow", "readOnly": true },
+      { "name": "x.get_posts_counts_recent", "permission": "x_get_posts_counts_recent", "effect": "allow", "readOnly": true },
+      { "name": "x.get_posts_liking_users", "permission": "x_get_posts_liking_users", "effect": "allow", "readOnly": true },
+      { "name": "x.get_posts_quoted_posts", "permission": "x_get_posts_quoted_posts", "effect": "allow", "readOnly": true },
+      { "name": "x.get_posts_reposted_by", "permission": "x_get_posts_reposted_by", "effect": "allow", "readOnly": true },
+      { "name": "x.get_trends_by_woeid", "permission": "x_get_trends_by_woeid", "effect": "allow", "readOnly": true },
+      { "name": "x.get_users_bookmark_folders", "permission": "x_get_users_bookmark_folders", "effect": "allow", "readOnly": true },
+      { "name": "x.get_users_bookmarks", "permission": "x_get_users_bookmarks", "effect": "allow", "readOnly": true },
+      { "name": "x.get_users_bookmarks_by_folder_id", "permission": "x_get_users_bookmarks_by_folder_id", "effect": "allow", "readOnly": true },
+      { "name": "x.get_users_by_id", "permission": "x_get_users_by_id", "effect": "allow", "readOnly": true },
+      { "name": "x.get_users_by_username", "permission": "x_get_users_by_username", "effect": "allow", "readOnly": true },
+      { "name": "x.get_users_by_usernames", "permission": "x_get_users_by_usernames", "effect": "allow", "readOnly": true },
+      { "name": "x.get_users_me", "permission": "x_get_users_me", "effect": "allow", "readOnly": true },
+      { "name": "x.get_users_mentions", "permission": "x_get_users_mentions", "effect": "allow", "readOnly": true },
+      { "name": "x.get_users_posts", "permission": "x_get_users_posts", "effect": "allow", "readOnly": true },
+      { "name": "x.get_users_timeline", "permission": "x_get_users_timeline", "effect": "allow", "readOnly": true },
+      { "name": "x.search_news", "permission": "x_search_news", "effect": "allow", "readOnly": true },
+      { "name": "x.search_posts_all", "permission": "x_search_posts_all", "effect": "allow", "readOnly": true },
+      { "name": "x.search_users", "permission": "x_search_users", "effect": "allow", "readOnly": true },
+      { "name": "x.article_create_draft", "permission": "x_article_create_draft", "effect": "ask", "readOnly": false },
+      { "name": "x.create_users_bookmark", "permission": "x_create_users_bookmark", "effect": "ask", "readOnly": false },
+      { "name": "x.create_users_bookmark_folder", "permission": "x_create_users_bookmark_folder", "effect": "ask", "readOnly": false },
+      { "name": "x.delete_users_bookmark", "permission": "x_delete_users_bookmark", "effect": "ask", "readOnly": false },
+      { "name": "x.article_publish", "permission": "x_article_publish", "effect": "ask", "readOnly": false }
+    ],
+    "skills": [
+      "x",
+      "x-write"
+    ],
+    "rpc": [],
+    "views": [],
+    "signIns": [
+      {
+        "id": "x",
+        "label": "X",
+        "server": "x"
+      }
+    ],
+    "contributes": {
+      "homeFeeds": [],
+      "homeWidgets": [],
+      "workKinds": [],
+      "settings": []
+    }
+  }
+}
