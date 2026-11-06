@@ -85,8 +85,8 @@ read and over what window, cites each post by handle and link, and never follows
 | `/x-status` | Posts the status report into the session: connection, account, access, the app, the callback, the scopes, tools, agents without the default rules, the OpenCode check and the next step. |
 | `/x`, or "X: Status" in the command palette | Opens the same report in a dialog. Press `r` to refresh it and `Esc` to close it. It also refreshes when X's connection, the sign-in or the agents change. |
 
-X's MCP has no account tool in this report, so the Account row shows the name OpenCode keeps on the sign-in, if it
-has one. The plugin makes no X call of its own: status costs nothing.
+Status makes no X call, so the Account row shows the name OpenCode keeps on the sign-in, if it has one; the model
+calls `get_users_me` once when it needs the handle. Status costs nothing.
 
 Two skills teach the model to use X well:
 
@@ -205,7 +205,7 @@ Run `/x-status` first. Its last line is the next step.
 | Tools: 0 available | X lists no tools for this app. Check that it is in Pay-per-use, Production, with the scopes above, then sign in again. |
 | Tools: unknown | X added tools the plugin does not know yet. They ask before they run. A known tool missing from the count is normal: X may list fewer tools for a token with fewer scopes. |
 | Access: default rules missing or not added | Some agents lack the default rules (see the agents row), or OpenCode could not add them (see the OpenCode row). Follow the next step. |
-| Account: account name not reported | Nothing is wrong: X's MCP has no account tool, and OpenCode keeps no name on this sign-in. X answers follow the account you signed in as. |
+| Account: account name not reported | Nothing is wrong: status makes no X call, and OpenCode keeps no name on this sign-in. X answers follow the account you signed in as. |
 | Answers cost more than expected | Every call is billed per resource returned. Keep the result count to ten unless the answer needs more, don't page a whole search, and read your own mentions and bookmarks instead of searching for them. |
 | Posting is missing | X's MCP server exposes no post, reply, quote, repost, like, follow, message or delete tool. Ask the model to draft the text, or to publish it as an Article. |
 | `429` | X's rate limit for that endpoint is used up. Wait for the reset X returns, and make fewer calls. |

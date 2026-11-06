@@ -75,7 +75,7 @@ export interface Status {
   readonly source?: ServerSource
   /**
    * The label OpenCode keeps on the active sign-in, on one line of at most 80 characters; absent when it has none.
-   * X's MCP has no account tool in the plugin's own status, so the plugin learns nothing else about the account.
+   * Status makes no X call, because every call costs money, so the plugin learns nothing else about the account.
    */
   readonly account?: string
   /** The X app OpenCode signs in with: its client ID, whether it has a secret, and where it came from. Never the secret. */
