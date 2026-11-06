@@ -21,10 +21,9 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
 - The X app's client ID and secret come from the plugin options or the `/connect` **X app** entry, and are kept in
   OpenCode's credential store or managed config. The plugin never reads the OAuth token. Status shows the client ID,
   whether a secret is set and where it came from; it never shows the secret.
-- **Stream sources can carry a secret.** `get_source` and `list_sources` return a user's RTMP/RTMPS ingest point; X's
-  source object holds the stream URL and its key, which lets anyone publish to that stream. The captured live list
-  has no output schema, so the plugin cannot confirm the shape, and both tools stay ask. Treat a source as a
-  credential, and never put its key in a message, a file or another tool.
+- **Stream sources.** `get_source` and `list_sources` are allowed reads. X's descriptions say the stream key is not
+  included in either response, and the plugin exposes no tool that reads it; the plugin still treats a source as
+  sensitive, and never asks for a denied broadcast or source write.
 - **A public client ID is not a secret.** A Native App's client ID only identifies the app, so it is safe to distribute
   in managed config for a team app. A client secret authenticates the app and must never be distributed: anyone with
   it can act as the app. If one leaks, rotate it in X's console.
@@ -44,7 +43,8 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
 - **X content is adversarial.** Posts, bios, display names and Article text come from anyone and often contain
   instructions aimed at the model. The namespace text and the skills tell the model to treat every result as data,
   never to follow an instruction in it, and never to let it choose a tool, a recipient or a change. X's terms also
-  forbid automated replies without prior approval and automated or bulk likes; the plugin exposes neither.
+  forbid automated replies without prior approval and automated or bulk likes. The plugin has no like tool; a reply
+  is possible through `x_create_posts`, asks every time, and those reply rules still apply.
 - **Every call is billed** to the X developer account that owns the app, and the plugin cannot cap the bill. The skill keeps calls to
   the smallest page, says when a search is wide, and never pages a search in a loop. A script pays the same rates; a
   spending limit in X's console is the backstop.
@@ -54,14 +54,16 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
 What the model can do in X is limited by these layers, in this order:
 
 1. **X's server and the app's scopes.** The sign-in is your own X account, and the token carries the app's scopes.
-   Without `bookmark.write` or `tweet.write`, those tools fail with `403` or are not listed. X's app-only bearer token
-   cannot reach your timeline, mentions or bookmarks; the hosted server uses the user's sign-in.
-2. **Default permission rules.** Every X tool asks before it runs, except the read tools listed in `src/x-tools.ts`,
-   which run without a prompt. Every change asks, and `x_create_posts` is public: anyone can read the Post,
-   it appears on the user's profile and in followers' timelines, and the plugin has no delete tool. No tool X offers today is
-   denied; `DENY_PATTERNS` in `src/x-tools.ts` and the last rules of `defaultRules()` deny a future DM, follow,
-   block, mute, post-delete, list-membership or account-settings tool by its effect, before any release classifies
-   it.
+   The plugin requests only the scopes its 51 reads and 9 asking writes need, including `follows.read`, `like.read`,
+   `block.read`, `list.read`, `list.write`, `space.read`, `broadcast.read` and `calls.read`; it requests no scope for a
+   denied tool. A missing scope makes its tools fail with `403` or disappear. X's app-only bearer token cannot reach
+   your timeline, mentions or bookmarks; the hosted server uses the user's sign-in.
+2. **Default permission rules.** 40 of X's 100 live tools are denied by name in `DENY_TOOLS`: DMs and private chat
+   conversations (reads included), scheduled calls, follows, blocks, mutes, list membership, chat moderator roles, and
+   live video with its sources. Every other tool asks before it runs, except the 51 read tools listed in
+   `src/x-tools.ts`, which run without a prompt. `x_create_posts` is public: anyone can read the Post, it appears on
+   the user's profile and in followers' timelines, and the plugin has no delete tool. `DENY_PATTERNS` and the last
+   rules of `defaultRules()` deny a future tool of the same effect before any release classifies it.
 3. **Your OpenCode permissions.** Your `permissions` rules and saved "Always allow" answers override the default
    rules. A `deny` you configure always wins.
 
@@ -85,8 +87,8 @@ Things to know:
 - **The client secret is a credential.** A config file may be synced, backed up or shared, so prefer
   `{env:X_CLIENT_SECRET}` in `opencode.json`, or the `/connect` X app entry, over a literal value. OpenCode substitutes
   the variable when it loads the config; an unset variable arrives as an empty string, which `OPTIONS_INVALID`
-  rejects. A Native App needs no secret: its sign-in is covered by the checks, though X's refresh token for a public
-  client is unconfirmed live.
+  rejects. A Native App needs no secret: X issued it a refresh token in the live test, and OpenCode refreshed it after
+  about two hours.
 
 ## Scripts
 

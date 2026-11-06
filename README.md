@@ -16,12 +16,16 @@ Unofficial; not affiliated with X Corp.
   callback URI:
 
   ```text
-  tweet.read users.read bookmark.read bookmark.write tweet.write offline.access
+  tweet.read users.read follows.read like.read block.read list.read list.write
+  space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write offline.access
   http://127.0.0.1:8766/callback
   ```
 
-  X matches the callback exactly: no wildcard, no other port. If your console refuses `127.0.0.1`, register
-  `http://localhost:8766/callback` instead and set `oauth.redirect_uri` to the same URL.
+  Each group needs its own scope: `follows.read` for follower and following reads, `like.read` for liked Posts,
+  `block.read` for blocking, `list.read`/`list.write` for lists and membership, and the rest for Spaces, broadcasts
+  and calls. X matches the callback exactly: no wildcard, no other port. If your console refuses `127.0.0.1`,
+  register `http://localhost:8766/callback` and set `oauth.redirect_uri` to the same URL. OpenCode listens on
+  `127.0.0.1` only: if the browser tries IPv6 for `localhost`, use `127.0.0.1` in the address bar.
 - The app in **Pay-per-use** and the **Production** environment, with **credits** and a spending limit (the app admin
   sets these). Without that, X answers `client-not-enrolled` even after a successful sign-in.
 - **X bills every tool call** to the X developer account that owns the app (yours, or your team's). Current rates, from
@@ -69,15 +73,17 @@ and for a confidential (Web App) app its client secret, are the sign-in.
 
 1. For your own app, create it in [console.x.com](https://console.x.com): open **User authentication settings**, set
    OAuth 2.0 on, choose **Web App** (a confidential client), add the callback and scopes above, and copy the **Client
-   ID** and **Client secret**. A **Native App** (public client, no secret) is what a team app uses: the plugin's
-   checks cover its sign-in against a fake, but whether X issues it a refresh token is unconfirmed until a live test.
-2. In OpenCode, run `/connect` and choose **X app**. Paste the client ID; paste the secret in the optional field. If an
-   organisation already set the client ID in managed config, there is no X app step: go to step 3.
+   ID** and **Client secret**. A **Native App** (public client, no secret) is what a team app uses: X issued it a
+   refresh token in the live test on 2026-11-06, and OpenCode refreshed it about two hours later.
+2. In OpenCode, run `/connect` and choose **X app**. Paste the client ID; paste the secret in the optional field. From
+   a terminal, `opencode auth login x-app` does the same. If an organisation already set the client ID in managed
+   config, there is no X app step: go to step 3.
 3. Run `/connect` and choose **X**, then press `o` or Enter to open the link. Sign in and approve the scopes.
 
 From a terminal, `opencode mcp auth x` opens the link automatically. `/mcps` also offers the same sign-in. No bearer
 token is pasted into OpenCode: the app's client ID, and its secret for a confidential app, are the sign-in, and
-OpenCode stores and refreshes the token.
+OpenCode stores and refreshes the token. After upgrading, sign in again so the app grants any scopes this version
+added.
 
 To sign out, or switch account, run `opencode mcp logout x`, or remove the account in `/connect` → X, then sign in
 again. To remove the app's access entirely, use X's connected-apps settings.
@@ -132,16 +138,16 @@ Keep the result count small: every call is billed. See
 The plugin adds these rules to every agent, directly after the agent's base rule that allows everything:
 
 1. `{ "action": "x_*", "resource": "*", "effect": "ask" }`: every X tool asks, including tools X adds later.
-2. One `allow` rule for each of X's 49 read tools, listed in
+2. One `allow` rule for each of X's 51 read tools, listed in
    [`src/x-tools.ts`](https://github.com/joe-broadhead/opencode-x/blob/HEAD/src/x-tools.ts). These run without a
    prompt.
-3. One `deny` rule for each of the 40 tools that are off: DMs and chat (reads included), calls, follows, blocks,
-   mutes, list membership, chat moderators, and live video with its sources.
+3. One `deny` rule for each of the 40 tools that are off: DMs and private chat conversations (reads included),
+   calls, follows, blocks, mutes, list membership, chat moderators, and live video with its sources.
 
-So 49 reads run; 11 tools ask (the bookmark, list and Article-draft writes, `x_create_posts`, and the two source
-reads that can return a stream key); and 40 are off. Each change's sentence, and whom it reaches, is in the
-`x-write` skill. `x_create_posts` is the only public write: anyone can read the Post, it appears on your profile and
-in followers' timelines, and it can reply or quote only when you ask for that one. To turn posting off for one agent:
+So 51 reads run; 9 tools ask (the bookmark, list and Article-draft writes and `x_create_posts`); and 40 are off. Each
+change's sentence, and whom it reaches, is in the `x-write` skill. `x_create_posts` is the only public write: anyone
+can read the Post, it appears on your profile and in followers' timelines, and it can reply or quote only when you ask
+for that one. To turn posting off for one agent:
 
 ```json
 { "agents": { "build": { "permissions": [{ "action": "x_create_posts", "resource": "*", "effect": "deny" }] } } }
@@ -177,15 +183,16 @@ Set options with the object form of the plugin entry:
 | Option | Values | Default | Effect |
 | --- | --- | --- | --- |
 | `oauth.client_id` | Your X app's client ID | none | The app OpenCode signs in with. Set in managed config, it replaces the `/connect` X app entry. |
-| `oauth.client_secret` | Your X app's client secret, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out for a Native App (public client): its sign-in is covered, but X's refresh token for it is unconfirmed live. |
+| `oauth.client_secret` | Your X app's client secret, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out for a Native App (public client); X issued it a refresh token in the live test. |
 | `oauth.redirect_uri` | A URL registered in the app | `http://127.0.0.1:8766/callback` | Must match X's registered callback exactly. |
 | `oauth.callback_port` | `1`–`65535` | none | Only with an `https:` redirect: the local port a proxy forwards to. |
-| `oauth.scopes` | X OAuth 2.0 scopes | `tweet.read users.read bookmark.read bookmark.write tweet.write offline.access` | Dropping `bookmark.write` or `tweet.write` makes those tools fail with `403`; dropping `offline.access` means no refresh token, so the sign-in expires within two hours. |
+| `oauth.scopes` | X OAuth 2.0 scopes | `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write offline.access` | Dropping a group's scope makes those tools fail with `403` or removes them; dropping `offline.access` means no refresh token. |
 | `allowUntestedHost` | `true` or `false` | `false` | Starts on an OpenCode version outside `>=2.2.3 <2.3.0`, with a warning in status. |
 
 `{env:NAME}` is substituted when OpenCode loads the config, so the secret can stay in your environment instead of the
-file. An unset variable arrives as an empty string, which the plugin rejects with `OPTIONS_INVALID`. Prefer it: a
-config file may be synced, backed up or shared.
+file. An unset variable arrives as an empty string, which the plugin rejects with `OPTIONS_INVALID`. A variable
+exported in a terminal reaches only an OpenCode started from that terminal: when OpenCode runs as a service or the
+desktop app, save the secret through `/connect` → **X app** instead.
 
 [docs/configuration.md](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/configuration.md) has the details,
 including your own `mcp.servers.x` entry, permission recipes and every error.
@@ -243,6 +250,7 @@ Run `/x-status` first. Its last line is the next step.
 | OpenCode: untested | OpenCode is not 2.2.3, 2.2.4 or 2.2.5. Inside `>=2.2.3 <2.3.0` the plugin runs normally; outside it, it runs only because `allowUntestedHost` is set. If X misbehaves, use a tested release. |
 | Connection: sign-in required soon after signing in | The app lacks `offline.access`, so X issued no refresh token and the two-hour token expired. Add the scope in the app and sign in again. |
 | Signed in to the wrong X account | Run `opencode mcp logout x` (or remove the account in `/connect` → X), then sign in again. |
+| Upgraded, and a read or write now fails with `403` | The new version asks for more scopes. Sign in again, and add the missing scope in the app first. |
 | An X tool is refused in `opencode run` | Nobody could answer its prompt. A read runs if you add an `allow` rule for it to the agent's own `permissions`. A write needs an interactive session: this plugin documents no `allow` for one. |
 | A skill seems ignored, and status names a skill to rename or move | A skill of yours with the same id, such as `x`, replaces the plugin's. Rename or move it. |
 | `/x` is missing | The plugin did not start. Run `/plugins` to see the error. |
@@ -258,14 +266,11 @@ A script's errors from the tools RPC have their own codes, listed in
 
 ## Known limits
 
-- **The tool table is reconciled with the live list on 2026-11-06.** It was captured from a signed-in OpenCode on
-  2.2.3 (`ctx.tool.list()`), 100 tools with input and output schemas. The capture carries **no annotations**, so each
-  tool's class comes from X's name, description and schema. `test/unit/x-live-tools.json` records the list, and
-  `npm run drift -- <tools.json> --strict` is the check that reconciles it.
-- **A public client's refresh token is unconfirmed live.** X is expected to issue one to a Native App when the request
-  includes `offline.access`, and the plugin's checks show OpenCode asking for it and refreshing without a secret, but
-  this release has not tested it against X. A team app on a public client may need a new sign-in every two hours until
-  then; a confidential app with a secret is the safe choice for a long session.
+- **The tool table was checked against X's live list on 2026-11-06.** X publishes no tool annotations, so each
+  tool's class comes from its name, description and schema. X may add, rename or remove tools; an unknown one asks
+  before it runs, and a known one can be missing for a token with fewer scopes.
+- **A public app refreshes.** X issued a Native App (public client) a refresh token on 2026-11-06, and OpenCode
+  refreshed it about two hours later; `offline.access` is still required.
 - **There is no delete or Article-publish tool.** A Post published by mistake is removed in the X app; an Article
   draft has no publish tool here, so it stays a draft until the user publishes it in X.
 - **X's `xurl` bridge is an alternative, not this plugin's route.** X documents
@@ -293,7 +298,8 @@ Sign out while the plugin is still installed: once it is removed, OpenCode no lo
 2. Check: `opencode auth list` no longer lists **X**.
 3. Remove the plugin: `opencode plugin remove @joe-broadhead/opencode-x`, then `opencode reload`.
    `opencode mcp list` no longer lists `x`.
-4. Remove the **X app** entry in `/connect`, and any X rules you copied into your agents' own `permissions`.
+4. Remove the **X app** entry: `opencode auth logout x-app` from a terminal, or in `/connect`. Remove any X rules you
+   copied into your agents' own `permissions`.
 5. In X's connected-apps settings, revoke the app's access. Delete the app in the console if nothing else uses it.
 
 ## Links

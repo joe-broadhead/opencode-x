@@ -29,15 +29,16 @@ To set options, use the object form:
 
 X has no dynamic client registration and no client metadata documents. The plugin signs in with **your own X app**,
 so it needs the app's OAuth 2.0 client. The values go in the plugin options (managed config) or in the `/connect`
-**X app** entry. Options win.
+**X app** entry. Options win. From a terminal, `opencode auth login x-app` saves the client ID and secret, and
+`opencode auth logout x-app` removes them.
 
 | Key | Values | Default | Notes |
 | --- | --- | --- | --- |
 | `client_id` | A non-empty string without spaces | none | The app's **Client ID**. A public client ID is what a team app shares in managed config. Without it, status is `not configured`. |
-| `client_secret` | A non-empty string, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out for a Native App, a public client with PKCE and no secret; the checks cover its sign-in, but X's refresh token for it is unconfirmed live (see the README's Known limits). Needs `client_id`. |
+| `client_secret` | A non-empty string, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out for a Native App, a public client with PKCE and no secret; X issued it a refresh token in the live test. Needs `client_id`. |
 | `redirect_uri` | An `http:` loopback URL with an explicit port and a path, or an `https:` URL | `http://127.0.0.1:8766/callback` | X matches it exactly. Register the same URL in the app's **User authentication settings**. |
 | `callback_port` | `1`–`65535` | none | Only, and always, with an `https:` redirect: the local port a proxy forwards the callback to. With a loopback redirect, OpenCode listens on the redirect's own port. |
-| `scopes` | A non-empty list of X OAuth 2.0 scopes | `tweet.read users.read bookmark.read bookmark.write tweet.write offline.access` | `offline.access` is what makes X issue a refresh token. Dropping `bookmark.write` or `tweet.write` makes those tools fail with `403`, or removes them from the list. |
+| `scopes` | A non-empty list of X OAuth 2.0 scopes | `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write offline.access` | `offline.access` is what makes X issue a refresh token. Dropping a group's scope makes those tools fail with `403`, or removes them from the list. |
 
 The plugin never shows the client secret: status and the RPC name the client ID, whether a secret is set, and where it
 came from. The secret lives in OpenCode's credential store, or in managed config.
@@ -46,8 +47,9 @@ came from. The secret lives in OpenCode's credential store, or in managed config
 
 OpenCode substitutes `{env:NAME}` in a config value when it loads the file, so `"client_secret": "{env:X_CLIENT_SECRET}"`
 keeps the secret in your environment, not in a file that may be synced, backed up or shared. An unset variable arrives
-as an empty string, which `OPTIONS_INVALID` rejects: export it before OpenCode starts, or save the secret through
-`/connect` → **X app** instead.
+as an empty string, which `OPTIONS_INVALID` rejects. A variable exported in a terminal reaches only an OpenCode started
+from that terminal; when OpenCode runs as a service or the desktop app, save the secret through `/connect` → **X app**
+instead.
 
 ### `allowUntestedHost`
 
@@ -82,7 +84,7 @@ no secret, and no per-member app.
 1. In [console.x.com](https://console.x.com), create an app and open **User authentication settings**. Set OAuth 2.0
    on, choose **Native App** (a public client: client ID only, no secret), and register **both** callbacks:
    `http://127.0.0.1:8766/callback` and `http://localhost:8766/callback`.
-2. Add the scopes `tweet.read users.read bookmark.read bookmark.write tweet.write offline.access`.
+2. Add the scopes `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write offline.access`.
 3. Move the app to **Pay-per-use → Production**. Without it, X answers `client-not-enrolled`.
 4. Buy **credits** and set a **spending limit**. Every member's calls draw on them.
 
@@ -111,8 +113,8 @@ Each member runs `/connect` and chooses X, then presses `o` or Enter. Status sho
 - X describes pay-per-use as for "applications with limited end-users". A larger team may need X's Enterprise plan.
 - Under X's Developer Agreement, the admin is responsible for how the app is used and for the content it reads.
 - A public client ID is not a secret and is safe to distribute. **Never** put a client secret in managed config.
-- X issuing a refresh token to a public client is unconfirmed until a live test; if it does not, a member signs in
-  again every two hours. A confidential app with a secret is the safe choice for a long session.
+- X issued a public Native App a refresh token in the live test on 2026-11-06, and OpenCode refreshed it after about
+  two hours. `offline.access` is still required.
 
 ## Your own `mcp.servers.x`
 
@@ -173,10 +175,10 @@ after that rule:
 That sample leaves out the other 47 read allows, which sit between the two shown; `/x-status` prints the whole block,
 and its `Agents without default rules` row prints it as a list to paste.
 
-`READ_TOOLS` in `src/x-tools.ts` lists the 49 reads that run; `ASK_READ_TOOLS` the two source reads whose output can
-carry a stream key; `WRITE_TOOLS` the 8 private writes; `PUBLIC_TOOLS` the one public write, `create_posts`;
-`DENY_TOOLS` the 40 tools that are off; and `DENY_PATTERNS` a safety net for a future tool of the same effect. A
-write or a tool X adds later that is not one of those effects matches only `x_*`, so it asks. `/x-status` names the
+`READ_TOOLS` in `src/x-tools.ts` lists the 51 reads that run; `WRITE_TOOLS` the 8 private writes; `PUBLIC_TOOLS`
+the one public write, `create_posts`; `DENY_TOOLS` the 40 tools that are off; and `DENY_PATTERNS` a safety net for a
+future tool of the same effect. A write or a tool X adds later that is not one of those effects matches only `x_*`,
+so it asks. `/x-status` names the
 tools in no list. X may list fewer tools for a token with fewer scopes, so a known tool can be missing; that is normal.
 
 The private writes, which ask:
@@ -190,10 +192,10 @@ The private writes, which ask:
 
 `x_create_posts` is public: anyone can read the Post, and it appears on the user's profile and in followers'
 timelines. It can reply (`reply.in_reply_to_tweet_id`), quote (`quote_tweet_id`) or edit
-(`edit_options.previous_post_id`); each asks, only on an explicit request. `x_get_source` and `x_list_sources` also
-ask, because a source can carry the RTMP URL and its stream key.
+(`edit_options.previous_post_id`); each asks, only on an explicit request. `x_get_source` and `x_list_sources` run
+like other reads; X's description says the stream key is not in that response, and no tool here exposes it.
 
-A deny also hides the tool from the model. The 40 off tools are DMs and chat (reads included), follows, blocks,
+A deny also hides the tool from the model. The 40 off tools are DMs and private chat conversations (reads included), follows, blocks,
 mutes, list membership, chat moderators, scheduled calls, and live video with its sources. Turning one on takes a
 later `ask` rule in an agent's own `permissions`; the recipes below narrow.
 
@@ -301,6 +303,82 @@ agent's own rules, so it would loosen Explore. For an agent `reviewer`, with one
 Copy the full block from your own `/x-status` output: the sample above keeps the first two read allows and your own
 rule, and leaves out the other 47.
 
+## Scopes
+
+The plugin requests only scopes that an allowed read or an asked write needs. No denied tool's scope is
+requested, so X also refuses those tools at the account level. `offline.access` is not a tool scope: it is what makes
+X issue a refresh token.
+
+The scope or scopes X's endpoint documents; every one of them is in the pinned set. `space.read` covers
+Spaces, `broadcast.read` your own broadcasts, their chat and moderators, and their sources, and `calls.read`
+scheduled calls.
+
+| Tool | Scope |
+| --- | --- |
+| `article_create_draft` | `tweet.write` |
+| `create_lists` | `list.write` |
+| `create_posts` | `tweet.write` |
+| `create_users_bookmark` | `bookmark.write` |
+| `create_users_bookmark_folder` | `bookmark.write` |
+| `delete_users_bookmark` | `bookmark.write` |
+| `get_broadcast` | `broadcast.read` |
+| `get_broadcast_chat` | `broadcast.read` |
+| `get_chat_moderators` | `broadcast.read` |
+| `get_communities_by_id` | `tweet.read` |
+| `get_lists_by_id` | `list.read` |
+| `get_lists_followers` | `list.read, users.read` |
+| `get_lists_members` | `list.read, users.read` |
+| `get_lists_posts` | `list.read, tweet.read` |
+| `get_news` | `tweet.read` |
+| `get_posts_by_id` | `tweet.read` |
+| `get_posts_by_ids` | `tweet.read` |
+| `get_posts_counts_recent` | `tweet.read` |
+| `get_posts_liking_users` | `like.read, tweet.read, users.read` |
+| `get_posts_quoted_posts` | `tweet.read` |
+| `get_posts_reposted_by` | `tweet.read, users.read` |
+| `get_scheduled_broadcast` | `broadcast.read` |
+| `get_scheduled_call` | `calls.read` |
+| `get_source` | `broadcast.read` |
+| `get_spaces_by_creator_ids` | `space.read` |
+| `get_spaces_by_id` | `space.read` |
+| `get_spaces_by_ids` | `space.read` |
+| `get_spaces_posts` | `space.read, tweet.read` |
+| `get_trends_by_woeid` | `tweet.read` |
+| `get_usage_credits` | `tweet.read` |
+| `get_users_blocking` | `block.read, users.read` |
+| `get_users_bookmark_folders` | `bookmark.read, tweet.read` |
+| `get_users_bookmarks` | `bookmark.read, tweet.read` |
+| `get_users_bookmarks_by_folder_id` | `bookmark.read, tweet.read` |
+| `get_users_by_id` | `users.read` |
+| `get_users_by_username` | `users.read` |
+| `get_users_by_usernames` | `users.read` |
+| `get_users_followed_lists` | `list.read, users.read` |
+| `get_users_liked_posts` | `like.read, tweet.read, users.read` |
+| `get_users_list_memberships` | `list.read, users.read` |
+| `get_users_me` | `users.read` |
+| `get_users_me_followers` | `follows.read, users.read` |
+| `get_users_me_following` | `follows.read, users.read` |
+| `get_users_mentions` | `tweet.read, users.read` |
+| `get_users_owned_lists` | `list.read, users.read` |
+| `get_users_pinned_lists` | `list.read, users.read` |
+| `get_users_posts` | `tweet.read, users.read` |
+| `get_users_timeline` | `tweet.read, users.read` |
+| `list_broadcasts` | `broadcast.read` |
+| `list_scheduled_broadcasts` | `broadcast.read` |
+| `list_scheduled_calls` | `calls.read` |
+| `list_sources` | `broadcast.read` |
+| `pin_list` | `list.write` |
+| `search_communities` | `tweet.read` |
+| `search_news` | `tweet.read` |
+| `search_posts_all` | `tweet.read` |
+| `search_spaces` | `space.read` |
+| `search_users` | `users.read` |
+| `unpin_list` | `list.write` |
+| `update_lists` | `list.write` |
+
+A `403` names the missing scope. Add it in the app's **User authentication settings**, then sign in again. This table
+is the shipped minimum; X may change an endpoint's scope, in which case the `403` is the authority.
+
 ## Errors
 
 Every error from the plugin reads `CODE: What happened. Next step: What to do.`
@@ -348,7 +426,7 @@ meanings:
 | `client` | `id`, `mode` (`public_pkce` for a Native App, `confidential` when a secret is set) and `source` (`options` or `connect`). The `Client` row names `your own app` when it came from `/connect`, or `configured app` when it came from plugin options, as a team app does; status cannot tell managed config from a user's own options. The secret is never shown. |
 | `callback`, `callbackPort`, `scopes` | The redirect URI the app must have registered, the local port for an `https:` redirect, and the scopes OpenCode requests |
 | `tools` | How many X tools OpenCode lists that the default rules let run or ask: the listed ones, without the denied ones |
-| `deniedTools` | The listed tools that the default rules deny, by name or by a safety pattern: the 40 off tools when X lists them all. The `Tools` row shows them as "off by default" |
+| `deniedTools`, `deniedCount` | The listed tools that the default rules deny, as safe plain names capped at 20, and the exact count: 40 when X lists them all. The `Tools` row shows them as "off by default" |
 | `listing` | True while a server that connected moments ago lists no tools yet. The next step is then to run `/x-status` again in a few seconds, not to check the app. |
 | `unknownCount`, `unknownTools` | How many of them the plugin does not know, and at most 20 of their names, only those made of lowercase letters, digits and `_` |
 | `unguardedAgents` | Agents where a new X tool would run without asking; empty when there are none. An agent whose own rules already ask or deny for every X tool is not listed. |
@@ -357,9 +435,10 @@ meanings:
 | `problems` | Setup problems, each `CODE: What happened. Next step: What to do.` |
 | `nextStep` | Exactly one next step: the `Next step` row, `Nothing to do.` when nothing is needed |
 
-The `Access` row states the posture the default rules fix: "reads run without asking; 11 tools ask first (bookmarks,
-lists, an Article draft, source keys and a public Post); 40 are off (DMs and chat, calls, follows, blocks, mutes,
-list membership, moderators and live video); X bills every tool call to the X developer account that owns the app". Then it says whether those rules are in place: "no agent runs new X tools unasked", "default rules missing in the agents listed below", or "default rules
+The `Access` row states the posture the default rules fix: "reads run without asking; 9 tools ask first (bookmarks,
+lists, an Article draft and a public Post); 40 are off (DMs and private chat conversations, calls, follows, blocks,
+mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the
+app". Then it says whether those rules are in place: "no agent runs new X tools unasked", "default rules missing in the agents listed below", or "default rules
 not added (see the OpenCode row)".
 
 When the status cannot be read, the method answers with its error `unavailable`: the message

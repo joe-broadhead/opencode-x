@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { ASK_READ_TOOLS, DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url))
 // Everything a user or the model reads about the current release.
@@ -17,7 +17,7 @@ const FILES = [
   ...readdirSync(join(ROOT, "docs")).map((name) => `docs/${name}`),
   ...readdirSync(join(ROOT, "skills")).map((name) => `skills/${name}/SKILL.md`),
 ]
-const KNOWN = [...READ_TOOLS, ...ASK_READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
+const KNOWN = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
 const text = (file: string) => readFileSync(join(ROOT, file), "utf8").replace(/\s+/g, " ")
 // Every code the plugin raises, whether through an error helper or a status field.
 const CODES = ["OPTIONS_INVALID", "HOST_UNTESTED", "CLIENT_ID_MISSING", "CLIENT_ID_INVALID", "STATUS_UNAVAILABLE", "SKILLS_INVALID", "SERVER_NOT_REGISTERED", "RULES_NOT_ADDED"]
@@ -61,14 +61,14 @@ describe("docs", () => {
     }
     expect(text("SECURITY.md")).toContain("A public client ID is not a secret")
     expect(text("SECURITY.md")).toContain("must never be distributed")
-    expect(readme).toContain("A public client's refresh token is unconfirmed live")
+    expect(readme).toContain("X issued a Native App (public client) a refresh token on 2026-11-06")
   })
 
   test("the README's Known limits says the table was reconciled with the live list, which has no annotations", () => {
     const readme = readFileSync(join(ROOT, "README.md"), "utf8")
     const limits = readme.split("## Known limits")[1]?.split("## Uninstall")[0] ?? ""
-    expect(limits).toContain("reconciled with the live list on 2026-11-06")
-    expect(limits).toContain("no annotations")
+    expect(limits).toContain("checked against X's live list on 2026-11-06")
+    expect(limits).toContain("X publishes no tool annotations")
     expect(readme).not.toMatch(/provisional/i)
   })
 
@@ -98,7 +98,7 @@ describe("docs", () => {
       expect(text(file)).toContain("{env:X_CLIENT_SECRET}")
       expect(text(file)).toContain("empty string")
     }
-    expect(text("README.md")).toContain("a config file may be synced, backed up or shared")
+    expect(text("README.md")).toContain("when OpenCode runs as a service or the desktop app")
     expect(text("docs/configuration.md")).toContain("### `{env:NAME}`")
     expect(text("docs/configuration.md")).toContain("`OPTIONS_INVALID` rejects")
     // The console page that issues the OAuth 2.0 pair, named the same way everywhere.

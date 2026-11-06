@@ -28,19 +28,18 @@ carries no vendor marks, colours or letterforms: only our own Neutral slate tile
 
 ## Tools and permissions
 
-100 tools are declared: 49 reads run, 2 read-only source tools ask, 8 private writes and the public
-`x_create_posts` ask, and 40 are off — every tool in `src/x-tools.ts`. Jelly's agents have no base "allow
+100 tools are declared: 51 reads run, 8 private writes and the public `x_create_posts` ask, and 40 are off — every tool in `src/x-tools.ts`. Jelly's agents have no base "allow
 everything" rule, so this plugin's own default rules, which it puts after that rule, never reach them. Jelly writes
 each declared `ask` or `deny` as that tool's default instead (the person's own choice replaces it), and denies a
 read-only helper every tool not marked `readOnly`. A declared `allow` changes nothing in Jelly.
 
 - Ask: `x_create_users_bookmark`, `x_delete_users_bookmark` and `x_create_users_bookmark_folder` (the user's
   bookmarks); `x_article_create_draft` (a private draft, with no publish tool here); `x_create_lists`,
-  `x_update_lists`, `x_pin_list` and `x_unpin_list` (the user's lists; public unless `private` is true); and
-  `x_get_source` and `x_list_sources` (their output can carry a stream key). `x_create_posts` is **public**: anyone
+  `x_update_lists`, `x_pin_list` and `x_unpin_list` (the user's lists; public unless `private` is true).
+  `x_create_posts` is **public**: anyone
   can read the Post, and it can reply or quote only when the user asks for that one.
-- Off: the 40 tools for DMs and chat (reads included), scheduled calls, follows, blocks, mutes, list membership, chat
-  moderators, and live video with its sources.
+- Off: the 40 tools for DMs and private chat conversations (reads included), scheduled calls, follows, blocks, mutes, list membership, chat
+  moderators, and live video with its sources. Your own broadcast's chat messages and moderators run, as reads.
 - Everything else runs, as the plugin's own rules let it.
 
 A tool X adds later, a write included, is not declared, so in Jelly it is not asked about: it runs without asking,
