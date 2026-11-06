@@ -51,9 +51,10 @@ What the model can do in X is limited by these layers, in this order:
    cannot reach your timeline, mentions or bookmarks; the hosted server uses the user's sign-in.
 2. **Default permission rules.** Every X tool asks before it runs, except the read tools listed in `src/x-tools.ts`,
    which run without a prompt. Every change asks, and `x_article_publish` is public: the Article appears on the user's
-   profile and in followers' timelines, and the plugin has no tool to unpublish it. No tool is denied by default
-   today; the classify rule in `src/x-tools.ts` puts a future DM, follow, block, mute, post-delete, list-membership or
-   account-settings tool in the deny list instead of the write list.
+   profile and in followers' timelines, and the plugin has no tool to unpublish it. No tool X offers today is
+   denied; `DENY_PATTERNS` in `src/x-tools.ts` and the last rules of `defaultRules()` deny a future DM, follow,
+   block, mute, post-delete, list-membership or account-settings tool by its effect, before any release classifies
+   it.
 3. **Your OpenCode permissions.** Your `permissions` rules and saved "Always allow" answers override the default
    rules. A `deny` you configure always wins.
 

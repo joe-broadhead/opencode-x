@@ -1,7 +1,7 @@
 import type { Plugin, Rpc } from "@opencode/plugin"
 import { DISPLAY_NAME, ENDPOINT, PLUGIN_ID, SCOPES, SERVER_NAME, TESTED_HOSTS } from "./constants.js"
 import { isSupportedHost, type HostCheck } from "./host-version.js"
-import { classify } from "./x-tools.js"
+import { classify, DENY_PATTERNS } from "./x-tools.js"
 import { defaultRules, unguardedAgents, type Rule } from "./permissions.js"
 import { cut, oneLine, shortReason } from "./redact.js"
 import { clientMode } from "./server.js"
@@ -267,7 +267,8 @@ const list = (names: readonly string[]) => (names.length < 2 ? names.join("") : 
  * The permission posture the default rules fix, derived from the tool lists so it cannot go stale, and whether those
  * rules are in place: facts status can check, not a fixed claim. The last clause is X's cost, in one clause (D10).
  */
-const POSTURE = "reads run without asking; bookmark changes, Article drafts and publishing ask first; X bills every tool call to your API credits"
+const DENIED_EFFECT = DENY_PATTERNS.length > 0 ? "a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the account is off; " : ""
+const POSTURE = `reads run without asking; bookmark changes, Article drafts and publishing ask first; ${DENIED_EFFECT}X bills every tool call to your API credits`
 
 function accessText({ problems, unguardedAgents }: Status) {
   const rules = problems.some((problem) => problem.startsWith(RULES_NOT_ADDED))

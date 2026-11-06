@@ -125,8 +125,8 @@ That sample leaves out the other 19 read allows, which sit between the two shown
 and its `Agents without default rules` row prints it as a list to paste.
 
 `READ_TOOLS` in `src/x-tools.ts` lists X's read tools, `WRITE_TOOLS` its four private writes, `PUBLIC_TOOLS` the one
-public write, and `DENY_TOOLS` the tools that are off; that list is empty today. Writes and tools that X adds later
-match only `x_*`, so they ask. `/x-status` names the tools in no list. X may list fewer tools for a token with fewer
+public write, `DENY_TOOLS` the named tools that are off (empty today), and `DENY_PATTERNS` the effects the owner ruled
+out. A write or a tool X adds later that is not one of those effects matches only `x_*`, so it asks. `/x-status` names the tools in no list. X may list fewer tools for a token with fewer
 scopes, so a known tool can be missing; that is normal.
 
 The writes, which ask:
@@ -138,8 +138,9 @@ The writes, which ask:
 - `x_article_publish` publishes the draft on the user's profile and in followers' timelines. The plugin has no tool
   to unpublish it: removal means deleting the post in the X app.
 
-A deny also hides the tool from the model. There is no denied tool today, so there is no "turn it on" recipe; the
-recipes below narrow.
+A deny also hides the tool from the model. No tool X offers today is denied, but `DENY_PATTERNS` denies a future tool
+that messages, follows, blocks, mutes, deletes a post, changes a list or changes the account. Turning one on takes a
+later `ask` rule in an agent's own `permissions`; the recipes below narrow.
 
 To narrow one agent, add a rule to that agent's own `permissions`, which come after the plugin's block in that agent.
 For the build agent, turn publishing off:
@@ -300,7 +301,7 @@ meanings:
 | `client` | `id`, `mode` (`public_pkce` for a Native App, `confidential` when a secret is set) and `source` (`options` or `connect`). The secret is never shown. |
 | `callback`, `callbackPort`, `scopes` | The redirect URI the app must have registered, the local port for an `https:` redirect, and the scopes OpenCode requests |
 | `tools` | How many X tools OpenCode lists that the default rules let run or ask: the listed ones, without the denied ones |
-| `deniedTools` | The listed tools that the default rules deny; empty today. The `Tools` row shows them as "off by default" |
+| `deniedTools` | The listed tools that the default rules deny, by name or by the owner's effect patterns; empty for today's list. The `Tools` row shows them as "off by default" |
 | `listing` | True while a server that connected moments ago lists no tools yet. The next step is then to run `/x-status` again in a few seconds, not to check the app. |
 | `unknownCount`, `unknownTools` | How many of them the plugin does not know, and at most 20 of their names, only those made of lowercase letters, digits and `_` |
 | `unguardedAgents` | Agents where a new X tool would run without asking; empty when there are none. An agent whose own rules already ask or deny for every X tool is not listed. |

@@ -53,6 +53,42 @@ export const PUBLIC_TOOLS: readonly string[] = ["article_publish"]
 export const DENY_TOOLS: readonly string[] = []
 
 /**
+ * Name patterns for the tools the owner ruled out: a future tool that messages, follows or unfollows, blocks or mutes,
+ * deletes a post, changes list membership or changes the account is denied even before a release classifies it. They
+ * are the tool name without the server prefix, and deliberately narrow, so no known read matches one; the test checks
+ * that. A user turns one on with a later `ask` rule in an agent's own permissions.
+ */
+export const DENY_PATTERNS: readonly string[] = [
+  "create_dm*",
+  "send_dm*",
+  "delete_dm*",
+  "get_dm*",
+  "follow_*",
+  "unfollow_*",
+  "create_follow*",
+  "delete_follow*",
+  "block_*",
+  "unblock_*",
+  "mute_*",
+  "unmute_*",
+  "delete_post*",
+  "delete_tweet*",
+  "create_*list_member*",
+  "delete_*list_member*",
+  "add_*list_member*",
+  "remove_*list_member*",
+  "update_account*",
+  "update_profile*",
+  "delete_account*",
+]
+
+/** The host's wildcard: `*` matches any text, `?` one character. */
+const wildcard = (pattern: string) => new RegExp(`^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".")}$`)
+
+/** True when the owner's ruling denies this tool by its effect, before any release classifies it. */
+export const deniedByDefault = (name: string) => DENY_TOOLS.includes(name) || DENY_PATTERNS.some((pattern) => wildcard(pattern).test(name))
+
+/**
  * Each known tool's input parameters, as `name:type`, with `*` after a required name. Empty until a tool list from a
  * signed-in server is recorded: X publishes no MCP schemas, and its 401 is a bare bearer challenge. The drift script
  * compares a saved tool list with this record and lists every tool still to record; the skills test lets a skill write
@@ -66,6 +102,6 @@ export function classify(name: string): ToolClass {
   if (READ_TOOLS.includes(name)) return "read"
   if (WRITE_TOOLS.includes(name)) return "write"
   if (PUBLIC_TOOLS.includes(name)) return "public"
-  if (DENY_TOOLS.includes(name)) return "denied"
+  if (deniedByDefault(name)) return "denied"
   return "unknown"
 }

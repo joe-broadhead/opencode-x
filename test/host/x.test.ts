@@ -168,7 +168,7 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     const text = await status(host, await session(host))
     expect(text).toContain(`- Connection: connected (${host.fake.url}, registered by this plugin)`)
     expect(text).toContain("- Account: account name not reported by X's MCP\n")
-    expect(text).toContain("- Access: reads run without asking; bookmark changes, Article drafts and publishing ask first; X bills every tool call to your API credits; default rules missing in the agents listed below\n")
+    expect(text).toContain("- Access: reads run without asking; bookmark changes, Article drafts and publishing ask first; a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the account is off; X bills every tool call to your API credits; default rules missing in the agents listed below\n")
     expect(text).toContain("- Tools: 8 available, 1 unknown: shiny_new_tool (unknown tools ask before running)\n")
     expect(text).toContain(`- Client: client-1 (confidential, secret set; set in plugin options)\n`)
     expect(text).toContain(`- Callback: ${REDIRECT_URI} (register exactly this URL in the app's User authentication settings)\n`)

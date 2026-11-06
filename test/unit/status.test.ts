@@ -27,7 +27,7 @@ const CLIENT = { client: { id: "client-1", source: "options" as const }, invalid
 const base: StatusFacts = { server: { status: "connected" }, source: { type: "plugin", url: URL, signIn: "oauth" }, host, client: CLIENT, options: OPTS, tools: ["search_posts_all"] }
 const guarded = { id: "build", permissions: [allow("*"), ...defaultRules()] }
 const RULES = "no agent runs new X tools unasked"
-const POSTURE = "reads run without asking; bookmark changes, Article drafts and publishing ask first; X bills every tool call to your API credits"
+const POSTURE = "reads run without asking; bookmark changes, Article drafts and publishing ask first; a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the account is off; X bills every tool call to your API credits"
 const ACCESS = `${POSTURE}; ${RULES}`
 
 describe("buildStatus", () => {
@@ -201,6 +201,10 @@ describe("buildStatus", () => {
     expect(status.unknownTools).toEqual(many.slice(0, 20))
     expect(formatStatus(status)).toContain(`- Tools: 30 available, 29 unknown: ${many.slice(0, 20).join(", ")} and 9 more (unknown tools ask before running)`)
     expect(formatStatus(buildStatus({ ...base, tools: odd }))).toContain("- Tools: 4 available, 4 unknown (unknown tools ask before running)")
+    // A future tool the owner ruled out is counted as off, not as available or unknown.
+    const future = buildStatus({ ...base, tools: ["search_posts_all", "create_dm", "delete_post"] })
+    expect(future).toMatchObject({ tools: 1, deniedTools: ["create_dm", "delete_post"], unknownCount: 0 })
+    expect(formatStatus(future)).toContain("- Tools: 1 available, 0 unknown; off by default: create_dm and delete_post\n")
   })
 
   test("names agents without the default rules, with the block to paste, and points the next step at it", () => {

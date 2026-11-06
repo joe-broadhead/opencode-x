@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { DENY_PATTERNS, DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, evaluate, hasDefaultRules, insertRules, registerDefaultRules, unguardedAgents, type Rule } from "../../src/permissions.js"
 import { agentEditor, allow, builtInAgents, transforms, type AgentEditor, type FakeAgent } from "./fake.js"
 
@@ -13,7 +13,10 @@ describe("defaultRules", () => {
     const rules = defaultRules()
     expect(rules[0]).toEqual(ask)
     expect(rules.slice(1, 1 + READ_TOOLS.length)).toEqual(READ_TOOLS.map((tool) => ({ action: `x_${tool}`, resource: "*", effect: "allow" })))
-    expect(rules.slice(1 + READ_TOOLS.length)).toEqual(DENY_TOOLS.map((tool) => deny(`x_${tool}`)))
+    expect(rules.slice(1 + READ_TOOLS.length)).toEqual([
+      ...DENY_TOOLS.map((tool) => deny(`x_${tool}`)),
+      ...DENY_PATTERNS.map((pattern) => deny(`x_${pattern}`)),
+    ])
     // Every write, private or public, is covered by the catch-all ask and adds no rule of its own.
     for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect(rules).not.toContainEqual({ action: `x_${tool}`, resource: "*", effect: "allow" })
   })
@@ -24,10 +27,15 @@ describe("defaultRules", () => {
     expect(evaluate([allow("*"), ...defaultRules()], "x_delete_users_bookmark")).toBe("ask")
   })
 
-  test("nothing is denied today, and a future deny list would come last", () => {
+  test("no known tool is denied today, and a future DM, follow, block, mute, delete, list or account tool is off", () => {
     expect(DENY_TOOLS).toEqual([])
-    const withDeny = [...defaultRules(), deny("x_new_dm_tool")]
-    expect(evaluate([allow("*"), ...withDeny], "x_new_dm_tool")).toBe("deny")
+    const rules = [allow("*"), ...defaultRules()]
+    for (const name of ["x_create_dm", "x_follow_user", "x_block_user", "x_mute_user", "x_delete_post", "x_update_account", "x_remove_list_members"]) {
+      expect({ name, effect: evaluate(rules, name) }).toEqual({ name, effect: "deny" })
+    }
+    // A later ask in the agent's own permissions is the only documented opt-in.
+    const ask = { action: "x_create_dm", resource: "*", effect: "ask" as const }
+    expect(evaluate([...rules, ask], "x_create_dm")).toBe("ask")
   })
 })
 

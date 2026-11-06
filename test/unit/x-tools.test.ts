@@ -1,6 +1,6 @@
 // The tool lists in src/x-tools.ts are the one record of X's tools; everything else derives from them.
 import { describe, expect, test } from "bun:test"
-import { classify, DENY_TOOLS, PARAMETERS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { classify, DENY_PATTERNS, DENY_TOOLS, deniedByDefault, PARAMETERS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 
 const ALL = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
 
@@ -43,6 +43,18 @@ describe("X's tool lists", () => {
   test("no tool sends a DM, follows, blocks, mutes, deletes a post, changes list membership or account settings", () => {
     const deniedByRule = /^(create_dm|send_dm|follow|unfollow|block|mute|delete_post|delete_tweet|add_list|remove_list|update_account|update_profile)/
     expect(ALL.filter((tool) => deniedByRule.test(tool))).toEqual([])
+  })
+
+  test("the owner's ruling denies a future DM, follow, block, mute, delete, list or account tool by its effect", () => {
+    for (const name of ["create_dm", "send_dm", "get_dm_events", "follow_user", "unfollow_user", "block_user", "mute_user", "delete_post", "delete_tweet", "create_list_member", "remove_list_members", "update_account", "update_profile", "delete_account"]) {
+      expect({ name, denied: deniedByDefault(name), class: classify(name) }).toEqual({ name, denied: true, class: "denied" })
+    }
+    // The patterns are narrow: no known read, write or public tool is caught by one.
+    for (const name of ALL) expect({ name, denied: deniedByDefault(name) }).toEqual({ name, denied: false })
+    // A tool outside those effects still asks, through the catch-all.
+    expect(deniedByDefault("schedule_post")).toBe(false)
+    expect(deniedByDefault("shiny_new_tool")).toBe(false)
+    expect(DENY_PATTERNS.length).toBeGreaterThan(10)
   })
 
   test("PARAMETERS stays empty until a live tool list is recorded", () => {
