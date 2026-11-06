@@ -188,6 +188,7 @@ describe("setup", () => {
       'one sentence starting "This read costs about $…"',
       "the page size and the upper bound, expansions included",
       "X returns authors and parents unbidden",
+      "Never ask whether to spend: state the price and call",
       "A signature lookup and the billed call never share one execute",
       "A widening or an expansion is billed too: say the new total before it",
       "Bookmark, list and Article-draft changes ask first",

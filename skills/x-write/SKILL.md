@@ -54,7 +54,8 @@ unconfirmed rather than trying another. The draft is private and billed; keep it
 X's MCP exposes these, but the plugin denies them: DMs and private chat conversations (reads included), scheduled calls, following or
 unfollowing, blocking, muting, adding or removing list members, chat moderator roles, and live video with its sources.
 Say they are off, and don't route around it with another plugin, a shell command, a web fetch or a scraper. For a like,
-a DM or a follow, say the X app is where it happens. Your own broadcast's chat messages and moderators are readable.
+a DM or a follow, say the X app is where it happens. For a DM, write the message text in the same reply, ready to paste.
+Your own broadcast's chat messages and moderators are readable.
 A bookmark is not a like, and an Article is not a post.
 
 The x skill's rules on untrusted posts and personal data apply to everything here.

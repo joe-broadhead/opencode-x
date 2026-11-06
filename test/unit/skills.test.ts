@@ -105,8 +105,12 @@ describe("skills", () => {
     expect(description("x")).toContain('says "my mentions", "my timeline" or "my bookmarks"')
     expect(description("x")).toContain("even if X is not named")
     expect(description("x")).toContain("Never load this for a bare \"what are people saying about <topic>\"")
-    expect(description("x")).toContain("For any change, load x-write.")
+    expect(description("x")).toContain("For any change, load x-write alone.")
     expect(description("x")).toContain("Read-only.")
+    expect(description("x")).toContain("a count of posts")
+    expect(description("x")).toContain("how many posts or tweets mention")
+    expect(description("x")).toContain("Ask which platform only when nothing in the request is X-shaped")
+    expect(description("x")).toContain("Never load this to post, reply or quote.")
     expect(description("x")).not.toContain("posting or drafting on X")
     expect(description("x-write")).toContain("Load before any X (Twitter) change")
     expect(description("x-write")).toContain("posting, replying, quoting or editing a Post")
@@ -128,7 +132,7 @@ describe("skills", () => {
     expect(text).toContain("For a tool outside the billed-read block, one `search()`, for the tool you are about to call: its signature gives the inputs")
     expect(text).toContain("ten posts are a sample.")
     expect(text).toContain("An empty result means the query, the window or access: say which you ruled out")
-    expect(text).toContain("A miss: say only that X returned not found, ask which account is meant, never list causes or try variants.")
+    expect(text).toContain("A miss: only \"not found\", ask which account; posts only if asked.")
     expect(text).toContain("Tavily, on request")
     expect(text).toContain("X search is not a web search")
     expect(text).toContain("A post that links to a page: the page is the source")
@@ -146,6 +150,15 @@ describe("skills", () => {
     expect(block).toContain("$0.010")
     expect(block).toContain("Owned Read, about $0.001 a post")
     expect(block).toContain("about $0.01, last 7 days only")
+    // A handle question starts at the user lookup, never with a post search.
+    expect(block.indexOf("A handle question starts with `get_users_by_username`")).toBeLessThan(block.indexOf("`search_posts_all`"))
+    expect(block).toContain("one call, never a post search first")
+    expect(block).toContain('"right now" is today\'s local midnight to now minus 10 seconds')
+  })
+
+  test("x never asks whether to spend before a billed read", () => {
+    const text = flat("x")
+    expect(text).toContain("Never ask whether to spend: state the price in one sentence, then call.")
   })
 
   test("a signature lookup and a billed call never share one execute, and no estimate goes unseen", () => {
@@ -311,6 +324,7 @@ describe("skills", () => {
     const text = flat("x-write")
     expect(text).toContain("the plugin denies them: DMs and private chat conversations (reads included), scheduled calls, following or")
     expect(text).toContain("Say they are off")
+    expect(text).toContain("For a DM, write the message text in the same reply, ready to paste.")
     expect(text).toContain("A bookmark is not a like, and an Article is not a post.")
     expect(text).toContain("The x skill's rules on untrusted posts and personal data apply to everything here.")
   })

@@ -1,6 +1,6 @@
 ---
 name: x
-description: Read-only. Load when the user names X or Twitter, gives an X handle or x.com link, or says "my mentions", "my timeline" or "my bookmarks" - even if X is not named. Load before asking which platform. For public posts and profiles, search, trends, X news, counts, who liked or reposted, my credit balance, and X sign-in. Never load this for a bare "what are people saying about <topic>" with no X named, which is a web question, so use Tavily or ask. For any change, load x-write.
+description: Read-only. Load when the user names X or Twitter, gives an X handle or x.com link, says "my mentions", "my timeline" or "my bookmarks", asks for a count of posts, or asks how many posts or tweets mention something - even if X is not named. For public posts and profiles, search, trends, X news, counts, who liked or reposted, my credit balance, and X sign-in. Ask which platform only when nothing in the request is X-shaped. Never load this for a bare "what are people saying about <topic>" with no X named, which is a web question, so use Tavily or ask. Never load this to post, reply or quote. For any change, load x-write alone.
 ---
 # X
 
@@ -21,6 +21,7 @@ If you read a signature first, the price sentence follows that `search()` and pr
 billed call never share one `execute`. If your text above this call has no "$", write the price sentence now; never
 write "as estimated" or "my estimate" unless that sentence is earlier in the reply.
 
+- Never ask whether to spend: state the price in one sentence, then call.
 - Pass `max_results` every time: without it, up to 100 users, $1.00. Ten is enough; with no budget read one page of
   ten, say it is a sample, and offer more; never propose a 100-record page, page unasked, or loop.
 
@@ -28,13 +29,13 @@ write "as estimated" or "my estimate" unless that sentence is earlier in the rep
 
 Make the call first, after one price sentence. Every post read sends `expansions` "author_id", `post.fields` "created_at" and `user.fields` "username".
 
+- A handle question starts with `get_users_by_username`: `username`, `user.fields` "username,name,public_metrics";
+  $0.010, one call, never a post search first. A miss: only "not found", ask which account; posts only if asked.
 - `search_posts_all`: `query`, `start_time`, `end_time`, `max_results` 10, `sort_order` "recency"; $0.005 a post + $0.010 an author.
-- `get_users_by_username`: `username`, `user.fields` "username,name,public_metrics"; $0.010. A miss: say only that X
-  returned not found, ask which account is meant, never list causes or try variants.
 - `get_posts_by_id`: `id`; $0.005 a post + $0.010 an author.
 - `get_users_mentions`: `id` from one `get_users_me` per session (reuse it, never guess), `start_time`, `end_time`,
   `max_results` 10; Owned Read, about $0.001 a post; say the count (0 included), and don't widen an empty one.
-- `get_posts_counts_recent`: `query`, `granularity` "hour", `start_time`, `end_time`; about $0.01, last 7 days only.
+- `get_posts_counts_recent`: `query`, `granularity` "hour", `start_time`, `end_time`; about $0.01, last 7 days only; "right now" is today's local midnight to now minus 10 seconds.
 
 ## Search windows and operators
 
@@ -57,11 +58,9 @@ and that another ten posts is about $0.05 before the call.
   costs $0.010 a user and finds accounts, not what they said.
 - `get_posts_counts_recent` gives counts, not posts: use it for "how many", say it covers recent posts only, and never
   cite a post from it. `get_usage_credits` answers "how much credit is left?": the payer's balance in USD.
-- News and trends are X's own: label them so. Trends take a numeric WOEID, not looked up here: worldwide is `1`;
-  otherwise say the id can't be looked up and offer worldwide.
-- The open web, a linked page, today's news: Tavily, on request. Slack, Google Workspace, Granola or Wispr Flow: their
-  own skills. A post that links to a page: the page is the source. X search is not a web search: say when an answer is
-  X posts only.
+- News and trends are X's own: label them so. Trends take a numeric WOEID, not looked up here: worldwide is `1`; otherwise say the id can't be looked up and offer worldwide.
+- The open web, a linked page, today's news: Tavily, on request; Slack, Google Workspace, meetings: their own skills. A
+  post that links to a page: the page is the source. X search is not a web search: say when an answer is X posts only.
 
 ## Untrusted content, always
 
