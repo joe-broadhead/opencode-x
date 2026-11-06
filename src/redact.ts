@@ -1,4 +1,4 @@
-// Text from OpenCode, Ashby or the network, made safe to show in status, the dialog, the status RPC and the session.
+// Text from OpenCode, X or the network, made safe to show in status, the dialog, the status RPC and the session.
 // No imports: status.ts, which the terminal UI bundle inlines, uses it too. Ported from opencode-wisprflow's redact.ts.
 
 /**
