@@ -14,25 +14,25 @@ key inside a tool, sign-in or `contributes` entry, so the section uses only the 
 
 ## Tools and permissions
 
-26 tools are declared (21 read-only), every tool in `src/x-tools.ts`: each read tool as read-only
-with `allow`, and each private write and the public Article publish with `ask`. Jelly's agents have
-no base "allow everything" rule, so this plugin's own default rules, which it puts after that rule,
-never reach them. Jelly writes each declared `ask` as that tool's default instead (the person's own
-choice replaces it), and denies a read-only helper every tool not marked `readOnly`. A declared
-`allow` changes nothing in Jelly.
+100 tools are declared: 49 reads run, 2 read-only source tools ask, 8 private writes and the public
+`x_create_posts` ask, and 40 are off — every tool in `src/x-tools.ts`. Jelly's agents have no base "allow
+everything" rule, so this plugin's own default rules, which it puts after that rule, never reach them. Jelly writes
+each declared `ask` or `deny` as that tool's default instead (the person's own choice replaces it), and denies a
+read-only helper every tool not marked `readOnly`. A declared `allow` changes nothing in Jelly.
 
-- Ask: `x_create_users_bookmark` (bookmarks a post for the user only), `x_delete_users_bookmark`
-  (removes that bookmark, not the post), `x_create_users_bookmark_folder` (a folder only the user
-  sees), `x_article_create_draft` (a private draft) and `x_article_publish` (**public**: anyone can read the Article,
-  it appears on the user's profile and in followers' timelines, and the plugin cannot unpublish it).
-- Nothing X offers today is off. The plugin itself denies a future DM, follow, block, mute, post-delete, list-membership or account tool, but Jelly does not: it declares no such tool, so set it to deny there.
+- Ask: `x_create_users_bookmark`, `x_delete_users_bookmark` and `x_create_users_bookmark_folder` (the user's
+  bookmarks); `x_article_create_draft` (a private draft, with no publish tool here); `x_create_lists`,
+  `x_update_lists`, `x_pin_list` and `x_unpin_list` (the user's lists; public unless `private` is true); and
+  `x_get_source` and `x_list_sources` (their output can carry a stream key). `x_create_posts` is **public**: anyone
+  can read the Post, and it can reply or quote only when the user asks for that one.
+- Off: the 40 tools for DMs and chat (reads included), scheduled calls, follows, blocks, mutes, list membership, chat
+  moderators, and live video with its sources.
 - Everything else runs, as the plugin's own rules let it.
 
-A tool X adds later, a write included, is not declared, so in Jelly it is not asked about: it runs
-without asking, even if it changes something, until a new version of this plugin declares it. X
-says it adds tools over time, write actions included. A Jelly admin can set such a tool to ask.
-Keep `jelly.tools` in step with `src/x-tools.ts`; `test/unit/jelly.test.ts` checks the list against
-it, and each declared effect against the plugin's own default rules.
+A tool X adds later, a write included, is not declared, so in Jelly it is not asked about: it runs without asking,
+even if it changes something, until a new version of this plugin declares it. The plugin itself denies a future tool
+of a denied effect, but Jelly does not, so set it to deny there. Keep `jelly.tools` in step with `src/x-tools.ts`;
+`test/unit/jelly.test.ts` checks the list against it, and each declared effect against the plugin's own default rules.
 
 ## Skills
 

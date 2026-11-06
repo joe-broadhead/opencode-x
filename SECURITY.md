@@ -21,6 +21,10 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
 - The X app's client ID and secret come from the plugin options or the `/connect` **X app** entry, and are kept in
   OpenCode's credential store or managed config. The plugin never reads the OAuth token. Status shows the client ID,
   whether a secret is set and where it came from; it never shows the secret.
+- **Stream sources can carry a secret.** `get_source` and `list_sources` return a user's RTMP/RTMPS ingest point; X's
+  source object holds the stream URL and its key, which lets anyone publish to that stream. The captured live list
+  has no output schema, so the plugin cannot confirm the shape, and both tools stay ask. Treat a source as a
+  credential, and never put its key in a message, a file or another tool.
 - **A public client ID is not a secret.** A Native App's client ID only identifies the app, so it is safe to distribute
   in managed config for a team app. A client secret authenticates the app and must never be distributed: anyone with
   it can act as the app. If one leaks, rotate it in X's console.
@@ -53,8 +57,8 @@ What the model can do in X is limited by these layers, in this order:
    Without `bookmark.write` or `tweet.write`, those tools fail with `403` or are not listed. X's app-only bearer token
    cannot reach your timeline, mentions or bookmarks; the hosted server uses the user's sign-in.
 2. **Default permission rules.** Every X tool asks before it runs, except the read tools listed in `src/x-tools.ts`,
-   which run without a prompt. Every change asks, and `x_article_publish` is public: anyone can read the
-   Article, it appears on the user's profile and in followers' timelines, and the plugin has no tool to unpublish it. No tool X offers today is
+   which run without a prompt. Every change asks, and `x_create_posts` is public: anyone can read the Post,
+   it appears on the user's profile and in followers' timelines, and the plugin has no delete tool. No tool X offers today is
    denied; `DENY_PATTERNS` in `src/x-tools.ts` and the last rules of `defaultRules()` deny a future DM, follow,
    block, mute, post-delete, list-membership or account-settings tool by its effect, before any release classifies
    it.
@@ -97,8 +101,8 @@ for a script, with no model. It adds no authority:
   say so.
 - An ask on a script's call is denied, not prompted: no one is there to answer it. The plugin's permission hook
   changes only an ask on one of its own script calls in flight, only to a deny, and leaves every other call alone.
-- Only the known reads are methods. The bookmark changes, the Article draft, the public `article_publish` and a tool
-  that X adds later never are, even with an allow rule.
+- Only the known reads are methods. The bookmark and list changes, the Article draft, the public `create_posts` and
+  a tool that X adds later never are, even with an allow rule.
 - The call goes through OpenCode's own MCP connection and sign-in. The plugin never sees the token, and returns none.
 - X's error text reaches the script only as the first line, at most 300 characters, with tokens and URL query strings
   removed.

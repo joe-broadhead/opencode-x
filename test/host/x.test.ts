@@ -15,7 +15,7 @@ import { defaultRules, type Rule } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { StatusRpc } from "../../src/status.js"
 import { TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
-import { MODEL_ID, X_SCOPES } from "./fake-mcp.js"
+import { DENIED_SAMPLE, MODEL_ID, X_SCOPES } from "./fake-mcp.js"
 import { agentRules, appOptions, attempt, cleanup, effect, HOST_VERSION, session, startHost, until, type Host } from "./harness.js"
 
 const AGENT_RULES = defaultRules().map((rule, index, rules) => `  ${JSON.stringify(rule)}${index < rules.length - 1 ? "," : ""}`).join("\n")
@@ -42,7 +42,7 @@ const hidden = (rules: readonly Rule[], action: string) => {
 const xTools = (host: Host) =>
   until("X's tools are registered", async () => {
     const ids = (await host.probe().tool.list()).map((tool) => tool.id).filter((id) => id.startsWith("x_"))
-    return ids.length === 8 && ids.sort()
+    return ids.length === 15 && ids.sort()
   })
 
 async function status(host: Host, sessionID: string) {
@@ -91,7 +91,7 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     expect(plugins.find((plugin) => plugin.id === "x.posts")?.state.status).toBe("active")
     const { data: servers } = await host.client.mcp.list({ location: host.location })
     expect(servers.find((server) => server.name === "x")?.status).toEqual({ status: "connected" })
-    expect(await xTools(host)).toEqual([...["search_posts_all", "get_users_me", "shiny_new_tool", ...WRITE_TOOLS, ...PUBLIC_TOOLS].map((tool) => `x_${tool}`)].sort())
+    expect(await xTools(host)).toEqual([...["search_posts_all", "get_users_me", "shiny_new_tool", ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENIED_SAMPLE].map((tool) => `x_${tool}`)].sort())
     const { data: skills } = await host.client.skill.list({ location: host.location })
     expect(skills.map((skill) => skill.id).filter((id) => id.startsWith("x")).sort()).toEqual([...SKILL_NAMES].sort())
     const { data: commands } = await host.client.command.list({ location: host.location })
@@ -126,16 +126,22 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) {
       expect({ tool, result: await attempt(host, build, "build", tool, "reject", { query: "q" }) }).toEqual({ tool, result: { asked: `x_${tool}`, ok: false, error: "Permission.DeclinedError: " } })
     }
+    // The off tools are hidden and refused with no prompt, even when "always" would be the answer.
+    for (const tool of DENIED_SAMPLE) {
+      expect({ tool, result: await attempt(host, build, "build", tool, "always", { query: "q" }) }).toEqual({ tool, result: { asked: undefined, ok: false, error: `Tool.Error: Permission denied: x_${tool}` } })
+      expect(host.fake.calls).not.toContain(tool)
+    }
     // Only the read reached X.
     expect(host.fake.calls.slice(before)).toEqual(["search_posts_all"])
     const rules = (await agentRules(host)).get("build")!
-    expect(["x_search_posts_all", "x_create_users_bookmark", "x_article_publish", "x_shiny_new_tool"].filter((action) => hidden(rules, action))).toEqual([])
+    expect(["x_search_posts_all", "x_create_users_bookmark", "x_create_posts", "x_shiny_new_tool"].filter((action) => hidden(rules, action))).toEqual([])
+    for (const tool of DENIED_SAMPLE) expect(hidden(rules, `x_${tool}`)).toBe(true)
   })
 
   test("no script reaches a write, the public publish or an unknown tool: the tools RPC has no such method", async () => {
     const sessionID = await session(host)
     const described = await scriptCall(host, "describe", {})
-    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS, "shiny_new_tool"]) {
+    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENIED_SAMPLE, "shiny_new_tool"]) {
       expect(described).not.toContain(tool)
       const call = (host.client.rpc as unknown as { call: (input: object) => Promise<unknown> }).call
       const outcome = await call({ rpcID: TOOLS_RPC_ID, method: tool, input: { sessionID, input: { query: "q" } }, location: host.location }).then(
@@ -168,8 +174,8 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     const text = await status(host, await session(host))
     expect(text).toContain(`- Connection: connected (${host.fake.url}, registered by this plugin)`)
     expect(text).toContain("- Account: account name not reported by X's MCP\n")
-    expect(text).toContain("- Access: reads run without asking; bookmark changes, Article drafts and publishing ask first; a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the account is off; X bills every tool call to the X developer account that owns the app; default rules missing in the agents listed below\n")
-    expect(text).toContain("- Tools: 8 available, 1 unknown: shiny_new_tool (unknown tools ask before running)\n")
+    expect(text).toContain("- Access: reads run without asking; 11 tools ask first (bookmarks, lists, an Article draft, source keys and a public Post); 40 are off (DMs and chat, calls, follows, blocks, mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the app; default rules missing in the agents listed below\n")
+    expect(text).toContain("- Tools: 12 available, 1 unknown: shiny_new_tool (unknown tools ask before running); off by default: add_lists_member, send_chat_message and users_id_block\n")
     expect(text).toContain(`- Client: client-1 (configured app, confidential; set in plugin options)\n`)
     expect(text).toContain(`- Callback: ${REDIRECT_URI} (register exactly this URL in the app's User authentication settings)\n`)
     expect(text).toContain(`- Scopes: ${SCOPES.join(" ")}\n`)
@@ -178,7 +184,7 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     expect(text).toContain(`- OpenCode: ${HOST_VERSION} (${TESTED_HOSTS.includes(HOST_VERSION) ? "tested" : "untested"}; supported range ${SUPPORTED_HOST})`)
     expect(text).not.toContain("secret-1")
     const output = await statusRpc(host)
-    expect(output).toMatchObject({ state: "connected", tools: 8, deniedTools: [], unknownCount: 1, listing: false, unguardedAgents: ["reviewer"], client: { id: "client-1", mode: "confidential", source: "options" } })
+    expect(output).toMatchObject({ state: "connected", tools: 12, deniedTools: [...DENIED_SAMPLE], unknownCount: 1, listing: false, unguardedAgents: ["reviewer"], client: { id: "client-1", mode: "confidential", source: "options" } })
     expect(JSON.stringify(output)).not.toContain("secret-1")
     expect(output).not.toHaveProperty("account")
   })
@@ -303,8 +309,8 @@ describe("a model turn that asks for the public Article publish, with Code Mode 
     const offered = turns().flatMap((request) => (request.tools ?? []).map((item) => item.function?.name ?? ""))
     expect(offered.filter((name) => name.startsWith("x_"))).toContain("x_get_users_me")
     // The tool is offered (the catch-all asks), and the declined call never reaches X.
-    expect(offered).toContain("x_article_publish")
-    expect(host.fake.calls).not.toContain("article_publish")
+    expect(offered).toContain("x_create_posts")
+    expect(host.fake.calls).not.toContain("create_posts")
   })
 })
 
@@ -319,7 +325,7 @@ describe("a Code Mode turn that asks for the public Article publish", () => {
     const code = [
       "const results = []",
       "results.push(String((await tools.x.get_users_me({})) !== undefined))",
-      "try { await tools.x.article_publish({ query: 'q' }); results.push('ran') } catch (error) { results.push('refused') }",
+      "try { await tools.x.create_posts({ query: 'q' }); results.push('ran') } catch (error) { results.push('refused') }",
       "return results",
     ].join("\n")
     host.fake.model.script = [{ tool: "execute", arguments: { code } }]
@@ -330,13 +336,13 @@ describe("a Code Mode turn that asks for the public Article publish", () => {
     await turn
     expect(host.fake.model.requests.length).toBeGreaterThan(before)
     expect(host.fake.calls).toContain("get_users_me")
-    expect(host.fake.calls).not.toContain("article_publish")
+    expect(host.fake.calls).not.toContain("create_posts")
   })
 })
 
 describe("the documented narrowing recipe", () => {
   // A deny goes in the agent's own permissions, after the plugin's block in that agent.
-  const narrow: Rule = { action: "x_article_publish", resource: "*", effect: "deny" }
+  const narrow: Rule = { action: "x_create_posts", resource: "*", effect: "deny" }
   let host: Host
   beforeAll(async () => {
     host = await startHost({ options: appOptions(), config: () => ({ agents: { build: { permissions: [narrow] } } }) })
@@ -347,16 +353,16 @@ describe("the documented narrowing recipe", () => {
     await xTools(host)
     const rules = (await agentRules(host)).get("build")!
     expect(rules.indexOf(rules.find((rule) => JSON.stringify(rule) === JSON.stringify(narrow))!)).toBeGreaterThan(rules.findIndex((rule) => rule.action === "x_*"))
-    expect(await effect(host, "build", "x_article_publish")).toBe("deny")
-    expect(hidden(rules, "x_article_publish")).toBe(true)
+    expect(await effect(host, "build", "x_create_posts")).toBe("deny")
+    expect(hidden(rules, "x_create_posts")).toBe(true)
     const build = await session(host)
-    expect(await attempt(host, build, "build", "article_publish", "always", { query: "q" })).toEqual({ asked: undefined, ok: false, error: "Tool.Error: Permission denied: x_article_publish" })
-    expect(host.fake.calls).not.toContain("article_publish")
+    expect(await attempt(host, build, "build", "create_posts", "always", { query: "q" })).toEqual({ asked: undefined, ok: false, error: "Tool.Error: Permission denied: x_create_posts" })
+    expect(host.fake.calls).not.toContain("create_posts")
     // The agents that use tools keep the plugin's ask; title and summary deny every tool, and Explore denies all.
-    for (const id of ["general", "compaction", "plan"]) expect({ id, effect: await effect(host, id, "x_article_publish") }).toEqual({ id, effect: "ask" })
-    for (const id of ["title", "summary"]) expect({ id, effect: await effect(host, id, "x_article_publish") }).toEqual({ id, effect: "deny" })
+    for (const id of ["general", "compaction", "plan"]) expect({ id, effect: await effect(host, id, "x_create_posts") }).toEqual({ id, effect: "ask" })
+    for (const id of ["title", "summary"]) expect({ id, effect: await effect(host, id, "x_create_posts") }).toEqual({ id, effect: "deny" })
     // Explore denies everything, as it did before the plugin.
-    expect(await effect(host, "explore", "x_article_publish")).toBe("deny")
+    expect(await effect(host, "explore", "x_create_posts")).toBe("deny")
     expect(await attempt(host, build, "build", "delete_users_bookmark", "reject", { query: "q" })).toMatchObject({ asked: "x_delete_users_bookmark", ok: false })
   })
 })
@@ -538,7 +544,7 @@ describe("an X app client saved in /connect", () => {
     expect(server.integrationID).toBeString()
     expect(await status()).toMatchObject({ client: { id: "CONNECT_CLIENT_ID", mode: "confidential", source: "connect" }, callback: REDIRECT_URI })
     // The registered entry carries the client and never shows it in status.
-    expect(await xTools(host)).toHaveLength(8)
+    expect(await xTools(host)).toHaveLength(15)
     expect(JSON.stringify(await status())).not.toContain("secret-2")
   })
 })

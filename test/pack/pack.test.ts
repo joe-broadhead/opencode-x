@@ -18,7 +18,7 @@ import { basename, join, relative, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { ENDPOINT, REDIRECT_URI, SUPPORTED_HOST, TESTED_HOSTS } from "../../src/constants.js"
 import { TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
-import { PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { ASK_READ_TOOLS, DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, type Rule } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { X_SCOPES, NEW_TOOL, startFakeMcp, UPSTREAM_FAILURE, type FakeMcp } from "../host/fake-mcp.js"
@@ -295,11 +295,11 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
       // Config-only agents get no default rules: their own rules decide, after the host's defaults.
       agents: { locked: { permissions: [rule("x_*", "deny")] }, careful: { permissions: [rule(`x_${READ_A}`, "ask")] } },
     })
-    // Every known tool, and the fake's new one, which is the only unknown.
-    const tools = READ_TOOLS.length + WRITE_TOOLS.length + PUBLIC_TOOLS.length + 1
+    // Every known tool except the 40 off ones, and the fake's new one, which is the only unknown.
+    const tools = READ_TOOLS.length + ASK_READ_TOOLS.length + WRITE_TOOLS.length + PUBLIC_TOOLS.length + 1
     await host.until(`x is connected with its ${tools} tools`, async () => {
       const output = await status()
-      return output.state === "connected" && output.tools === tools && output.unknownCount === 1 && output.deniedTools.length === 0
+      return output.state === "connected" && output.tools === tools && output.unknownCount === 1 && output.deniedTools.length === DENY_TOOLS.length
     })
     const create = async (body: Record<string, unknown>) => {
       const created = await host.api<Record<string, any>>("POST", "/api/session", body)
@@ -349,7 +349,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
 
   test("never makes a known write, a denied tool or an unknown tool a method, though OpenCode lists them all", async () => {
     const from = fake.calls.length
-    for (const name of [...WRITE_TOOLS, ...PUBLIC_TOOLS, NEW_TOOL.name]) {
+    for (const name of [...WRITE_TOOLS, ...PUBLIC_TOOLS, "send_chat_message", "users_id_block", "add_lists_member", NEW_TOOL.name]) {
       const result = await call("build", name, { query: "q" })
       expect({ name, type: result.type }).toEqual({ name, type: "rpc.method_not_found" })
     }

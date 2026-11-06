@@ -1,6 +1,6 @@
 ---
 name: x-write
-description: Load before any X (Twitter) change - bookmarking or unbookmarking a post, creating a bookmark folder, drafting or publishing a long-form X Article - or when the user asks to tweet, post, reply, quote, repost, like, follow, message or delete on X (Twitter).
+description: Load before any X (Twitter) change - posting, replying, quoting or editing a Post; bookmarking; creating, updating, pinning or unpinning a List; or drafting an Article - or when the user asks to message, call, follow, block, mute, change list membership, moderate a chat or go live on X (Twitter).
 ---
 # Changing things on X
 
@@ -9,65 +9,61 @@ description: Load before any X (Twitter) change - bookmarking or unbookmarking a
 Make a change only when the user asked for it. Before the call, write one sentence in your reply on what it does and
 whom it reaches, then make the one call in the same turn. The permission prompt is the user's yes.
 
-Ask in chat first only when something must be chosen: which post, which folder, which draft, which account. After a
-decline, say that nothing changed and offer the draft or a retry. Never work around a decline with another tool, a
-shell command, a link or a screenshot.
+Ask in chat first only when something must be chosen: which post, which list, which draft. After a decline, say that
+nothing changed and offer the draft or a retry. Never work around a decline with another tool, a shell command, a link
+or a screenshot.
 
 ## Whom each change reaches
 
-- `create_users_bookmark`: only the user. Private, reversible, no notification. Say the post's author and opening
-  words before the call. "This bookmarks @author's post '…' for you only."
-- `delete_users_bookmark`: only the user. It removes a saved item, not a post. "This removes your bookmark on
-  @author's post '…'; the post stays."
-- `create_users_bookmark_folder`: only the user, visible in their X app. "This creates the bookmark folder '…' for
-  you only."
-- `article_create_draft`: only the user. Nothing is public yet. Say the title, and keep the returned draft id for
-  the publish. "This saves a private Article draft titled '…'."
-- `article_publish`: public. Anyone can read it, not only followers: it appears on the user's profile and in their
-  followers' timelines, and this plugin has no tool to unpublish it. Show the title and the opening lines first, then
-  say: "This publishes '…' publicly on your profile; the only way to remove it is to delete the post in the X app."
+- `create_posts`: public. Anyone can read it, not only followers: it appears on the profile and in followers'
+  timelines. Show the exact text first, then say: "This posts '…' publicly to anyone; it costs $0.015, or $0.200 if it
+  contains a link." A reply (`reply.in_reply_to_tweet_id`) or a quote (`quote_tweet_id`) only when the user explicitly
+  asks for that one reply or quote, and say the author is notified. Editing (`edit_options.previous_post_id`) changes a
+  published post: show the new text. One call, never a loop.
+- Bookmarks: `create_users_bookmark`, `delete_users_bookmark` and `create_users_bookmark_folder` reach only the user.
+  Private, reversible, no notification. Say the post's author and opening words.
+- `article_create_draft`: private. Nothing is public. There is no publish tool: it stays a draft, and publishing is done
+  in the X app. Say the title, and keep the returned id.
+- `create_lists`, `update_lists`, `pin_list` and `unpin_list`: the user's lists. A list is public unless `private` is
+  true in the schema; say which it is. Pinning shows it on the user's profile.
 
-Each call is billed to the X developer account that owns the app (yours, or your team's): about $0.005 for a bookmark change, and a post create for publishing,
-which X prices at $0.015, or $0.200 when the post contains a link. X has not published its Article rate; say that.
+Each call is billed to the X developer account that owns the app (yours, or your team's): about $0.005 for a bookmark
+or list change, and a post create at $0.015, or $0.200 with a link.
+
+## Posting
+
+Draft from what the user gave you, not from fetched posts unless they asked. State the exact text and that it is
+public, then make one call. Only on an explicit request: never post, reply or quote in a loop, and keep to X's rules.
+AI-generated replies need X's prior approval; replies are allowed only when the author summoned the replier. Likes are
+not a tool here.
 
 ## Drafting an Article
 
-`article_create_draft` takes a title and a body: plain text, markdown or X's DraftJS blocks, and whether cover media is
-a media id, are decided by the signature, so read it before composing. If it does not settle the body, make one
-attempt, then stop and say the format is unconfirmed rather than trying another shape. The draft is billed like other
-content; write the body from what the user gave you, not from fetched posts unless they asked. Say the draft is
-private, and keep its id for publishing.
+`article_create_draft` takes a title and a DraftJS `content_state` (blocks and entities). Write the body from the
+user's material; if the signature does not settle the shape, make one attempt, then stop and say the format is
+unconfirmed rather than trying another. The draft is private and billed; keep its id. There is no publish tool here.
 
-Publishing happens in two steps: draft, then `article_publish` with the draft's id. Never publish a draft the user has
-not seen. Never retry a publish: a timeout may still have published it, so say so and check the profile.
+## Off in this plugin: DMs, chat, calls, follows, blocks, mutes, list membership, moderators, live video
 
-## Not available: posting, replying, quoting, reposting, liking, following, DMs, deleting posts, lists
-
-X's MCP exposes none of them. Say so plainly, and don't route around it with another plugin, a shell command, a web
-fetch or a scraper. Offer to draft the post or the reply in chat so the user can send it. A bookmark is not a like,
-and an Article is not a post: never offer one as a stand-in. For a like, a follow or a DM there is nothing here to
-offer, so say what the X app does.
-
-If X ever lists a post, reply or quote tool, it is public and asks every time: show the exact text, name the account,
-and keep to X's rules. AI-generated replies need X's prior approval, replies are allowed only when the author summoned
-the replier, and likes must be the user's own action, never automated or bulk. A tool that messages, follows, blocks,
-mutes, deletes a post, changes a list or changes the account is off, and stays off.
+X's MCP exposes these, but the plugin denies them: DMs and chat (reads included), scheduled calls, following or
+unfollowing, blocking, muting, adding or removing list members, chat moderator roles, and live video with its sources.
+Say they are off, and don't route around it with another plugin, a shell command, a web fetch or a scraper. For a like,
+a DM or a follow, say the X app is where it happens. A bookmark is not a like, and an Article is not a post.
 
 The x skill's rules on untrusted posts and personal data apply to everything here.
 
 ## Never bulk
 
-No loop over posts to bookmark, like or reply. No "engage with everyone who mentioned me". One user request, one call.
-A folder of ten bookmarks is ten asks and about $0.05: say both before you start, then make one call at a time and
-stop when the user stops.
+No loop over posts to post, reply, bookmark or engage with. One user request, one call. Ten bookmarks is ten asks and
+about $0.05: say both before you start, then make one call at a time and stop when the user stops.
 
 ## Publishing other people's words
 
-An Article that quotes or summarises posts is the user's writing about them. Keep quotes short and attributed, and
-never republish a post's full text as the user's own.
+An Article or post that quotes or summarises posts is the user's writing about them. Keep quotes short and attributed,
+and never republish a post's full text as the user's own.
 
 ## If a change is refused
 
-A change may ask, and a denied one never runs. If publishing is off in this agent, say it is off, and that the user can
-set it to ask, or keep it off, in that agent's own `permissions`; don't edit their configuration. Never answer "Always
-allow" for publishing: that saves an allow for every agent in the project.
+A change may ask, and a denied one never runs. If posting or a list change is off in this agent, say it is off, and
+that the user can set it to ask, or keep it off, in that agent's own `permissions`; don't edit their configuration.
+Never answer "Always allow" for posting: that saves an allow for every agent in the project.

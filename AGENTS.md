@@ -46,11 +46,11 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
   account is the label OpenCode keeps on the sign-in, if any.
 - **A user's own server entry** is read for its type, URL and whether `oauth` is `false`, never its `headers` or its
   client fields.
-- **`src/x-tools.ts` is the one record of X's tools**, and has no runtime imports. `DENY_PATTERNS` is the owner's
-  effect deny for a future DM, follow, block, mute, post-delete, list-membership or account tool; never weaken it.
+- **`src/x-tools.ts` is the one record of X's tools**, and has no runtime imports. `DENY_TOOLS` is the 40 live tools that are off, and `DENY_PATTERNS` is the owner's
+  effect deny for a future DM, follow, block, mute, post-delete, list-membership or account tool; never weaken either.
   Everything else derives from it;
-  `jelly.tools` and the skills are checked against it. Its names are provisional until a tool list from a signed-in
-  server is recorded, and `PARAMETERS` is empty until then: reconciling is a change to that file,
+  `jelly.tools` and the skills are checked against it. Its names are the live list captured on 2026-11-06, with no
+  annotations, and `PARAMETERS` comes from its input schemas: reconciling is a change to that file,
   `test/unit/x-tools.json`, `jelly.tools` and the skills, which `npm run drift` guides. `src/constants.ts` has no
   imports at all: `scripts/check.mjs` loads it with Node's type stripping.
 - **Every call is billed.** Docs, skills, status and the namespace text say so plainly. The skills keep result counts
@@ -73,7 +73,7 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
 - **The tools RPC.** `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block
   between the `PLUGIN-SPECIFIC` markers here; change the rest in the shared copy first. Its methods are `READ_TOOLS`
-  and nothing else: never a write, the public publish, a denied tool or an unknown tool. Keep the RPC id
+  and nothing else: never a write, the public Post, a denied tool or an unknown tool. Keep the RPC id
   `x.posts.tools` and its method names stable: scripts call them by name.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
   `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`.

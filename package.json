@@ -2,7 +2,7 @@
   "name": "@joe-broadhead/opencode-x",
   "version": "0.0.0",
   "private": true,
-  "description": "Unofficial OpenCode plugin for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, and draft long-form Articles, through X's official MCP server",
+  "description": "Unofficial OpenCode plugin for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, post, and draft long-form Articles, through X's official MCP server",
   "keywords": [
     "opencode",
     "opencode-plugin",
@@ -61,32 +61,606 @@
     "summary": "Search and read X, your bookmarks, news and trends, and draft Articles.",
     "icon": "assets/icon.svg",
     "tools": [
-      { "name": "x.get_news", "permission": "x_get_news", "effect": "allow", "readOnly": true },
-      { "name": "x.get_posts_by_id", "permission": "x_get_posts_by_id", "effect": "allow", "readOnly": true },
-      { "name": "x.get_posts_by_ids", "permission": "x_get_posts_by_ids", "effect": "allow", "readOnly": true },
-      { "name": "x.get_posts_counts_recent", "permission": "x_get_posts_counts_recent", "effect": "allow", "readOnly": true },
-      { "name": "x.get_posts_liking_users", "permission": "x_get_posts_liking_users", "effect": "allow", "readOnly": true },
-      { "name": "x.get_posts_quoted_posts", "permission": "x_get_posts_quoted_posts", "effect": "allow", "readOnly": true },
-      { "name": "x.get_posts_reposted_by", "permission": "x_get_posts_reposted_by", "effect": "allow", "readOnly": true },
-      { "name": "x.get_trends_by_woeid", "permission": "x_get_trends_by_woeid", "effect": "allow", "readOnly": true },
-      { "name": "x.get_users_bookmark_folders", "permission": "x_get_users_bookmark_folders", "effect": "allow", "readOnly": true },
-      { "name": "x.get_users_bookmarks", "permission": "x_get_users_bookmarks", "effect": "allow", "readOnly": true },
-      { "name": "x.get_users_bookmarks_by_folder_id", "permission": "x_get_users_bookmarks_by_folder_id", "effect": "allow", "readOnly": true },
-      { "name": "x.get_users_by_id", "permission": "x_get_users_by_id", "effect": "allow", "readOnly": true },
-      { "name": "x.get_users_by_username", "permission": "x_get_users_by_username", "effect": "allow", "readOnly": true },
-      { "name": "x.get_users_by_usernames", "permission": "x_get_users_by_usernames", "effect": "allow", "readOnly": true },
-      { "name": "x.get_users_me", "permission": "x_get_users_me", "effect": "allow", "readOnly": true },
-      { "name": "x.get_users_mentions", "permission": "x_get_users_mentions", "effect": "allow", "readOnly": true },
-      { "name": "x.get_users_posts", "permission": "x_get_users_posts", "effect": "allow", "readOnly": true },
-      { "name": "x.get_users_timeline", "permission": "x_get_users_timeline", "effect": "allow", "readOnly": true },
-      { "name": "x.search_news", "permission": "x_search_news", "effect": "allow", "readOnly": true },
-      { "name": "x.search_posts_all", "permission": "x_search_posts_all", "effect": "allow", "readOnly": true },
-      { "name": "x.search_users", "permission": "x_search_users", "effect": "allow", "readOnly": true },
-      { "name": "x.article_create_draft", "permission": "x_article_create_draft", "effect": "ask", "readOnly": false },
-      { "name": "x.create_users_bookmark", "permission": "x_create_users_bookmark", "effect": "ask", "readOnly": false },
-      { "name": "x.create_users_bookmark_folder", "permission": "x_create_users_bookmark_folder", "effect": "ask", "readOnly": false },
-      { "name": "x.delete_users_bookmark", "permission": "x_delete_users_bookmark", "effect": "ask", "readOnly": false },
-      { "name": "x.article_publish", "permission": "x_article_publish", "effect": "ask", "readOnly": false }
+      {
+        "name": "x.get_broadcast",
+        "permission": "x_get_broadcast",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_broadcast_chat",
+        "permission": "x_get_broadcast_chat",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_chat_moderators",
+        "permission": "x_get_chat_moderators",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_communities_by_id",
+        "permission": "x_get_communities_by_id",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_lists_by_id",
+        "permission": "x_get_lists_by_id",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_lists_followers",
+        "permission": "x_get_lists_followers",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_lists_members",
+        "permission": "x_get_lists_members",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_lists_posts",
+        "permission": "x_get_lists_posts",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_news",
+        "permission": "x_get_news",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_posts_by_id",
+        "permission": "x_get_posts_by_id",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_posts_by_ids",
+        "permission": "x_get_posts_by_ids",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_posts_counts_recent",
+        "permission": "x_get_posts_counts_recent",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_posts_liking_users",
+        "permission": "x_get_posts_liking_users",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_posts_quoted_posts",
+        "permission": "x_get_posts_quoted_posts",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_posts_reposted_by",
+        "permission": "x_get_posts_reposted_by",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_scheduled_broadcast",
+        "permission": "x_get_scheduled_broadcast",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_scheduled_call",
+        "permission": "x_get_scheduled_call",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_spaces_by_creator_ids",
+        "permission": "x_get_spaces_by_creator_ids",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_spaces_by_id",
+        "permission": "x_get_spaces_by_id",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_spaces_by_ids",
+        "permission": "x_get_spaces_by_ids",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_spaces_posts",
+        "permission": "x_get_spaces_posts",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_trends_by_woeid",
+        "permission": "x_get_trends_by_woeid",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_usage_credits",
+        "permission": "x_get_usage_credits",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_blocking",
+        "permission": "x_get_users_blocking",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_bookmark_folders",
+        "permission": "x_get_users_bookmark_folders",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_bookmarks",
+        "permission": "x_get_users_bookmarks",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_bookmarks_by_folder_id",
+        "permission": "x_get_users_bookmarks_by_folder_id",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_by_id",
+        "permission": "x_get_users_by_id",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_by_username",
+        "permission": "x_get_users_by_username",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_by_usernames",
+        "permission": "x_get_users_by_usernames",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_followed_lists",
+        "permission": "x_get_users_followed_lists",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_liked_posts",
+        "permission": "x_get_users_liked_posts",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_list_memberships",
+        "permission": "x_get_users_list_memberships",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_me",
+        "permission": "x_get_users_me",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_me_followers",
+        "permission": "x_get_users_me_followers",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_me_following",
+        "permission": "x_get_users_me_following",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_mentions",
+        "permission": "x_get_users_mentions",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_owned_lists",
+        "permission": "x_get_users_owned_lists",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_pinned_lists",
+        "permission": "x_get_users_pinned_lists",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_posts",
+        "permission": "x_get_users_posts",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_timeline",
+        "permission": "x_get_users_timeline",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.list_broadcasts",
+        "permission": "x_list_broadcasts",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.list_scheduled_broadcasts",
+        "permission": "x_list_scheduled_broadcasts",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.list_scheduled_calls",
+        "permission": "x_list_scheduled_calls",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.search_communities",
+        "permission": "x_search_communities",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.search_news",
+        "permission": "x_search_news",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.search_posts_all",
+        "permission": "x_search_posts_all",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.search_spaces",
+        "permission": "x_search_spaces",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.search_users",
+        "permission": "x_search_users",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_source",
+        "permission": "x_get_source",
+        "effect": "ask",
+        "readOnly": true
+      },
+      {
+        "name": "x.list_sources",
+        "permission": "x_list_sources",
+        "effect": "ask",
+        "readOnly": true
+      },
+      {
+        "name": "x.article_create_draft",
+        "permission": "x_article_create_draft",
+        "effect": "ask",
+        "readOnly": false
+      },
+      {
+        "name": "x.create_lists",
+        "permission": "x_create_lists",
+        "effect": "ask",
+        "readOnly": false
+      },
+      {
+        "name": "x.create_users_bookmark",
+        "permission": "x_create_users_bookmark",
+        "effect": "ask",
+        "readOnly": false
+      },
+      {
+        "name": "x.create_users_bookmark_folder",
+        "permission": "x_create_users_bookmark_folder",
+        "effect": "ask",
+        "readOnly": false
+      },
+      {
+        "name": "x.delete_users_bookmark",
+        "permission": "x_delete_users_bookmark",
+        "effect": "ask",
+        "readOnly": false
+      },
+      {
+        "name": "x.pin_list",
+        "permission": "x_pin_list",
+        "effect": "ask",
+        "readOnly": false
+      },
+      {
+        "name": "x.unpin_list",
+        "permission": "x_unpin_list",
+        "effect": "ask",
+        "readOnly": false
+      },
+      {
+        "name": "x.update_lists",
+        "permission": "x_update_lists",
+        "effect": "ask",
+        "readOnly": false
+      },
+      {
+        "name": "x.create_posts",
+        "permission": "x_create_posts",
+        "effect": "ask",
+        "readOnly": false
+      },
+      {
+        "name": "x.accept_chat_message_request",
+        "permission": "x_accept_chat_message_request",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.add_chat_moderator",
+        "permission": "x_add_chat_moderator",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.add_conversation_keys",
+        "permission": "x_add_conversation_keys",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.add_lists_member",
+        "permission": "x_add_lists_member",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.archive_chat_conversation",
+        "permission": "x_archive_chat_conversation",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.cancel_scheduled_call",
+        "permission": "x_cancel_scheduled_call",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.chat_media_download",
+        "permission": "x_chat_media_download",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.chat_media_upload_append",
+        "permission": "x_chat_media_upload_append",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.chat_media_upload_finalize",
+        "permission": "x_chat_media_upload_finalize",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.chat_media_upload_initialize",
+        "permission": "x_chat_media_upload_initialize",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.create_scheduled_broadcast",
+        "permission": "x_create_scheduled_broadcast",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.create_source",
+        "permission": "x_create_source",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.delete_scheduled_broadcast",
+        "permission": "x_delete_scheduled_broadcast",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.delete_source",
+        "permission": "x_delete_source",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.follow_list",
+        "permission": "x_follow_list",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.get_chat_conversation",
+        "permission": "x_get_chat_conversation",
+        "effect": "deny",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_chat_conversation_events",
+        "permission": "x_get_chat_conversation_events",
+        "effect": "deny",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_chat_conversations",
+        "permission": "x_get_chat_conversations",
+        "effect": "deny",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_chat_message_request",
+        "permission": "x_get_chat_message_request",
+        "effect": "deny",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_chat_message_requests",
+        "permission": "x_get_chat_message_requests",
+        "effect": "deny",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_public_key",
+        "permission": "x_get_users_public_key",
+        "effect": "deny",
+        "readOnly": true
+      },
+      {
+        "name": "x.get_users_public_keys",
+        "permission": "x_get_users_public_keys",
+        "effect": "deny",
+        "readOnly": true
+      },
+      {
+        "name": "x.go_live_scheduled_broadcast",
+        "permission": "x_go_live_scheduled_broadcast",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.mark_chat_conversation_read",
+        "permission": "x_mark_chat_conversation_read",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.mark_chat_conversation_unread",
+        "permission": "x_mark_chat_conversation_unread",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.mute_broadcast_chat_user",
+        "permission": "x_mute_broadcast_chat_user",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.remove_chat_moderator",
+        "permission": "x_remove_chat_moderator",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.remove_lists_member_by_user_id",
+        "permission": "x_remove_lists_member_by_user_id",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.respond_to_scheduled_call",
+        "permission": "x_respond_to_scheduled_call",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.schedule_call",
+        "permission": "x_schedule_call",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.send_chat_message",
+        "permission": "x_send_chat_message",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.send_chat_typing_indicator",
+        "permission": "x_send_chat_typing_indicator",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.unarchive_chat_conversation",
+        "permission": "x_unarchive_chat_conversation",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.unfollow_list",
+        "permission": "x_unfollow_list",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.unmute_broadcast_chat_user",
+        "permission": "x_unmute_broadcast_chat_user",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.update_scheduled_broadcast",
+        "permission": "x_update_scheduled_broadcast",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.update_scheduled_call",
+        "permission": "x_update_scheduled_call",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.update_source",
+        "permission": "x_update_source",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.users_id_block",
+        "permission": "x_users_id_block",
+        "effect": "deny",
+        "readOnly": false
+      },
+      {
+        "name": "x.users_id_unblock",
+        "permission": "x_users_id_unblock",
+        "effect": "deny",
+        "readOnly": false
+      }
     ],
     "skills": [
       "x",

@@ -170,35 +170,41 @@ after that rule:
 ]
 ```
 
-That sample leaves out the other 19 read allows, which sit between the two shown; `/x-status` prints the whole block,
+That sample leaves out the other 47 read allows, which sit between the two shown; `/x-status` prints the whole block,
 and its `Agents without default rules` row prints it as a list to paste.
 
-`READ_TOOLS` in `src/x-tools.ts` lists X's read tools, `WRITE_TOOLS` its four private writes, `PUBLIC_TOOLS` the one
-public write, `DENY_TOOLS` the named tools that are off (empty today), and `DENY_PATTERNS` the effects the owner ruled
-out. A write or a tool X adds later that is not one of those effects matches only `x_*`, so it asks. `/x-status` names the tools in no list. X may list fewer tools for a token with fewer
-scopes, so a known tool can be missing; that is normal.
+`READ_TOOLS` in `src/x-tools.ts` lists the 49 reads that run; `ASK_READ_TOOLS` the two source reads whose output can
+carry a stream key; `WRITE_TOOLS` the 8 private writes; `PUBLIC_TOOLS` the one public write, `create_posts`;
+`DENY_TOOLS` the 40 tools that are off; and `DENY_PATTERNS` a safety net for a future tool of the same effect. A
+write or a tool X adds later that is not one of those effects matches only `x_*`, so it asks. `/x-status` names the
+tools in no list. X may list fewer tools for a token with fewer scopes, so a known tool can be missing; that is normal.
 
-The writes, which ask:
+The private writes, which ask:
 
 - `x_create_users_bookmark` bookmarks a post for the user only, and `x_delete_users_bookmark` removes that bookmark,
-  not the post.
-- `x_create_users_bookmark_folder` creates a folder that only the user sees in their X app.
-- `x_article_create_draft` saves a private Article draft. Nothing is public yet.
-- `x_article_publish` publishes the draft: anyone can read it, and it appears on the user's profile and in
-  followers' timelines. The plugin has no tool to unpublish it: removal means deleting the post in the X app.
+  not the post. `x_create_users_bookmark_folder` creates a folder only the user sees.
+- `x_article_create_draft` saves a private Article draft. There is no publish tool: it stays a draft, and the user
+  publishes it in X.
+- `x_create_lists`, `x_update_lists`, `x_pin_list` and `x_unpin_list` change the user's lists. A list is public unless
+  `private` is true.
 
-A deny also hides the tool from the model. No tool X offers today is denied, but `DENY_PATTERNS` denies a future tool
-that messages, follows, blocks, mutes, deletes a post, changes a list or changes the account. Turning one on takes a
+`x_create_posts` is public: anyone can read the Post, and it appears on the user's profile and in followers'
+timelines. It can reply (`reply.in_reply_to_tweet_id`), quote (`quote_tweet_id`) or edit
+(`edit_options.previous_post_id`); each asks, only on an explicit request. `x_get_source` and `x_list_sources` also
+ask, because a source can carry the RTMP URL and its stream key.
+
+A deny also hides the tool from the model. The 40 off tools are DMs and chat (reads included), follows, blocks,
+mutes, list membership, chat moderators, scheduled calls, and live video with its sources. Turning one on takes a
 later `ask` rule in an agent's own `permissions`; the recipes below narrow.
 
 To narrow one agent, add a rule to that agent's own `permissions`, which come after the plugin's block in that agent.
-For the build agent, turn publishing off:
+For the build agent, turn posting off:
 
 ```json
 {
   "agents": {
     "build": {
-      "permissions": [{ "action": "x_article_publish", "resource": "*", "effect": "deny" }]
+      "permissions": [{ "action": "x_create_posts", "resource": "*", "effect": "deny" }]
     }
   }
 }
@@ -221,10 +227,10 @@ rules and keeps its own behaviour.
 A `deny` can go in the top-level `permissions` of `opencode.json`: it applies to every agent, and only tightens. An
 `allow` or `ask` goes in the agent's own `permissions`.
 
-Never publish Articles, in any agent (a `deny` also hides the tool):
+Never post, in any agent (a `deny` also hides the tool):
 
 ```json
-[{ "action": "x_article_publish", "resource": "*", "effect": "deny" }]
+[{ "action": "x_create_posts", "resource": "*", "effect": "deny" }]
 ```
 
 Turn off every bookmark change, in one agent:
@@ -255,8 +261,9 @@ Make every X tool ask in one agent, reads included. The last match wins, so this
 }
 ```
 
-A write is approved per call, through the permission prompt. This plugin documents no `allow` for a write, publishing
-included: an "Always allow" saves an allow for every agent in the project, and a top-level `allow` would reach Explore.
+A write is approved per call, through the permission prompt. This plugin documents no `allow` for a write, the public
+Post included: an "Always allow" saves an allow for every agent in the project, and a top-level `allow` would reach
+Explore.
 
 ### Agents that miss the rules
 
@@ -275,7 +282,7 @@ agent's own rules, so it would loosen Explore. For an agent `reviewer`, with one
 
 ```json
 {
-  "permissions": [{ "action": "x_article_publish", "resource": "*", "effect": "deny" }],
+  "permissions": [{ "action": "x_create_posts", "resource": "*", "effect": "deny" }],
   "agents": {
     "reviewer": {
       "description": "Reviews changes",
@@ -284,7 +291,7 @@ agent's own rules, so it would loosen Explore. For an agent `reviewer`, with one
         { "action": "x_*", "resource": "*", "effect": "ask" },
         { "action": "x_get_news", "resource": "*", "effect": "allow" },
         { "action": "x_get_users_me", "resource": "*", "effect": "allow" },
-        { "action": "x_article_publish", "resource": "*", "effect": "deny" }
+        { "action": "x_create_posts", "resource": "*", "effect": "deny" }
       ]
     }
   }
@@ -292,7 +299,7 @@ agent's own rules, so it would loosen Explore. For an agent `reviewer`, with one
 ```
 
 Copy the full block from your own `/x-status` output: the sample above keeps the first two read allows and your own
-rule, and leaves out the other 19.
+rule, and leaves out the other 47.
 
 ## Errors
 
@@ -341,7 +348,7 @@ meanings:
 | `client` | `id`, `mode` (`public_pkce` for a Native App, `confidential` when a secret is set) and `source` (`options` or `connect`). The `Client` row names `your own app` when it came from `/connect`, or `configured app` when it came from plugin options, as a team app does; status cannot tell managed config from a user's own options. The secret is never shown. |
 | `callback`, `callbackPort`, `scopes` | The redirect URI the app must have registered, the local port for an `https:` redirect, and the scopes OpenCode requests |
 | `tools` | How many X tools OpenCode lists that the default rules let run or ask: the listed ones, without the denied ones |
-| `deniedTools` | The listed tools that the default rules deny, by name or by the owner's effect patterns; empty for today's list. The `Tools` row shows them as "off by default" |
+| `deniedTools` | The listed tools that the default rules deny, by name or by a safety pattern: the 40 off tools when X lists them all. The `Tools` row shows them as "off by default" |
 | `listing` | True while a server that connected moments ago lists no tools yet. The next step is then to run `/x-status` again in a few seconds, not to check the app. |
 | `unknownCount`, `unknownTools` | How many of them the plugin does not know, and at most 20 of their names, only those made of lowercase letters, digits and `_` |
 | `unguardedAgents` | Agents where a new X tool would run without asking; empty when there are none. An agent whose own rules already ask or deny for every X tool is not listed. |
@@ -350,9 +357,9 @@ meanings:
 | `problems` | Setup problems, each `CODE: What happened. Next step: What to do.` |
 | `nextStep` | Exactly one next step: the `Next step` row, `Nothing to do.` when nothing is needed |
 
-The `Access` row states the posture the default rules fix: "reads run without asking; bookmark changes, Article
-drafts and publishing ask first; a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the
-account is off; X bills every tool call to the X developer account that owns the app". Then it says whether those rules are in place: "no agent runs new X tools unasked", "default rules missing in the agents listed below", or "default rules
+The `Access` row states the posture the default rules fix: "reads run without asking; 11 tools ask first (bookmarks,
+lists, an Article draft, source keys and a public Post); 40 are off (DMs and chat, calls, follows, blocks, mutes,
+list membership, moderators and live video); X bills every tool call to the X developer account that owns the app". Then it says whether those rules are in place: "no agent runs new X tools unasked", "default rules missing in the agents listed below", or "default rules
 not added (see the OpenCode row)".
 
 When the status cannot be read, the method answers with its error `unavailable`: the message

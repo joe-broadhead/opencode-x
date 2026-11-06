@@ -37,7 +37,7 @@ export const PLUGIN_ID = X_PLUGIN_ID
 /**
  * The MCP tools that become methods, by their upstream name (the tool id without the `<server>_` prefix). Only known
  * reads belong here: an allowlist, so a tool the server adds later is never a method. X's are its known reads, the
- * tools that the default rules allow; its bookmark changes, its Article draft and article_publish never are.
+ * tools that the default rules allow; its bookmark and list changes, its Article draft and create_posts never are.
  */
 export const KNOWN_READS: readonly string[] = READ_TOOLS
 
