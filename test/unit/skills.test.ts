@@ -237,11 +237,15 @@ describe("skills", () => {
     expect(scripts).toContain("one call at a time")
   })
 
-  test("x-write says what a write does and whom it reaches, then makes the call: the permission prompt is the yes", () => {
+  test("x-write gives the Post text, the public-and-price sentence, then the one call: the permission prompt is the yes", () => {
     const text = flat("x-write")
-    expect(text).toMatch(/Before the call, write one sentence in your reply on what it does and\s+whom it reaches, then make the one call in the same turn\. The permission prompt is the user's yes/)
+    expect(text).toContain("For `create_posts`, in the same turn and before the call, your reply gives, in this order:")
+    expect(text).toContain("1. the draft text;")
+    expect(text).toContain('2. one sentence: "This will be public: anyone on X can see it. It costs $0.015 ($0.200 with a link).";')
+    expect(text).toContain("3. then the one call.")
+    expect(text).toMatch(/The permission prompt is the user's yes/)
+    expect(text).toMatch(/After a decline, nothing was posted: say so, and offer the draft/)
     expect(text).toMatch(/Ask in chat first only when something must be chosen/)
-    expect(text).toMatch(/After a\s+decline, say that nothing changed and offer the draft or a retry/)
     expect(text).not.toMatch(/wait for a yes|get a yes|only after a yes|wait for (?:the user's )?(?:confirmation|approval)/i)
   })
 
@@ -250,7 +254,7 @@ describe("skills", () => {
     const reach = text.split("## Whom each change reaches")[1]?.split(" ## ")[0] ?? ""
     expect(reach).toContain("`create_posts`: public.")
     expect(reach).toContain("Anyone can read it, not only followers")
-    expect(reach).toContain("This posts '…' publicly to anyone; it costs $0.015, or $0.200 if it contains a link.")
+    expect(reach).toContain("This will be public: anyone on X can see it. It costs $0.015 ($0.200 with a link).")
     expect(reach).toContain("A reply (`reply.in_reply_to_tweet_id`) or a quote (`quote_tweet_id`) only when the user explicitly")
     expect(reach).toContain("say the author is notified")
     for (const name of WRITE_TOOLS) expect(reach).toContain(`\`${name}\``)
