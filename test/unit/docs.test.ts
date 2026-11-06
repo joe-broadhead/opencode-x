@@ -193,5 +193,13 @@ describe("docs", () => {
     expect(guide).toContain("x-rate-limit-reset")
     expect(guide).toContain("make calls one at a time")
     expect(guide).toContain("Never page in a loop")
+    expect(guide).toContain("`start_time` and `end_time`")
+  })
+
+  test("no doc offers a search operator or parameter X does not have", () => {
+    for (const file of ["README.md", "docs/scripting.md", "docs/configuration.md"]) {
+      const body = text(file)
+      for (const bad of ["since:", "until:", "min_faves:"]) expect({ file, bad, found: body.includes(bad) }).toEqual({ file, bad, found: false })
+    }
   })
 })
