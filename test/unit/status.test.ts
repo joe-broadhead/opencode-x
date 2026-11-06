@@ -27,7 +27,7 @@ const CLIENT = { client: { id: "client-1", source: "options" as const }, invalid
 const base: StatusFacts = { server: { status: "connected" }, source: { type: "plugin", url: URL, signIn: "oauth" }, host, client: CLIENT, options: OPTS, tools: ["search_posts_all"] }
 const guarded = { id: "build", permissions: [allow("*"), ...defaultRules()] }
 const RULES = "no agent runs new X tools unasked"
-const POSTURE = "reads run without asking; bookmark changes, Article drafts and publishing ask first; a tool that messages, follows, blocks, mutes, deletes a post, changes a list or the account is off; X bills every tool call to the X developer account that owns the app"
+const POSTURE = "reads run without asking; 11 tools ask first (bookmarks, lists, an Article draft, source keys and a public Post); 40 are off (DMs and chat, calls, follows, blocks, mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the app"
 const ACCESS = `${POSTURE}; ${RULES}`
 
 describe("buildStatus", () => {
@@ -188,8 +188,8 @@ describe("buildStatus", () => {
 
   test("the Access row says whether the default rules are in place, from what status can see", () => {
     expect(formatStatus(buildStatus(base))).toContain(`- Access: ${ACCESS}\n`)
-    expect(ACCESS).toContain("bookmark changes, Article drafts and publishing ask first")
-    expect(ACCESS).toContain("X bills every tool call to the X developer account that owns the app")
+    expect(ACCESS).toContain("11 tools ask first (bookmarks, lists, an Article draft, source keys and a public Post)")
+    expect(ACCESS).toContain("40 are off (DMs and chat, calls, follows, blocks, mutes, list membership, moderators and live video)")
     const missing = buildStatus({ ...base, agents: [{ id: "reviewer", permissions: [allow("*")] }] })
     expect(formatStatus(missing)).toContain(`- Access: ${POSTURE}; default rules missing in the agents listed below\n`)
     const problem = "RULES_NOT_ADDED: X's default permission rules could not be added (boom), so X tools may run without asking. Next step: Restart OpenCode."
@@ -288,8 +288,8 @@ describe("buildStatus", () => {
   })
 
   test("the writes the Access row covers are the lists', not a fixed sentence", () => {
-    expect(WRITE_TOOLS.length).toBe(4)
-    expect(PUBLIC_TOOLS).toEqual(["article_publish"])
+    expect(WRITE_TOOLS.length).toBe(8)
+    expect(PUBLIC_TOOLS).toEqual(["create_posts"])
   })
 })
 

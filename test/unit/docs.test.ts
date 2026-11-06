@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { ASK_READ_TOOLS, DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url))
 // Everything a user or the model reads about the current release.
@@ -17,7 +17,7 @@ const FILES = [
   ...readdirSync(join(ROOT, "docs")).map((name) => `docs/${name}`),
   ...readdirSync(join(ROOT, "skills")).map((name) => `skills/${name}/SKILL.md`),
 ]
-const KNOWN = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
+const KNOWN = [...READ_TOOLS, ...ASK_READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
 const text = (file: string) => readFileSync(join(ROOT, file), "utf8").replace(/\s+/g, " ")
 // Every code the plugin raises, whether through an error helper or a status field.
 const CODES = ["OPTIONS_INVALID", "HOST_UNTESTED", "CLIENT_ID_MISSING", "CLIENT_ID_INVALID", "STATUS_UNAVAILABLE", "SKILLS_INVALID", "SERVER_NOT_REGISTERED", "RULES_NOT_ADDED"]
@@ -64,11 +64,12 @@ describe("docs", () => {
     expect(readme).toContain("A public client's refresh token is unconfirmed live")
   })
 
-  test("the README's Known limits says the tool table is provisional, and nowhere else does", () => {
+  test("the README's Known limits says the table was reconciled with the live list, which has no annotations", () => {
     const readme = readFileSync(join(ROOT, "README.md"), "utf8")
     const limits = readme.split("## Known limits")[1]?.split("## Uninstall")[0] ?? ""
-    expect(limits).toContain("The tool table is provisional")
-    expect(readme.replace(limits, "")).not.toMatch(/provisional/i)
+    expect(limits).toContain("reconciled with the live list on 2026-11-06")
+    expect(limits).toContain("no annotations")
+    expect(readme).not.toMatch(/provisional/i)
   })
 
   test("the README names no version of the plugin, not even in an example", () => {
@@ -78,7 +79,7 @@ describe("docs", () => {
   test("the README and the configuration guide give the narrowing recipes, and no allow for any write", () => {
     for (const file of ["README.md", "docs/configuration.md"]) {
       const body = text(file)
-      expect(body).toContain('{ "action": "x_article_publish", "resource": "*", "effect": "deny" }')
+      expect(body).toContain('{ "action": "x_create_posts", "resource": "*", "effect": "deny" }')
     }
     expect(text("docs/configuration.md")).toContain("This plugin documents no `allow` for a write")
     // No document may teach an allow for a private write or the public write.
@@ -190,9 +191,10 @@ describe("docs", () => {
     const readme = text("README.md")
     expect(readme).toContain("client-not-enrolled")
     expect(readme).toContain("Pay-per-use")
-    expect(readme).toContain("`403` on a bookmark or an Article")
-    expect(readme).toContain("Posting is missing")
-    expect(readme).toContain("X's MCP server exposes no post, reply, quote, repost, like, follow, message or delete tool")
+    expect(readme).toContain("`403` on a write")
+    expect(readme).toContain("Posting asks first")
+    expect(readme).toContain("How much credit is left")
+    expect(readme).toContain("`x_create_posts` is public and asks every time")
     expect(readme).toContain("Answers cost more than expected")
     expect(readme).toContain("`429`")
   })

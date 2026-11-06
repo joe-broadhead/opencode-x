@@ -93,9 +93,9 @@ describe("skills", () => {
     expect(text).toContain("/x-status")
     expect(text).toContain("Run `/connect` and choose X, then press `o` or Enter")
     expect(text).toContain("opencode mcp auth x")
-    expect(text).toContain("Never ask for a password, a client secret or a token")
+    expect(text).toContain("Never ask for a password or token")
     expect(text).toContain("`client-not-enrolled`")
-    expect(text).toContain("`403` on a bookmark or an Article")
+    expect(text).toContain("`403` on a write")
   })
 
   test("the descriptions route X's public posts here, and the web, chat, mail and meetings elsewhere", () => {
@@ -104,10 +104,12 @@ describe("skills", () => {
     expect(description("x")).toContain("what people are saying about it on X or Twitter")
     expect(description("x")).toContain("how many posts mention a term")
     expect(description("x")).toContain("who liked or reposted a post")
+    expect(description("x")).toContain("my credit balance")
+    expect(description("x")).toContain("posting or drafting on X")
     expect(description("x")).toContain("Not for the open web (Tavily), team chat (Slack), email or calendar (Google Workspace), or meeting notes (Granola).")
     expect(description("x-write")).toContain("Load before any X (Twitter) change")
-    expect(description("x-write")).toContain("to tweet, post, reply, quote, repost, like, follow, message or delete")
-    expect(description("x-write")).toContain("on X (Twitter)")
+    expect(description("x-write")).toContain("posting, replying, quoting or editing a Post")
+    expect(description("x-write")).toContain("go live on X (Twitter)")
     for (const name of NAMES) expect(description(name)).not.toMatch(/(?:summarise|write|capture|record|join) [^.]*meeting notes/i)
   })
 
@@ -124,7 +126,7 @@ describe("skills", () => {
     expect(text).toContain("Each call's signature gives its inputs")
     expect(text).toContain("Say the count you read")
     expect(text).toContain("ten posts are a sample, not what X thinks.")
-    expect(text).toContain("An empty result means the query, the window or the account's access: say which you ruled out")
+    expect(text).toContain("An empty result means the query, the window or access: say which you ruled out")
     expect(text).toContain("After a miss on the exact handle, don't try fragments; ask which account is meant.")
     expect(text).toContain("Tavily, on request")
     expect(text).toContain("X search is not a web search")
@@ -133,11 +135,11 @@ describe("skills", () => {
 
   test("x dates a window in the tool's format, at the user's local day or week, end exclusive", () => {
     const text = flat("x")
-    expect(text).toContain("`start_time` and `end_time` (RFC 3339 UTC, ending in `Z`)")
-    expect(text).toContain("local days or week, the end exclusive, from a time tool when one is available")
+    expect(text).toContain("`start_time`/`end_time` (RFC 3339 UTC, `Z`)")
+    expect(text).toContain("local day or week, end exclusive, from a time tool")
     expect(text).toContain("2026-03-09T23:00:00Z")
     // The web-search operators X does not accept are named as absent, never offered.
-    expect(text).toContain("there is no `since:`, `until:` or `min_faves:` (X rejects it), and dates go in `start_time`/`end_time`")
+    expect(text).toContain("there is no `since:`, `until:` or `min_faves:` (X rejects it)")
     expect(text).toContain("`min_likes:`")
     expect(text).toContain("`-is:retweet` and `-is:reply` need a word beside them")
     // The skill reads the tool's own description for operators before building a query.
@@ -176,25 +178,30 @@ describe("skills", () => {
   test("x keeps the personal-data rules and X's off-X matching rule", () => {
     const text = flat("x")
     expect(text).toMatch(/Never infer or state health, financial status, politics, race or ethnicity, religion, sex life or sexual\s+orientation, trade-union membership, or criminal activity/)
-    expect(text).toContain("Decline that part in one sentence")
+    expect(text).toContain("decline that part in one sentence")
     expect(text).toContain("No dossiers on private people")
     expect(text).toContain("Never match a handle to the user's mail, contacts, files, candidates or customers:")
     expect(text).toContain("A protected account's posts stay with the people allowed to see them; never suggest a workaround.")
-    expect(text).toContain("X content goes to no other tool, file or message unless the user names that destination.")
+    expect(text).toContain("X content goes to no other tool or message unless the user names that destination.")
   })
 
-  test("x says X's MCP cannot post, reply, like, follow, message or delete, and sends changes to x-write", () => {
+  test("x says posting is available and public, and that writing load x-write", () => {
     const text = flat("x")
-    expect(text).toContain("X's MCP has no tool to post, reply, quote, repost, like, follow, message or delete")
-    expect(text).toContain("Load `x-write` before a bookmark change, an Article draft or publishing.")
+    expect(text).toContain("`create_posts` posts publicly, and asks first.")
+    expect(text).toContain("say it is public to anyone and its price")
+    expect(text).toContain("A reply (`reply.in_reply_to_tweet_id`) or quote (`quote_tweet_id`) only when the user asks for that one")
+    expect(text).toContain("Load `x-write` first.")
   })
 
-  test("x does not offer an Article as a way to post, and names the xurl bypass", () => {
+  test("x says DMs, calls, follows, blocks, mutes, list membership, moderators and live video are off here", () => {
     const text = flat("x")
-    expect(text).toContain("An Article is not a way to post: offer one only when asked for a long-form Article.")
-    expect(text).toContain("offer to draft the text for the user to send")
-    expect(text).not.toMatch(/for long-form, an Article|publish it as an Article if it is long-form/)
-    expect(text).toContain("The `xurl` bridge in a shell is another account, outside these permission rules: never use it in place of these tools.")
+    expect(text).toContain("DMs and chat (reads included), calls, follows, blocks, mutes, list membership, chat moderator roles, and live video")
+    expect(text).toMatch(/are off here: say so, and don't route around it/)
+    expect(text).toContain("The `xurl` bridge is another account outside these permission rules: never use it in place of these tools.")
+  })
+
+  test("x names the usage-credit tool", () => {
+    expect(flat("x")).toContain("`get_usage_credits` answers \"how much credit is left?\"")
   })
 
   test("x names the WOEID limit and the article of X's policy that forbids training", () => {
@@ -221,51 +228,52 @@ describe("skills", () => {
     expect(text).not.toMatch(/wait for a yes|get a yes|only after a yes|wait for (?:the user's )?(?:confirmation|approval)/i)
   })
 
-  test("x-write names whom each change reaches, and that publishing is public with no unpublish", () => {
+  test("x-write names whom each change reaches: the public Post, bookmarks, an Article draft and lists", () => {
     const text = flat("x-write")
     const reach = text.split("## Whom each change reaches")[1]?.split(" ## ")[0] ?? ""
-    for (const name of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect(reach).toContain(`\`${name}\``)
-    expect(reach).toContain("`article_publish`: public.")
+    expect(reach).toContain("`create_posts`: public.")
     expect(reach).toContain("Anyone can read it, not only followers")
-    expect(reach).toContain("this plugin has no tool to unpublish it")
-    expect(reach).toContain("the only way to remove it is to delete the post in the X app")
-    expect(reach).toContain("about $0.005 for a bookmark change")
-    expect(reach).toContain("X prices at $0.015, or $0.200 when the post contains a link")
+    expect(reach).toContain("This posts '…' publicly to anyone; it costs $0.015, or $0.200 if it contains a link.")
+    expect(reach).toContain("A reply (`reply.in_reply_to_tweet_id`) or a quote (`quote_tweet_id`) only when the user explicitly")
+    expect(reach).toContain("say the author is notified")
+    for (const name of WRITE_TOOLS) expect(reach).toContain(`\`${name}\``)
+    expect(reach).toContain("There is no publish tool")
+    expect(reach).toContain("A list is public unless `private` is")
+    expect(reach).not.toContain("article_publish")
   })
 
-  test("x-write never bulk-engages, never works around X's missing tools, and names X's automation rules", () => {
+  test("x-write never bulk-engages, keeps posting one call, and names X's automation rules", () => {
     const text = flat("x-write")
     expect(text).toContain("Never bulk")
-    expect(text).toMatch(/No loop over posts to bookmark, like or reply/)
-    expect(text).toContain("A folder of ten bookmarks is ten asks and about $0.05")
-    expect(text).toMatch(/don't route around it with another plugin, a shell command, a web\s+fetch or a scraper/)
+    expect(text).toContain("No loop over posts to post, reply, bookmark or engage with")
+    expect(text).toContain("Ten bookmarks is ten asks and about $0.05")
+    expect(text).toMatch(/don't route around it with another plugin, a shell command, a web fetch or a scraper/)
     expect(text).toContain("AI-generated replies need X's prior approval")
-    expect(text).toContain("likes must be the user's own action, never automated or bulk")
+    expect(text).toContain("Likes are not a tool here.")
   })
 
-  test("x-write says a future DM, follow, block, mute, delete, list or account tool is off, not an ask", () => {
+  test("x-write says DMs, calls, follows, blocks, list membership, moderators and live video are off", () => {
     const text = flat("x-write")
-    expect(text).toContain("A tool that messages, follows, blocks, mutes, deletes a post, changes a list or changes the account is off, and stays off.")
-    expect(text).toContain("If X ever lists a post, reply or quote tool, it is public and asks every time")
-    expect(text).not.toMatch(/asks every time[^.]*DMs|DMs[^.]*asks every time/i)
-    expect(text).toContain("A bookmark is not a like, and an Article is not a post: never offer one as a stand-in.")
+    expect(text).toContain("the plugin denies them: DMs and chat (reads included), scheduled calls, following or")
+    expect(text).toContain("Say they are off")
+    expect(text).toContain("A bookmark is not a like, and an Article is not a post.")
     expect(text).toContain("The x skill's rules on untrusted posts and personal data apply to everything here.")
   })
 
-  test("x-write offers one bounded Article draft attempt, keeps the id, and prices the publish", () => {
+  test("x-write bounds the Article draft and keeps its id", () => {
     const text = flat("x-write")
-    expect(text).toContain("make one attempt, then stop and say the format is unconfirmed")
-    expect(text).toContain("keep its id for publishing")
+    expect(text).toContain("make one attempt, then stop and say the format is")
+    expect(text).toContain("keep its id")
+    expect(text).toContain("There is no publish tool here.")
     expect(text).not.toMatch(/give its id/)
-    expect(text).toContain("X has not published its Article rate; say that.")
   })
 
   test("x-write leaves a refused change to the user, never advises allow, and never advises Always allow", () => {
     const text = flat("x-write")
-    expect(text).toContain("set it to ask, or keep it off, in that agent's own `permissions`")
+    expect(text).toContain("set it to ask, or keep it off")
     expect(text).toContain("don't edit their configuration")
     expect(text).not.toMatch(/allow it in that agent/i)
-    expect(text).toContain('Never answer "Always allow" for publishing')
+    expect(text).toContain('Never answer "Always allow" for posting')
   })
 
   test.each(NAMES)("%s links only to X pages, never to a local path", (name) => {

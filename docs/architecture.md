@@ -18,7 +18,7 @@ runtime dependencies.
 | `src/listing.ts` | When the `x` server's status last changed, so status can tell a server still listing its tools from one that lists none |
 | `src/options.ts` | Option parsing and validation, the `oauth` block included |
 | `src/host-version.ts` | The host check: the supported range, and the tested releases |
-| `src/x-tools.ts` | `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS`, `DENY_TOOLS`, `DENY_PATTERNS`, `PARAMETERS` and `classify()`: every fact the plugin keeps about X's tools. No runtime imports, so `scripts/check-x-tools.mjs` (`npm run drift`) can load it. `PARAMETERS` is used by that script and the tests only, and stays empty until a tool list from a signed-in server is recorded |
+| `src/x-tools.ts` | `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS`, `DENY_TOOLS`, `DENY_PATTERNS`, `PARAMETERS` and `classify()`: every fact the plugin keeps about X's tools. No runtime imports, so `scripts/check-x-tools.mjs` (`npm run drift`) can load it. `PARAMETERS` is recorded from the live input schemas, and is used by that script and the tests only |
 | `src/permissions.ts` | The default rules, their placement, and detection of agents without them |
 | `src/status.ts` | The status model and text, `/x-status`, and the status RPC method |
 | `src/redact.ts` | Redaction for everything status shows: URL credentials, queries and token shapes removed, one line, controls and bidi characters stripped, cut by whole characters |
@@ -111,7 +111,7 @@ Status makes no X call, because every call costs money.
 
 `x.posts.tools` lets a script call the known reads with no model; [Scripting](scripting.md) is the user's view. Its
 methods are `describe` and one per name in `READ_TOOLS`, named after the upstream tool. It is an allowlist:
-`WRITE_TOOLS`, `PUBLIC_TOOLS`, `DENY_TOOLS` and a tool that X adds later are never methods. `describe` reports each
+`ASK_READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS`, `DENY_TOOLS` and a tool that X adds later are never methods. `describe` reports each
 method as available or not from what OpenCode lists now.
 
 A call is `{ sessionID, input }`. The module:

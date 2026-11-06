@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import { DISPLAY_NAME, SERVER_NAME } from "../../src/constants.js"
-import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { ASK_READ_TOOLS, DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 
@@ -32,12 +32,13 @@ const ICON_ELEMENTS = new Set(["svg", "g", "path", "circle", "ellipse", "rect", 
 const byPermission = new Map(jelly.tools.map((tool) => [tool.permission, tool]))
 
 describe("the jelly declaration", () => {
-  test("declares every known tool once: reads that run, writes that ask, and the public Article publish that asks", () => {
+  test("declares every live tool once: reads that run, reads and writes that ask, the public Post, and the off tools", () => {
     for (const tool of READ_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
+    for (const tool of ASK_READ_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "ask", readOnly: true })
     for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "ask", readOnly: false })
-    for (const tool of DENY_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "deny", readOnly: false })
-    expect(jelly.tools).toHaveLength(READ_TOOLS.length + WRITE_TOOLS.length + PUBLIC_TOOLS.length + DENY_TOOLS.length)
-    expect([...byPermission.keys()].sort()).toEqual([...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS].map((tool) => `x_${tool}`).sort())
+    for (const tool of DENY_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "deny" })
+    expect(jelly.tools).toHaveLength(READ_TOOLS.length + ASK_READ_TOOLS.length + WRITE_TOOLS.length + PUBLIC_TOOLS.length + DENY_TOOLS.length)
+    expect([...byPermission.keys()].sort()).toEqual([...READ_TOOLS, ...ASK_READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS].map((tool) => `x_${tool}`).sort())
   })
 
   test("each declared effect is what the plugin's own default rules decide for that tool", () => {

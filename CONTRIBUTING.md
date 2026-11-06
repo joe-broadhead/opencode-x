@@ -104,18 +104,18 @@ check, and never save a token, a client secret or X content in this repository.
 ## X's tools
 
 `src/x-tools.ts` is the one record of the X tools the plugin knows: `READ_TOOLS` run without a prompt and are the
-tools RPC's methods, `WRITE_TOOLS` are private writes that ask, `PUBLIC_TOOLS` reach other people and ask, `DENY_TOOLS`
-are off, and `PARAMETERS` holds each tool's input parameters. The default rules, the tools RPC, status's unknown and
-denied tools, the fake server in the host and pack tests, and the checks of `jelly.tools`, the docs and the skills all
-derive from it. X's hosted server is closed and unversioned, and may add, rename or remove tools without notice. It may
-also list fewer tools for a token with fewer scopes, so a known tool missing from one list is not drift.
+tools RPC's methods; `ASK_READ_TOOLS` are reads whose output can carry a secret; `WRITE_TOOLS` are private writes that
+ask; `PUBLIC_TOOLS` reach other people and ask; `DENY_TOOLS` are off; `DENY_PATTERNS` is a safety net for a future
+tool of a denied effect; and `PARAMETERS` holds each tool's input parameters. The default rules, the tools RPC,
+status's unknown and denied tools, the fake server in the host and pack tests, and the checks of `jelly.tools`, the
+docs and the skills all derive from it. X's hosted server is closed and unversioned, and may add, rename or remove
+tools without notice.
 
-The names and classes are **provisional**. X answers `tools/list` only for a signed-in token, and no live list is
-recorded here yet: the names come from X's MCP capability table, a third party's recorded list (24 read and bookmark
-names) and X's OpenAPI operation ids, which the hosted server names its tools after. `test/unit/x-tools.json` records
-that table, with names only: X publishes no MCP schemas or annotations, so `PARAMETERS` is empty and the skills name
-tools without their inputs. In Code Mode each call's signature gives the model the parameter names. Once a tool list
-from a signed-in server is saved, reconciling is a data change, made with the drift check below.
+The names and classes come from the **live list** captured from a signed-in OpenCode 2.2.3 on 2026-11-06
+(`ctx.tool.list()`), recorded in `test/unit/x-live-tools.json`: 100 tools with input and output schemas. The capture
+carries **no annotations**, so each class comes from X's name, description and schema, and `PARAMETERS` is filled
+from the input schemas. X may list fewer tools for a token with fewer scopes, so a known tool missing from one list is
+not drift.
 
 ### Drift check
 
@@ -148,9 +148,9 @@ npm run drift -- <tools.json> --strict
 - Exit codes: `0` for no drift, or drift without `--strict`; `1` for drift with `--strict`; `2` for a usage or file
   error.
 
-`test/unit/x-tools.json` records the list the plugin was built from, and the drift test runs the check on it with
-`--strict`, so `src/x-tools.ts` must match it exactly. Replace that file with a newly saved list (the same fields, and
-a `source` line with no local path) when X changes its tools.
+`test/unit/x-live-tools.json` is the captured list, and the drift test runs the check on it with `--strict`, so
+`src/x-tools.ts` must match it exactly. Replace that file with a newly saved list (the same fields, and a `source`
+line with no local path) when X changes its tools.
 
 ### Updating the tool lists
 
@@ -159,9 +159,11 @@ a `source` line with no local path) when X changes its tools.
 3. Add a tool to `READ_TOOLS` only if it never changes anything and sends nothing beyond its query, because reads run
    without a prompt and each one is also a method of the tools RPC for scripts. Add a tool that changes only the
    user's own account and reaches nobody to `WRITE_TOOLS`. Add a tool that posts, replies, quotes, reposts, publishes,
-   mentions or messages anyone to `PUBLIC_TOOLS`. Add a tool that sends a DM, follows or unfollows, blocks or mutes,
-   deletes a post, changes list membership, changes account or profile settings, or sends data to X's team to
-   `DENY_TOOLS`. Leave a tool out if you are not sure: it then asks before every call, and scripts cannot call it.
+   mentions or messages anyone to `PUBLIC_TOOLS`. Add a tool that sends a DM or chat message, follows or unfollows,
+   blocks or mutes, deletes a post, changes list membership, changes a moderator role, schedules a call, goes live,
+   manages a stream source, changes account settings, or sends data to X's team to `DENY_TOOLS`. A read whose output
+   can carry a secret goes to `ASK_READ_TOOLS`. Leave a tool out if you are not sure: it then asks before every call,
+   and scripts cannot call it.
 4. Update `PARAMETERS` from the schemas, `jelly.tools` in `package.json`, and any skill text that names a changed tool.
    With parameters recorded, a skill may give a literal call such as `search_posts_all({ … })`, and the skills test
    checks its keys against `PARAMETERS`. Run `npm run check`: the Jelly test fails if `jelly.tools` differs from the

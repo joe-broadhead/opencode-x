@@ -1,0 +1,3759 @@
+{
+  "server": "x",
+  "source": "OpenCode ctx.tool.list() in ~/opencode-release/newplugins/live-x",
+  "host": "2.2.3",
+  "listedAt": "2026-11-06T13:52:53.945Z",
+  "title": null,
+  "tools": [
+    {
+      "id": "x_accept_chat_message_request",
+      "name": "accept_chat_message_request",
+      "description": "Accepts the other user's pending message request in a 1:1 Chat conversation, which moves to the authenticated user's inbox. Without a pending request, including after a successful accept, the response is 404. Replying to a request does not accept it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The other user's ID, or both user IDs joined by a hyphen.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_add_chat_moderator",
+      "name": "add_chat_moderator",
+      "description": "Adds a moderator to the authenticated broadcaster's persistent list and returns the updated moderator user IDs. The list applies to all current and future broadcast chats.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "description": "The user to appoint as a moderator.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_add_conversation_keys",
+      "name": "add_conversation_keys",
+      "description": "Adds (initializes or rotates) the encryption keys for a Chat conversation. Call this before sending messages in a new 1:1 conversation, and again with a newer key version to rotate the conversation key. For 1:1 conversations, provide the recipient's user ID as the conversation id; the server constructs the canonical conversation ID from the authenticated user and recipient. The request body must contain the conversation key version and participant keys (the conversation key encrypted for each participant using their public key).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action_signatures": {
+            "description": "Signatures for this action, forwarded in the order they are sent.",
+            "items": {
+              "properties": {
+                "encoded_message_event_detail": {
+                  "description": "Base64-encoded Thrift MessageEventDetail for the signed action.",
+                  "type": "string"
+                },
+                "message_event_signature": {
+                  "properties": {
+                    "message_signing_key_info_list": {
+                      "description": "List of signing key information for message verification.",
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "public_key_version": {
+                      "description": "The version of the public key used for signing.",
+                      "type": "string"
+                    },
+                    "signature": {
+                      "description": "The signature of the message event.",
+                      "type": "string"
+                    },
+                    "signature_version": {
+                      "description": "The version of the signature algorithm.",
+                      "type": "string"
+                    },
+                    "signing_public_key": {
+                      "description": "The public key used for signing.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "signature",
+                    "public_key_version",
+                    "signature_version"
+                  ],
+                  "type": "object"
+                },
+                "message_id": {
+                  "description": "Client-generated ID of the message being signed.",
+                  "type": "string"
+                },
+                "signature_payload": {
+                  "description": "Payload string the client signed; used only in server-side failure logs.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message_id",
+                "encoded_message_event_detail",
+                "message_event_signature"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "base64_encoded_key_rotation": {
+            "description": "Base64-encoded key rotation payload for ratchet tree key management.",
+            "type": "string"
+          },
+          "conversation_key_version": {
+            "description": "Version of the conversation encryption key (typically a timestamp in milliseconds).",
+            "type": "string"
+          },
+          "conversation_participant_keys": {
+            "description": "Encrypted conversation keys for each participant.",
+            "items": {
+              "properties": {
+                "encrypted_conversation_key": {
+                  "description": "Conversation key encrypted with this participant's public key.",
+                  "type": "string"
+                },
+                "public_key_version": {
+                  "description": "Version of the participant's public key used for encryption.",
+                  "type": "string"
+                },
+                "user_id": {
+                  "description": "Participant user ID.",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversation_key_version",
+          "conversation_participant_keys"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_add_lists_member",
+      "name": "add_lists_member",
+      "description": "Adds a User to a specific List by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_archive_chat_conversation",
+      "name": "archive_chat_conversation",
+      "description": "Archives a Chat conversation for the authenticated user only. Archiving an archived conversation changes nothing. Works for group and 1:1 conversations. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action_signatures": {
+            "description": "Signatures for this action, forwarded in the order they are sent.",
+            "items": {
+              "properties": {
+                "encoded_message_event_detail": {
+                  "description": "Base64-encoded Thrift MessageEventDetail for the signed action.",
+                  "type": "string"
+                },
+                "message_event_signature": {
+                  "properties": {
+                    "message_signing_key_info_list": {
+                      "description": "List of signing key information for message verification.",
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "public_key_version": {
+                      "description": "The version of the public key used for signing.",
+                      "type": "string"
+                    },
+                    "signature": {
+                      "description": "The signature of the message event.",
+                      "type": "string"
+                    },
+                    "signature_version": {
+                      "description": "The version of the signature algorithm.",
+                      "type": "string"
+                    },
+                    "signing_public_key": {
+                      "description": "The public key used for signing.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "signature",
+                    "public_key_version",
+                    "signature_version"
+                  ],
+                  "type": "object"
+                },
+                "message_id": {
+                  "description": "Client-generated ID of the message being signed.",
+                  "type": "string"
+                },
+                "signature_payload": {
+                  "description": "Payload string the client signed; used only in server-side failure logs.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message_id",
+                "encoded_message_event_detail",
+                "message_event_signature"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "The ID of the conversation: a group ID starting with `g`, the other user's ID for a 1:1 conversat...",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_article_create_draft",
+      "name": "article_create_draft",
+      "description": "Creates a new Article draft that can later be published.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content_state": {
+            "properties": {
+              "blocks": {
+                "description": "The text blocks that make up the article body.",
+                "items": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "cashtags": {
+                          "description": "Cashtag spans in this block.",
+                          "type": "array"
+                        },
+                        "hashtags": {
+                          "description": "Hashtag spans in this block.",
+                          "type": "array"
+                        },
+                        "mentions": {
+                          "description": "Mention spans in this block.",
+                          "type": "array"
+                        },
+                        "urls": {
+                          "description": "URL spans in this block.",
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "entity_ranges": {
+                      "description": "References to entries in entities.",
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "inline_style_ranges": {
+                      "description": "Inline formatting ranges.",
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "key": {
+                      "description": "Optional block key.",
+                      "type": "string"
+                    },
+                    "text": {
+                      "description": "The text content of this block. For latex entities, this holds the LaTeX source;          for div...",
+                      "type": "string"
+                    },
+                    "type": {
+                      "description": "The block type. Use atomic for non-text embeds (image, post, markdown, divider, latex).",
+                      "enum": [
+                        "unstyled",
+                        "header-one",
+                        "header-two",
+                        "header-three",
+                        "unordered-list-item",
+                        "ordered-list-item",
+                        "blockquote",
+                        "atomic"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "type"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "entities": {
+                "description": "Non-text entities referenced by blocks (links, embedded posts, images, emoji,          markdown/c...",
+                "items": {
+                  "properties": {
+                    "key": {
+                      "description": "The entity key referenced by entity_ranges.",
+                      "type": "string"
+                    },
+                    "value": {
+                      "properties": {
+                        "data": {
+                          "type": "object"
+                        },
+                        "mutability": {
+                          "description": "Whether the entity can be edited. Recommended: immutable for post, image, divider, latex; mutable...",
+                          "enum": [
+                            "immutable",
+                            "mutable",
+                            "segmented"
+                          ],
+                          "type": "string"
+                        },
+                        "type": {
+                          "description": "The entity type. markdown carries code blocks, GFM tables, and other Markdown;          emoji map...",
+                          "enum": [
+                            "post",
+                            "link",
+                            "image",
+                            "emoji",
+                            "markdown",
+                            "divider",
+                            "latex"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "mutability",
+                        "data"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "blocks",
+              "entities"
+            ],
+            "type": "object"
+          },
+          "cover_media": {
+            "properties": {
+              "media_category": {
+                "description": "The media category (e.g. tweet_image).",
+                "type": "string"
+              },
+              "media_id": {
+                "description": "The media ID from the media upload endpoint.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "media_category",
+              "media_id"
+            ],
+            "type": "object"
+          },
+          "title": {
+            "description": "The title of the Article.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "content_state"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_cancel_scheduled_call",
+      "name": "cancel_scheduled_call",
+      "description": "Cancels a scheduled call the authenticated user organizes, and takes it off invitees' calendars. For a recurring call, scope and occurrence_start_time pick the occurrences: all of them (the default), one, or one and every one after it. Cancelling what is already cancelled succeeds.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "notify_invitees": {
+            "description": "Whether invitees get an email about it. Defaults to true.",
+            "type": "boolean"
+          },
+          "occurrence_start_time": {
+            "description": "Start of the occurrence that scope this or this_and_following refers to (RFC 3339).",
+            "type": "string"
+          },
+          "scope": {
+            "description": "Which occurrences: all (the default without occurrence_start_time), this (the default with it), o...",
+            "enum": [
+              "all",
+              "this",
+              "this_and_following"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_chat_media_download",
+      "name": "chat_media_download",
+      "description": "Downloads encrypted media bytes from an XChat conversation. The response body contains raw binary bytes. Returns JSON with the response bytes base64-encoded in `data`, plus `content_type` and `size_bytes`. Needs the OAuth2 scope `media.write`.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "media_hash_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "media_hash_key"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_chat_media_upload_append",
+      "name": "chat_media_upload_append",
+      "description": "Appends media data to an XChat upload session. Needs the OAuth2 scope `media.write`.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversation_id": {
+            "description": "The XChat conversation the upload belongs to.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "media": {
+            "description": "The media segment bytes: base64-encoded in JSON bodies, raw bytes in multipart bodies.",
+            "type": "string"
+          },
+          "media_hash_key": {
+            "description": "The media hash key returned by the initialize step.",
+            "type": "string"
+          },
+          "segment_index": {
+            "description": "The index of this segment in the upload sequence.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "media",
+          "segment_index",
+          "conversation_id",
+          "media_hash_key"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_chat_media_upload_finalize",
+      "name": "chat_media_upload_finalize",
+      "description": "Finalizes an XChat media upload session. Needs the OAuth2 scope `media.write`.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversation_id": {
+            "description": "The XChat conversation the upload belongs to.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "media_hash_key": {
+            "description": "The media hash key returned by the initialize step.",
+            "type": "string"
+          },
+          "message_id": {
+            "description": "Optional message identifier associated with the upload.",
+            "type": "string"
+          },
+          "num_parts": {
+            "description": "Total number of uploaded parts, as a numeric string.",
+            "type": "string"
+          },
+          "ttl_msec": {
+            "description": "Optional TTL for the media in milliseconds, as a numeric string.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversation_id",
+          "media_hash_key",
+          "num_parts"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_chat_media_upload_initialize",
+      "name": "chat_media_upload_initialize",
+      "description": "Initializes an XChat media upload session. Needs the OAuth2 scope `media.write`.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversation_id": {
+            "description": "The XChat conversation the upload belongs to.",
+            "type": "string"
+          },
+          "total_bytes": {
+            "description": "Total size of the media upload in bytes.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "total_bytes"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_create_lists",
+      "name": "create_lists",
+      "description": "Creates a new List for the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "description": "Description of the List (up to 100 characters).",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name of the List (1-25 characters).",
+            "type": "string"
+          },
+          "private": {
+            "description": "Whether the List is private.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_create_posts",
+      "name": "create_posts",
+      "description": "Creates a new Post for the authenticated user, or edits an existing Post when edit_options are provided. Supports paid partnership disclosure via the paid_partnership field.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "card_uri": {
+            "description": "Card URI parameter.",
+            "type": "string"
+          },
+          "community_id": {
+            "description": "Community to post the tweet to.",
+            "type": "string"
+          },
+          "direct_message_deep_link": {
+            "description": "Direct message deep link.",
+            "type": "string"
+          },
+          "edit_options": {
+            "properties": {
+              "previous_post_id": {
+                "description": "The ID of the Post being edited.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "previous_post_id"
+            ],
+            "type": "object"
+          },
+          "for_super_followers_only": {
+            "description": "Restrict tweet to super followers.",
+            "type": "boolean"
+          },
+          "geo": {
+            "properties": {
+              "place_id": {
+                "description": "Place ID for geo tagging.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "place_id"
+            ],
+            "type": "object"
+          },
+          "made_with_ai": {
+            "description": "Disclose that the tweet contains AI-generated media.",
+            "type": "boolean"
+          },
+          "media": {
+            "properties": {
+              "call_to_actions": {
+                "properties": {
+                  "app_install": {
+                    "properties": {
+                      "app_store_id": {
+                        "description": "Apple App Store iPhone app id.",
+                        "type": "string"
+                      },
+                      "ipad_app_store_id": {
+                        "description": "Apple App Store iPad app id.",
+                        "type": "string"
+                      },
+                      "play_store_id": {
+                        "description": "Google Play Store app id.",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "visit_site": {
+                    "properties": {
+                      "url": {
+                        "description": "HTTPS URL the CTA links to.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "url"
+                    ],
+                    "type": "object"
+                  },
+                  "watch_now": {
+                    "properties": {
+                      "url": {
+                        "description": "HTTPS URL the CTA links to.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "url"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              },
+              "description": {
+                "description": "Description for the media, rendered on the Post card for video and Amplify content.",
+                "type": "string"
+              },
+              "embeddable": {
+                "description": "When true, the media's asset URLs do not expire and external syndicated playback is allowed.",
+                "type": "boolean"
+              },
+              "media_ids": {
+                "description": "Media IDs to attach to the tweet.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "preview_media_id": {
+                "description": "Media id whose asset is used as the preview image.",
+                "type": "string"
+              },
+              "tagged_user_ids": {
+                "description": "User IDs tagged in the media.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "title": {
+                "description": "Title for the media, rendered on the Post card for video and Amplify content.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "media_ids"
+            ],
+            "type": "object"
+          },
+          "nullcast": {
+            "description": "If true, the tweet is not shown in the public timeline.",
+            "type": "boolean"
+          },
+          "paid_partnership": {
+            "description": "Disclose that the tweet is a paid partnership.",
+            "type": "boolean"
+          },
+          "poll": {
+            "properties": {
+              "duration_minutes": {
+                "description": "Duration of the poll in minutes.",
+                "type": "integer"
+              },
+              "options": {
+                "description": "Poll options (2-4 choices, 1-25 characters each).",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "reply_settings": {
+                "description": "Who can reply to the poll Tweet. Accepted for compatibility; it carries no backend argument and i...",
+                "enum": [
+                  "following",
+                  "mentionedUsers",
+                  "subscribers",
+                  "verified"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "options",
+              "duration_minutes"
+            ],
+            "type": "object"
+          },
+          "quote_tweet_id": {
+            "description": "Tweet ID to quote.",
+            "type": "string"
+          },
+          "reply": {
+            "properties": {
+              "auto_populate_reply_metadata": {
+                "description": "If true, reply metadata is automatically populated. Accepted for compatibility; it carries no bac...",
+                "type": "boolean"
+              },
+              "exclude_reply_user_ids": {
+                "description": "User IDs to exclude from the reply thread.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "in_reply_to_tweet_id": {
+                "description": "The ID of the tweet being replied to.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "in_reply_to_tweet_id"
+            ],
+            "type": "object"
+          },
+          "reply_settings": {
+            "description": "Who can reply to this tweet.",
+            "enum": [
+              "following",
+              "mentionedUsers",
+              "subscribers",
+              "verified"
+            ],
+            "type": "string"
+          },
+          "share_with_followers": {
+            "description": "Share an exclusive (super-follower) tweet with all followers.",
+            "type": "boolean"
+          },
+          "text": {
+            "description": "Text of the tweet. Required unless media is provided.  Defaulted to an empty string so it is alwa...",
+            "type": "string"
+          }
+        }
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_create_scheduled_broadcast",
+      "name": "create_scheduled_broadcast",
+      "description": "Schedules a broadcast for the authenticated user on one of their sources: `source_id` is required. Passing a stream key as `source_id` is deprecated and stops working when the /2/users/:id/sources and /2/users/:id/broadcasts routes reach end of life on January 1, 2027; pass the source's `id` from GET /2/sources instead.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "available_for_replay": {
+            "description": "Enable replay.",
+            "type": "boolean"
+          },
+          "chat_option": {
+            "description": "Who can chat (numeric string): `0` default, `1` chat off, `2` everyone, `3` verified accounts, `4...",
+            "type": "string"
+          },
+          "description": {
+            "description": "Description.",
+            "type": "string"
+          },
+          "is_locked": {
+            "description": "Lock the broadcast.",
+            "type": "boolean"
+          },
+          "locale": {
+            "description": "Locale.",
+            "type": "string"
+          },
+          "manual_publish": {
+            "description": "If true, do not auto-publish at start; call POST .../live when ready.",
+            "type": "boolean"
+          },
+          "recurrence": {
+            "properties": {
+              "frequency": {
+                "description": "Recurrence frequency.",
+                "enum": [
+                  "Daily",
+                  "Weekly"
+                ],
+                "type": "string"
+              },
+              "repeats": {
+                "description": "Number of repeats (numeric string).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "frequency",
+              "repeats"
+            ],
+            "type": "object"
+          },
+          "scheduled_end_ms": {
+            "description": "Optional end time, ms since Unix epoch (decimal string). Omit for an open-ended broadcast.",
+            "type": "string"
+          },
+          "scheduled_start_ms": {
+            "description": "Start time, ms since Unix epoch (decimal string).",
+            "type": "string"
+          },
+          "source_id": {
+            "description": "Source to bind: a source's `id` from GET /2/sources. A stream key is also accepted but deprecated...",
+            "type": "string"
+          },
+          "telecast_id": {
+            "description": "Deprecated: telecast associations are being retired and this field will be ignored.",
+            "type": "string"
+          },
+          "thumbnail_media_id": {
+            "description": "Pre-live slate media id (numeric string).",
+            "type": "string"
+          },
+          "title": {
+            "description": "Title / status text.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "scheduled_start_ms"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_create_source",
+      "name": "create_source",
+      "description": "Creates a persistent RTMP/RTMPS ingest point for the authenticated user. Push an encoder to `rtmps_url` with the returned `stream_key`. This is the only response that includes the stream key; read it later with GET /2/sources/:id/stream_key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Label for the source.",
+            "type": "string"
+          },
+          "region": {
+            "description": "Ingest region, as returned by GET /2/region. us-west-1 and us-west-2 ingest in US West; us-east-1...",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "region"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_create_users_bookmark",
+      "name": "create_users_bookmark",
+      "description": "Adds one or more Posts to the authenticated user's Bookmarks. Supply `tweet_id` for a single Post, or `tweet_ids` (at most 25) to bookmark several in one request. Optional `folder_id` applies to every Post in the request. Billing and rate limits still apply per HTTP request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_id": {
+            "description": "Optional ID of the Bookmark folder to add the Post(s) to. When omitted, Posts are added to the us...",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "tweet_id": {
+            "description": "The ID of the Post to add to the user's Bookmarks. Mutually exclusive with `tweet_ids`.",
+            "type": "string"
+          },
+          "tweet_ids": {
+            "description": "Post IDs to add to the user's Bookmarks. At most 25. Mutually exclusive with `tweet_id`.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_create_users_bookmark_folder",
+      "name": "create_users_bookmark_folder",
+      "description": "Creates a new Bookmark folder for the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "description": "Name of the Bookmark folder (1-25 characters).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_delete_scheduled_broadcast",
+      "name": "delete_scheduled_broadcast",
+      "description": "Deletes a scheduled broadcast by its alphanumeric broadcast id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "roll_forward": {
+            "description": "Deprecated: recurring schedules are being retired and `true` will be rejected.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_delete_source",
+      "name": "delete_source",
+      "description": "Deletes one of the authenticated user's stream sources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Source id (19 digits), from GET /2/sources.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_delete_users_bookmark",
+      "name": "delete_users_bookmark",
+      "description": "Removes a Post from the authenticated user's Bookmarks by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tweet_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tweet_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_follow_list",
+      "name": "follow_list",
+      "description": "Causes the authenticated user to follow a specific List by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "list_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "list_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_broadcast",
+      "name": "get_broadcast",
+      "description": "Returns a broadcast owned by the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "broadcast.fields": {
+            "description": "A comma separated list of Broadcast fields to display.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_broadcast_chat",
+      "name": "get_broadcast_chat",
+      "description": "Returns newest-first chat messages for a broadcast owned by the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "broadcast_chat_message.fields": {
+            "description": "A comma separated list of BroadcastChatMessage fields to display.",
+            "type": "string"
+          },
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "A 64-bit signed integer.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_chat_conversation",
+      "name": "get_chat_conversation",
+      "description": "Returns metadata for a Chat conversation including type, muted status, group details, and your unread state. For the unread state, request chat_conversation.fields=unread,last_read_event_id,newest_event_id: those fields give your read state, computed from your latest read receipt and the conversation's latest notifying message. Use chat_conversation.fields to select which fields are returned. Use expansions to hydrate member, admin, or participant user objects. Use user.fields to control which profile fields are returned for expanded users.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chat_conversation.fields": {
+            "description": "A comma separated list of ChatConversation fields to display.",
+            "type": "string"
+          },
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_chat_conversation_events",
+      "name": "get_chat_conversation_events",
+      "description": "Retrieves the events of a specific Chat conversation, newest first, with pagination support: messages, key changes, group changes, and read receipts. Events with an id above the conversation's last_read_event_id are unread: they come after the point you read up to. To collect them, page until an event's id is at or below it. Only `id` and `encoded_event` are always present. Events are either end-to-end encrypted or unencrypted, such as messages sent before the conversation was encrypted. Encrypted events carry `conversation_key_version`, and usually `conversation_token` and `message_event_signature`; treat an encrypted event without `message_event_signature` as unverified. An event without `conversation_key_version` is unencrypted. Decode each `encoded_event` client-side, and decrypt it with the conversation key named by `conversation_key_version` when that is present. A page holds up to `max_results` events and can hold fewer while `has_more` is true. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chat_message_event.fields": {
+            "description": "A comma separated list of ChatMessageEvent fields to display.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "description": "The maximum number of events to return.",
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "The next_token from a previous response, to fetch the next page.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_chat_conversations",
+      "name": "get_chat_conversations",
+      "description": "Retrieves a list of Chat conversations for the authenticated user's inbox, newest first: the most recently active conversation comes first. The unread, last_read_event_id and newest_event_id fields give your read state, computed from your latest read receipt and each conversation's latest notifying message. Request them with chat_conversation.fields=unread,last_read_event_id,newest_event_id.\n\nThe filters unread_only, type, is_archived, is_muted, participant_ids, participant_query, start_time and end_time are optional, and all filters must match (AND). participant_query keeps conversations where another participant's username, or a word of their display name, starts with the query, ignoring case and accents; with a leading @ it matches usernames only. It considers the 100 people who best match the query, uses only public profile information, and never matches group names, nicknames or messages. start_time and end_time apply to the time of each conversation's latest message.\n\nEach page covers max_results conversations and returns those that match, so a page can hold fewer than max_results, or none, while meta.next_token is set and has_more is true: keep paging, passing meta.next_token as pagination_token. Once a page reaches a conversation whose latest message is older than start_time, has_more is false. A pagination_token only works with the same filters as the request that returned it; with other filters, the request fails with a 400.\n\nWhen both are provided, `start_time` must be earlier than `end_time`.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chat_conversation.fields": {
+            "description": "A comma separated list of ChatConversation fields to display.",
+            "type": "string"
+          },
+          "end_time": {
+            "description": "ISO 8601, e.g. 2026-10-17T00:00:00Z. Chats whose latest message is before this time.",
+            "type": "string"
+          },
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "is_archived": {
+            "description": "true: only archived; false: only not archived. Omit for both.",
+            "type": "boolean"
+          },
+          "is_muted": {
+            "description": "true: only muted; false: only not muted. Omit for both.",
+            "type": "boolean"
+          },
+          "max_results": {
+            "description": "Conversations covered per page (1-1000, default 200). Filtered pages can return fewer.",
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "meta.next_token from the previous page. Send the same filters with it, or the request fails.",
+            "type": "string"
+          },
+          "participant_ids": {
+            "description": "Comma-separated numeric user IDs (1-10), all in the chat. Names or @handles: use participant_query.",
+            "type": "string"
+          },
+          "participant_query": {
+            "description": "Name or @username prefix (1-50 chars); keeps chats where any other participant matches it.",
+            "type": "string"
+          },
+          "start_time": {
+            "description": "ISO 8601, e.g. 2026-10-16T00:00:00Z. Chats whose latest message is at or after this time.",
+            "type": "string"
+          },
+          "type": {
+            "description": "Only direct (1:1) or only group conversations. Omit for both.",
+            "enum": [
+              "direct",
+              "group"
+            ],
+            "type": "string"
+          },
+          "unread_only": {
+            "description": "Return only unread conversations. A page can be short; keep paging while has_more.",
+            "type": "boolean"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        }
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_chat_message_request",
+      "name": "get_chat_message_request",
+      "description": "Retrieves the message request state of a 1:1 Chat conversation and its newest message events. Like opening the request in an X app, reading it marks the returned messages as delivered and updates the unread badge.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chat_message_request_detail.fields": {
+            "description": "A comma separated list of ChatMessageRequestDetail fields to display.",
+            "type": "string"
+          },
+          "id": {
+            "description": "The other user's ID, or both user IDs joined by a hyphen.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_chat_message_requests",
+      "name": "get_chat_message_requests",
+      "description": "Retrieves the authenticated user's pending Chat message requests from one inbox. Message contents are end-to-end encrypted unless the conversation is unencrypted. Accepting or deleting requests between pages can skip or repeat requests, and a page can be empty while `next_token` is set.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chat_message_request.fields": {
+            "description": "A comma separated list of ChatMessageRequest fields to display.",
+            "type": "string"
+          },
+          "inbox_type": {
+            "description": "Which message request inbox to list: `you_may_know` (the apps' Priority tab) or `low_quality` (th...",
+            "enum": [
+              "you_may_know",
+              "low_quality"
+            ],
+            "type": "string"
+          },
+          "max_results": {
+            "description": "The maximum number of message requests to return.",
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "The next_token from a previous response, to fetch the next page.",
+            "type": "string"
+          }
+        }
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_chat_moderators",
+      "name": "get_chat_moderators",
+      "description": "Returns the authenticated broadcaster's persistent moderators as User resources. The list applies to all of their current and future broadcast chats.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        }
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_communities_by_id",
+      "name": "get_communities_by_id",
+      "description": "Retrieves details of a specific Community by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "community.fields": {
+            "description": "A comma separated list of Community fields to display.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_lists_by_id",
+      "name": "get_lists_by_id",
+      "description": "Retrieves details of a specific List by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "list.fields": {
+            "description": "A comma separated list of List fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_lists_followers",
+      "name": "get_lists_followers",
+      "description": "Retrieves a list of Users who follow a specific List by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "A 64-bit signed integer.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_lists_members",
+      "name": "get_lists_members",
+      "description": "Retrieves a list of Users who are members of a specific List by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "A 64-bit signed integer.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_lists_posts",
+      "name": "get_lists_posts",
+      "description": "Retrieves a list of Posts associated with a specific List by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "media.fields": {
+            "description": "A comma separated list of Media fields to display.",
+            "type": "string"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "place.fields": {
+            "description": "A comma separated list of Place fields to display.",
+            "type": "string"
+          },
+          "poll.fields": {
+            "description": "A comma separated list of Poll fields to display.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_news",
+      "name": "get_news",
+      "description": "Retrieves news story by its ID. Each returned story includes a `url` deeplinking to its x.com page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "news.fields": {
+            "description": "A comma separated list of News fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_posts_by_id",
+      "name": "get_posts_by_id",
+      "description": "Retrieves details of a specific Post by its ID. Each returned post includes a `url` deeplinking to it on x.com.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "media.fields": {
+            "description": "A comma separated list of Media fields to display.",
+            "type": "string"
+          },
+          "place.fields": {
+            "description": "A comma separated list of Place fields to display.",
+            "type": "string"
+          },
+          "poll.fields": {
+            "description": "A comma separated list of Poll fields to display.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_posts_by_ids",
+      "name": "get_posts_by_ids",
+      "description": "Retrieves details of multiple Posts by their IDs. Each returned post includes a `url` deeplinking to it on x.com.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "ids": {
+            "description": "(comma-separated)",
+            "type": "string"
+          },
+          "media.fields": {
+            "description": "A comma separated list of Media fields to display.",
+            "type": "string"
+          },
+          "place.fields": {
+            "description": "A comma separated list of Place fields to display.",
+            "type": "string"
+          },
+          "poll.fields": {
+            "description": "A comma separated list of Poll fields to display.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_posts_counts_recent",
+      "name": "get_posts_counts_recent",
+      "description": "Retrieves the count of Posts from the last 7 days matching a search query.\n\nAt most one of `pagination_token`, `next_token` may be provided.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "end_time": {
+            "type": "string"
+          },
+          "granularity": {
+            "enum": [
+              "minute",
+              "hour",
+              "day"
+            ],
+            "type": "string"
+          },
+          "next_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "search_count.fields": {
+            "type": "string"
+          },
+          "since_id": {
+            "type": "string"
+          },
+          "start_time": {
+            "description": "Must be within the last 7 days.",
+            "type": "string"
+          },
+          "until_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_posts_liking_users",
+      "name": "get_posts_liking_users",
+      "description": "Retrieves a list of Users who liked a specific Post by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_posts_quoted_posts",
+      "name": "get_posts_quoted_posts",
+      "description": "Retrieves a list of Posts that quote a specific Post by its ID. Each returned post includes a `url` deeplinking to it on x.com.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "exclude": {
+            "description": "(comma-separated)",
+            "type": "string"
+          },
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "media.fields": {
+            "description": "A comma separated list of Media fields to display.",
+            "type": "string"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "place.fields": {
+            "description": "A comma separated list of Place fields to display.",
+            "type": "string"
+          },
+          "poll.fields": {
+            "description": "A comma separated list of Poll fields to display.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_posts_reposted_by",
+      "name": "get_posts_reposted_by",
+      "description": "Retrieves a list of Users who reposted a specific Post by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_scheduled_broadcast",
+      "name": "get_scheduled_broadcast",
+      "description": "Returns a single scheduled broadcast by its alphanumeric broadcast id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_scheduled_call",
+      "name": "get_scheduled_call",
+      "description": "Returns a scheduled call the authenticated user organizes or is invited to, at its occurrence running now or its next one within a year: its time, call, recurrence and who is invited and how they answered. Changes can take a few seconds to show here. Use scheduled_call.fields to select which fields are returned.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "call.fields": {
+            "description": "A comma separated list of Call fields to display.",
+            "type": "string"
+          },
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "scheduled_call.fields": {
+            "description": "A comma separated list of ScheduledCall fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_source",
+      "name": "get_source",
+      "description": "Returns one of the authenticated user's stream sources. Poll it after starting an encoder and wait for `is_stream_active` before going live. The stream key is not included; read it with GET /2/sources/:id/stream_key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Source id (19 digits), from GET /2/sources.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_spaces_by_creator_ids",
+      "name": "get_spaces_by_creator_ids",
+      "description": "Retrieves details of Spaces created by specified User IDs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "space.fields": {
+            "description": "A comma separated list of Space fields to display.",
+            "type": "string"
+          },
+          "topic.fields": {
+            "description": "A comma separated list of Topic fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          },
+          "user_ids": {
+            "description": "(comma-separated)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_ids"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_spaces_by_id",
+      "name": "get_spaces_by_id",
+      "description": "Retrieves details of a specific Space by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "space.fields": {
+            "description": "A comma separated list of Space fields to display.",
+            "type": "string"
+          },
+          "topic.fields": {
+            "description": "A comma separated list of Topic fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_spaces_by_ids",
+      "name": "get_spaces_by_ids",
+      "description": "Retrieves details of multiple Spaces by their IDs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "ids": {
+            "description": "(comma-separated)",
+            "type": "string"
+          },
+          "space.fields": {
+            "description": "A comma separated list of Space fields to display.",
+            "type": "string"
+          },
+          "topic.fields": {
+            "description": "A comma separated list of Topic fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_spaces_posts",
+      "name": "get_spaces_posts",
+      "description": "Retrieves a list of Posts shared in a specific Space by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "media.fields": {
+            "description": "A comma separated list of Media fields to display.",
+            "type": "string"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "place.fields": {
+            "description": "A comma separated list of Place fields to display.",
+            "type": "string"
+          },
+          "poll.fields": {
+            "description": "A comma separated list of Poll fields to display.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_trends_by_woeid",
+      "name": "get_trends_by_woeid",
+      "description": "Retrieves trending topics for a specific location identified by its WOEID. Each returned trend includes a `url` deeplinking to its x.com search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "max_trends": {
+            "type": "integer"
+          },
+          "trend.fields": {
+            "description": "A comma separated list of Trend fields to display.",
+            "type": "string"
+          },
+          "woeid": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "woeid"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_usage_credits",
+      "name": "get_usage_credits",
+      "description": "Returns the payer's developer-platform credit balance in USD. total_balance is max(0, prepaid_balance + free_balance); prepaid_balance may be negative.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_blocking",
+      "name": "get_users_blocking",
+      "description": "Returns the Users that the given User is blocking.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_bookmark_folders",
+      "name": "get_users_bookmark_folders",
+      "description": "Retrieves a list of Bookmark folders created by the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_bookmarks",
+      "name": "get_users_bookmarks",
+      "description": "Retrieves a list of Posts bookmarked by the authenticated user. Each returned post includes a `url` deeplinking to it on x.com.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "media.fields": {
+            "description": "A comma separated list of Media fields to display.",
+            "type": "string"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "place.fields": {
+            "description": "A comma separated list of Place fields to display.",
+            "type": "string"
+          },
+          "poll.fields": {
+            "description": "A comma separated list of Poll fields to display.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_bookmarks_by_folder_id",
+      "name": "get_users_bookmarks_by_folder_id",
+      "description": "Retrieves Posts in a specific Bookmark folder by its ID for the authenticated user. Each returned post includes a `url` deeplinking to it on x.com.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "folder_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_by_id",
+      "name": "get_users_by_id",
+      "description": "Retrieves details of a specific User by their ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_by_username",
+      "name": "get_users_by_username",
+      "description": "Retrieves details of a specific User by their username.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "username"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_by_usernames",
+      "name": "get_users_by_usernames",
+      "description": "Retrieves details of multiple Users by their usernames.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          },
+          "usernames": {
+            "description": "(comma-separated)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "usernames"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_followed_lists",
+      "name": "get_users_followed_lists",
+      "description": "Retrieves a list of Lists followed by a specific User by their ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "list.fields": {
+            "description": "A comma separated list of List fields to display.",
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "A 64-bit signed integer.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_liked_posts",
+      "name": "get_users_liked_posts",
+      "description": "Retrieves a list of Posts liked by a specific User by their ID. Each returned post includes a `url` deeplinking to it on x.com.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "media.fields": {
+            "description": "A comma separated list of Media fields to display.",
+            "type": "string"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "place.fields": {
+            "description": "A comma separated list of Place fields to display.",
+            "type": "string"
+          },
+          "poll.fields": {
+            "description": "A comma separated list of Poll fields to display.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_list_memberships",
+      "name": "get_users_list_memberships",
+      "description": "Retrieves a list of Lists that a specific User is a member of by their ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "list.fields": {
+            "description": "A comma separated list of List fields to display.",
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_me",
+      "name": "get_users_me",
+      "description": "Retrieves details of the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        }
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_me_followers",
+      "name": "get_users_me_followers",
+      "description": "Returns the Users who follow the authenticated user. Same results as `GET /2/users/{id}/followers` with your own user ID, without looking it up.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "max_results": {
+            "description": "The maximum number of users to return.",
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "The next_token or previous_token from a previous response, to fetch that page. A base32hex-encode...",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        }
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_me_following",
+      "name": "get_users_me_following",
+      "description": "Returns the Users the authenticated user follows. Same results as `GET /2/users/{id}/following` with your own user ID, without looking it up.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "max_results": {
+            "description": "The maximum number of users to return.",
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "The next_token or previous_token from a previous response, to fetch that page. A base32hex-encode...",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        }
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_mentions",
+      "name": "get_users_mentions",
+      "description": "Retrieves a list of Posts that mention a specific User by their ID.\n\nWhen both are provided, `start_time` must be earlier than `end_time`. When both are provided, `since_id` must be less than `until_id`. Each returned post includes a `url` deeplinking to it on x.com.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "end_time": {
+            "description": "Must be on or after 2010-11-06.",
+            "type": "string"
+          },
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "media.fields": {
+            "description": "A comma separated list of Media fields to display.",
+            "type": "string"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "place.fields": {
+            "description": "A comma separated list of Place fields to display.",
+            "type": "string"
+          },
+          "poll.fields": {
+            "description": "A comma separated list of Poll fields to display.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "since_id": {
+            "type": "string"
+          },
+          "start_time": {
+            "description": "Must be on or after 2010-11-06.",
+            "type": "string"
+          },
+          "until_id": {
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_owned_lists",
+      "name": "get_users_owned_lists",
+      "description": "Retrieves a list of Lists owned by a specific User by their ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "list.fields": {
+            "description": "A comma separated list of List fields to display.",
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "description": "A 64-bit signed integer.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_pinned_lists",
+      "name": "get_users_pinned_lists",
+      "description": "Retrieves a list of Lists pinned by the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "list.fields": {
+            "description": "A comma separated list of List fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_posts",
+      "name": "get_users_posts",
+      "description": "Retrieves a list of Posts authored by a specific User by their ID.\n\nWhen both are provided, `start_time` must be earlier than `end_time`. When both are provided, `since_id` must be less than `until_id`. Each returned post includes a `url` deeplinking to it on x.com.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "end_time": {
+            "description": "Must be on or after 2010-11-06.",
+            "type": "string"
+          },
+          "exclude": {
+            "description": "(comma-separated)",
+            "type": "string"
+          },
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "media.fields": {
+            "description": "A comma separated list of Media fields to display.",
+            "type": "string"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "place.fields": {
+            "description": "A comma separated list of Place fields to display.",
+            "type": "string"
+          },
+          "poll.fields": {
+            "description": "A comma separated list of Poll fields to display.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "since_id": {
+            "type": "string"
+          },
+          "start_time": {
+            "description": "Must be on or after 2010-11-06.",
+            "type": "string"
+          },
+          "until_id": {
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_public_key",
+      "name": "get_users_public_key",
+      "description": "Returns a user's registered public keys for X Chat encryption.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "public_key.fields": {
+            "description": "A comma separated list of PublicKey fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_public_keys",
+      "name": "get_users_public_keys",
+      "description": "Returns registered public keys for X Chat encryption for the specified users.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "description": "(comma-separated)",
+            "type": "string"
+          },
+          "public_key.fields": {
+            "description": "A comma separated list of PublicKey fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_get_users_timeline",
+      "name": "get_users_timeline",
+      "description": "Retrieves a reverse chronological list of Posts in the authenticated user's Timeline.\n\nWhen both are provided, `start_time` must be earlier than `end_time`. When both are provided, `since_id` must be less than `until_id`. Each returned post includes a `url` deeplinking to it on x.com.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "end_time": {
+            "description": "Must be on or after 2010-11-06.",
+            "type": "string"
+          },
+          "exclude": {
+            "description": "(comma-separated)",
+            "type": "string"
+          },
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "media.fields": {
+            "description": "A comma separated list of Media fields to display.",
+            "type": "string"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "place.fields": {
+            "description": "A comma separated list of Place fields to display.",
+            "type": "string"
+          },
+          "poll.fields": {
+            "description": "A comma separated list of Poll fields to display.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "since_id": {
+            "type": "string"
+          },
+          "start_time": {
+            "description": "Must be on or after 2010-11-06.",
+            "type": "string"
+          },
+          "until_id": {
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_go_live_scheduled_broadcast",
+      "name": "go_live_scheduled_broadcast",
+      "description": "Publishes a schedule that was created or updated with `manual_publish: true`. Without that flag the coordinator auto-publishes at start and this call is rejected.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_list_broadcasts",
+      "name": "list_broadcasts",
+      "description": "Returns the authenticated user's live-video broadcasts, or selected owned broadcasts when ids are provided.\n\nAt most one of `ids`, `max_results` may be provided. At most one of `ids`, `pagination_token` may be provided.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "broadcast.fields": {
+            "description": "A comma separated list of Broadcast fields to display.",
+            "type": "string"
+          },
+          "ids": {
+            "description": "Comma-separated broadcast IDs to retrieve instead of listing broadcasts.",
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "pagination_token": {
+            "type": "string"
+          }
+        }
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_list_scheduled_broadcasts",
+      "name": "list_scheduled_broadcasts",
+      "description": "Returns scheduled broadcasts owned by the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "max_results": {
+            "type": "integer"
+          },
+          "newest_start_time": {
+            "type": "string"
+          },
+          "oldest_start_time": {
+            "type": "string"
+          },
+          "pagination_token": {
+            "type": "string"
+          }
+        }
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_list_scheduled_calls",
+      "name": "list_scheduled_calls",
+      "description": "Returns the X calls on the authenticated user's calendar, earliest first: events on their X Calls calendar, and events on the Microsoft Outlook calendars they linked to X whose conference is an X call. Calls still running at start_time are included. The window defaults to the next 24 hours and may span at most 7 days. Use scheduled_call.fields to select which fields are returned.\n\nWhen both are provided, `start_time` must be earlier than `end_time`.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "call.fields": {
+            "description": "A comma separated list of Call fields to display.",
+            "type": "string"
+          },
+          "end_time": {
+            "description": "Calls starting before this time (RFC 3339). Defaults to 24 hours after start_time.",
+            "type": "string"
+          },
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "max_results": {
+            "description": "The most calls to return. Defaults to 20.",
+            "type": "integer"
+          },
+          "scheduled_call.fields": {
+            "description": "A comma separated list of ScheduledCall fields to display.",
+            "type": "string"
+          },
+          "start_time": {
+            "description": "Calls still running at this time or starting after it (RFC 3339). Defaults to now.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        }
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_list_sources",
+      "name": "list_sources",
+      "description": "Returns the authenticated user's RTMP/RTMPS stream sources. A source's `id` is the `source_id` that POST /2/broadcasts and scheduled broadcasts take. Stream keys are not included; read one with GET /2/sources/:id/stream_key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_mark_chat_conversation_read",
+      "name": "mark_chat_conversation_read",
+      "description": "Marks a specific Chat conversation as read on behalf of the authenticated user. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient. Without action_signatures the conversation is marked read up to its newest event and the read receipt is unsigned. With one action signature over a MarkConversationReadEvent, the server sends that signed read receipt, marking the conversation read up to the event it names.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action_signatures": {
+            "description": "Signature over the read receipt (a MarkConversationReadEvent). Omit to send it unsigned.",
+            "items": {
+              "properties": {
+                "encoded_message_event_detail": {
+                  "description": "Base64-encoded Thrift MessageEventDetail for the signed action.",
+                  "type": "string"
+                },
+                "message_event_signature": {
+                  "properties": {
+                    "message_signing_key_info_list": {
+                      "description": "List of signing key information for message verification.",
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "public_key_version": {
+                      "description": "The version of the public key used for signing.",
+                      "type": "string"
+                    },
+                    "signature": {
+                      "description": "The signature of the message event.",
+                      "type": "string"
+                    },
+                    "signature_version": {
+                      "description": "The version of the signature algorithm.",
+                      "type": "string"
+                    },
+                    "signing_public_key": {
+                      "description": "The public key used for signing.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "signature",
+                    "public_key_version",
+                    "signature_version"
+                  ],
+                  "type": "object"
+                },
+                "message_id": {
+                  "description": "Client-generated ID of the message being signed.",
+                  "type": "string"
+                },
+                "signature_payload": {
+                  "description": "Payload string the client signed; used only in server-side failure logs.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message_id",
+                "encoded_message_event_detail",
+                "message_event_signature"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_mark_chat_conversation_unread",
+      "name": "mark_chat_conversation_unread",
+      "description": "Marks a specific Chat conversation as unread on behalf of the authenticated user. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_mute_broadcast_chat_user",
+      "name": "mute_broadcast_chat_user",
+      "description": "Prevents a user from posting further messages in a running broadcast chat. When `end_at_ms` is provided, the mute expires at that time. The authenticated user must be the broadcast host or a moderator.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "end_at_ms": {
+            "description": "The Unix timestamp in milliseconds when the mute expires. Omit this field to mute indefinitely.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message_id": {
+            "description": "A chat message to remove while muting the user.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "The user to mute.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_pin_list",
+      "name": "pin_list",
+      "description": "Causes the authenticated user to pin a specific List by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "list_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "list_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_remove_chat_moderator",
+      "name": "remove_chat_moderator",
+      "description": "Removes a moderator from the authenticated broadcaster's persistent list and returns the updated moderator user IDs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "description": "A 64-bit signed integer.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_remove_lists_member_by_user_id",
+      "name": "remove_lists_member_by_user_id",
+      "description": "Removes a User from a List by their ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_respond_to_scheduled_call",
+      "name": "respond_to_scheduled_call",
+      "description": "Accepts, declines or tentatively accepts an invitation to a scheduled call for the authenticated user. For a recurring call, scope and occurrence_start_time pick the occurrences the answer is for: all of them (the default), one, or one and every one after it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "occurrence_start_time": {
+            "description": "Start of the occurrence that scope this or this_and_following refers to (RFC 3339).",
+            "type": "string"
+          },
+          "response": {
+            "description": "The answer to the invitation.",
+            "enum": [
+              "accepted",
+              "declined",
+              "tentative"
+            ],
+            "type": "string"
+          },
+          "scope": {
+            "description": "Which occurrences of a recurring call: all (the default without occurrence_start_time), this (the...",
+            "enum": [
+              "all",
+              "this",
+              "this_and_following"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "response"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_schedule_call",
+      "name": "schedule_call",
+      "description": "Puts an X call on the authenticated user's X Calls calendar, with them as its organizer, and invites people to it. The call exists right away: share its join_url, or put an agent in it at start time with POST /2/calls/:id/join. A recurrence (an RFC 5545 RRULE) repeats it. Invitees get an email unless notify_invitees is false.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "description": "What the call is about.",
+            "type": "string"
+          },
+          "duration_minutes": {
+            "description": "How long the call lasts, in minutes. Defaults to 30; at most 31 days.",
+            "type": "integer"
+          },
+          "invitee_ids": {
+            "description": "X user ids of the people to invite.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "notify_invitees": {
+            "description": "Whether invitees get an email about the call. Defaults to true.",
+            "type": "boolean"
+          },
+          "recurrence": {
+            "description": "RFC 5545 RRULE to repeat the call by, such as FREQ=WEEKLY;BYDAY=MO; the RRULE: prefix is optional.",
+            "type": "string"
+          },
+          "start_time": {
+            "description": "When the call starts (RFC 3339); not in the past.",
+            "type": "string"
+          },
+          "time_zone": {
+            "description": "IANA time zone the recurrence follows, such as America/Los_Angeles.",
+            "type": "string"
+          },
+          "title": {
+            "description": "Title invitees see.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start_time"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_search_communities",
+      "name": "search_communities",
+      "description": "Retrieves a list of Communities matching the specified search query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "community.fields": {
+            "description": "A comma separated list of Community fields to display.",
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "next_token": {
+            "type": "string"
+          },
+          "pagination_token": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_search_news",
+      "name": "search_news",
+      "description": "Retrieves a list of News stories matching the specified search query. Each returned story includes a `url` deeplinking to its x.com page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "max_age_hours": {
+            "type": "integer"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "news.fields": {
+            "description": "A comma separated list of News fields to display.",
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_search_posts_all",
+      "name": "search_posts_all",
+      "description": "Retrieves Posts from the full archive matching a search query.\n\nAt most one of `start_time`, `since_id` may be provided. At most one of `end_time`, `until_id` may be provided. At most one of `pagination_token`, `next_token` may be provided. Each returned post includes a `url` deeplinking to it on x.com.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "end_time": {
+            "type": "string"
+          },
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "media.fields": {
+            "description": "A comma separated list of Media fields to display.",
+            "type": "string"
+          },
+          "next_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "pagination_token": {
+            "description": "A base32hex-encoded pagination token.",
+            "type": "string"
+          },
+          "place.fields": {
+            "description": "A comma separated list of Place fields to display.",
+            "type": "string"
+          },
+          "poll.fields": {
+            "description": "A comma separated list of Poll fields to display.",
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "since_id": {
+            "type": "string"
+          },
+          "sort_order": {
+            "enum": [
+              "recency",
+              "relevancy"
+            ],
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "until_id": {
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_search_spaces",
+      "name": "search_spaces",
+      "description": "Retrieves a list of Spaces matching the specified search query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "query": {
+            "type": "string"
+          },
+          "space.fields": {
+            "description": "A comma separated list of Space fields to display.",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "live",
+              "scheduled",
+              "all"
+            ],
+            "type": "string"
+          },
+          "topic.fields": {
+            "description": "A comma separated list of Topic fields to display.",
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_search_users",
+      "name": "search_users",
+      "description": "Retrieves a list of Users matching a search query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expansions": {
+            "description": "A comma separated list of fields to expand.",
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "next_token": {
+            "type": "string"
+          },
+          "post.fields": {
+            "description": "A comma separated list of Post fields to display.",
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "user.fields": {
+            "description": "A comma separated list of User fields to display.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_send_chat_message",
+      "name": "send_chat_message",
+      "description": "Sends a message or reaction to a specific Chat conversation. Send `encoded_message_create_event`, an end-to-end encrypted event built with the Chat XDK. `content`, a plaintext message or reaction sent unencrypted, is only a fallback for a 1:1 conversation that X Chat can't encrypt because one of the two users has connected an enterprise app that reads their DMs; check that the recipient's `receives_your_chat` user field is `unencrypted` before using it. Otherwise a `content` send is refused, and retrying it won't help: HTTP 400 https://api.x.com/2/problems/encryption-required when the conversation can be encrypted or is a group (send `encoded_message_create_event` instead), 400 https://api.x.com/2/problems/xchat-setup-required when you haven't set up X Chat, 400 https://api.x.com/2/problems/recipient-xchat-setup-required when the recipient hasn't, and 403 https://api.x.com/2/problems/message-request-not-supported when it would be a message request. HTTP 503 https://api.x.com/2/problems/chat-permissions-unavailable means the check failed and nothing was sent; retry it. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient. A recipient who cannot be messaged (closed inbox, system/notification account, or a 1:1 block) returns HTTP 403 with type https://api.x.com/2/problems/recipient-not-messageable.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "properties": {
+              "message": {
+                "properties": {
+                  "text": {
+                    "description": "Text of the message.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "type": "object"
+              },
+              "reaction_add": {
+                "properties": {
+                  "emoji": {
+                    "description": "Emoji of the reaction.",
+                    "type": "string"
+                  },
+                  "event_id": {
+                    "description": "ID of the message event the reaction is on.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "event_id",
+                  "emoji"
+                ],
+                "type": "object"
+              },
+              "reaction_remove": {
+                "properties": {
+                  "emoji": {
+                    "description": "Emoji of the reaction.",
+                    "type": "string"
+                  },
+                  "event_id": {
+                    "description": "ID of the message event the reaction is on.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "event_id",
+                  "emoji"
+                ],
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "conversation_token": {
+            "description": "Optional conversation token.",
+            "type": "string"
+          },
+          "encoded_message_create_event": {
+            "description": "Base64-encoded Thrift MessageCreateEvent containing encrypted message contents. Omit when sending...",
+            "type": "string"
+          },
+          "encoded_message_event_signature": {
+            "description": "Base64-encoded Thrift MessageEventSignature for message verification.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message_id": {
+            "description": "Unique identifier for this message.",
+            "type": "string"
+          },
+          "xdk_version": {
+            "description": "Version of the Chat XDK that produced the payload.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "message_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_send_chat_typing_indicator",
+      "name": "send_chat_typing_indicator",
+      "description": "Sends a typing indicator to a specific Chat conversation on behalf of the authenticated user. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_unarchive_chat_conversation",
+      "name": "unarchive_chat_conversation",
+      "description": "Unarchives a Chat conversation for the authenticated user only. Unarchiving a conversation that is not archived changes nothing. Works for group and 1:1 conversations. For 1:1 conversations, provide the recipient's user ID; the server constructs the canonical conversation ID from the authenticated user and recipient.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The ID of the conversation: a group ID starting with `g`, the other user's ID for a 1:1 conversat...",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_unfollow_list",
+      "name": "unfollow_list",
+      "description": "Causes the authenticated user to unfollow a List by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "list_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "list_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_unmute_broadcast_chat_user",
+      "name": "unmute_broadcast_chat_user",
+      "description": "Allows a muted user to post messages in a running broadcast chat again. The authenticated user must be the broadcast host or a moderator.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "user_id": {
+            "description": "A 64-bit signed integer.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_unpin_list",
+      "name": "unpin_list",
+      "description": "Causes the authenticated user to unpin a List by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "list_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "list_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_update_lists",
+      "name": "update_lists",
+      "description": "Updates the details of a specific List owned by the authenticated user by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "description": "New description for the List (up to 100 characters).",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "description": "New name for the List (1-25 characters).",
+            "type": "string"
+          },
+          "private": {
+            "description": "Whether the List is private.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_update_scheduled_broadcast",
+      "name": "update_scheduled_broadcast",
+      "description": "Updates a scheduled broadcast. Path `:id` is the broadcast id; the body must include `scheduled_broadcast_id`. Re-send every field that should be kept. Passing a stream key as `source_id` is deprecated and stops working when the /2/users/:id/sources and /2/users/:id/broadcasts routes reach end of life on January 1, 2027; pass the source's `id` from GET /2/sources instead.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "available_for_replay": {
+            "description": "Enable replay.",
+            "type": "boolean"
+          },
+          "chat_option": {
+            "description": "Who can chat (numeric string): `0` default, `1` chat off, `2` everyone, `3` verified accounts, `4...",
+            "type": "string"
+          },
+          "description": {
+            "description": "Description.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "is_locked": {
+            "description": "Lock the broadcast.",
+            "type": "boolean"
+          },
+          "locale": {
+            "description": "Locale.",
+            "type": "string"
+          },
+          "manual_publish": {
+            "description": "If true, do not auto-publish at start; call POST .../live when ready.",
+            "type": "boolean"
+          },
+          "roll_forward": {
+            "description": "Deprecated: recurring schedules are being retired and `true` will be rejected.",
+            "type": "boolean"
+          },
+          "scheduled_broadcast_id": {
+            "description": "Numeric scheduler id from create/list/get.",
+            "type": "string"
+          },
+          "scheduled_end_ms": {
+            "description": "End time, ms since Unix epoch (decimal string).",
+            "type": "string"
+          },
+          "scheduled_start_ms": {
+            "description": "Start time, ms since Unix epoch (decimal string).",
+            "type": "string"
+          },
+          "source_id": {
+            "description": "Source to bind: a source's `id` from GET /2/sources. A stream key is also accepted but deprecated...",
+            "type": "string"
+          },
+          "thumbnail_media_id": {
+            "description": "Pre-live slate media id (numeric string).",
+            "type": "string"
+          },
+          "title": {
+            "description": "Title / status text.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scheduled_broadcast_id",
+          "scheduled_start_ms",
+          "scheduled_end_ms"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_update_scheduled_call",
+      "name": "update_scheduled_call",
+      "description": "Moves, renames or re-invites a scheduled call the authenticated user organizes. Only the fields sent change. For a recurring call, scope and occurrence_start_time pick the occurrences: all of them (the default), one, or one and every one after it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "description": "What the call is about.",
+            "type": "string"
+          },
+          "duration_minutes": {
+            "description": "How long the call lasts, in minutes.",
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "invitee_ids": {
+            "description": "Everyone to invite: replaces the invite list. At most 25 of them may be people not invited yet.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "notify_invitees": {
+            "description": "Whether invitees get an email about the change. Defaults to true.",
+            "type": "boolean"
+          },
+          "occurrence_start_time": {
+            "description": "Start of the occurrence that scope this or this_and_following refers to (RFC 3339).",
+            "type": "string"
+          },
+          "recurrence": {
+            "description": "RFC 5545 RRULE to repeat the call by, such as FREQ=WEEKLY;BYDAY=MO.",
+            "type": "string"
+          },
+          "scope": {
+            "description": "Which occurrences of a recurring call: all (the default without occurrence_start_time), this (the...",
+            "enum": [
+              "all",
+              "this",
+              "this_and_following"
+            ],
+            "type": "string"
+          },
+          "start_time": {
+            "description": "When the call (or the chosen occurrence) starts now (RFC 3339).",
+            "type": "string"
+          },
+          "time_zone": {
+            "description": "IANA time zone the recurrence follows.",
+            "type": "string"
+          },
+          "title": {
+            "description": "Title invitees see.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_update_source",
+      "name": "update_source",
+      "description": "Renames one of the authenticated user's stream sources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Source id (19 digits), from GET /2/sources.",
+            "type": "string"
+          },
+          "name": {
+            "description": "New label for the source.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_users_id_block",
+      "name": "users_id_block",
+      "description": "Causes the source User to block the target User.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "target_user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "target_user_id"
+        ]
+      },
+      "outputSchema": {}
+    },
+    {
+      "id": "x_users_id_unblock",
+      "name": "users_id_unblock",
+      "description": "Causes the source User to unblock the target User.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source_user_id": {
+            "type": "string"
+          },
+          "target_user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_user_id",
+          "target_user_id"
+        ]
+      },
+      "outputSchema": {}
+    }
+  ]
+}

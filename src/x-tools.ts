@@ -1,16 +1,22 @@
-// Every fact the plugin keeps about X's tools: their names, without the `x_` server prefix, sorted by what they do.
-// The default rules, the tools RPC's methods, status's unknown and denied tools and the tests all derive from these
-// lists; `jelly.tools` in package.json and the skills' tool names are checked against them. Keep this file free of
-// runtime imports.
+// Every fact the plugin keeps about X's tools: the live list captured from a signed-in OpenCode on 2026-11-06,
+// classified by name, description and schema. The names, without the `x_` server prefix, are the explicit tool lists
+// below; `DENY_PATTERNS` is only a safety net for a tool X adds later. The default rules, the tools RPC's methods,
+// status's unknown and denied tools and the tests all derive from these lists; `jelly.tools` in package.json and the
+// skills' tool names are checked against them. Keep this file free of runtime imports.
 //
-// The names come from X's MCP capability table, a third party's recorded tools/list (24 read and bookmark names) and
-// X's own OpenAPI operation ids, which the hosted server names its tools after; provisional-tools.json in the design
-// folder records the same table. X answers tools/list only for a signed-in token, so the table is provisional until a
-// live list is recorded (CONTRIBUTING.md, "Drift check"). X may list fewer tools for a token with fewer scopes, so a
-// known tool missing from a live list is normal and never reported.
+// The live list has no annotations, so each class is X's own description of the tool. X may list fewer tools for a
+// token with fewer scopes, so a known tool missing from a live list is normal and never reported.
 
-/** Known reads: each only reads, by X's description, and sends nothing beyond its query. They run without asking. */
+/** Reads that run without asking: they only return data, and send nothing to anyone. */
 export const READ_TOOLS: readonly string[] = [
+  "get_broadcast",
+  "get_broadcast_chat",
+  "get_chat_moderators",
+  "get_communities_by_id",
+  "get_lists_by_id",
+  "get_lists_followers",
+  "get_lists_members",
+  "get_lists_posts",
   "get_news",
   "get_posts_by_id",
   "get_posts_by_ids",
@@ -18,81 +24,151 @@ export const READ_TOOLS: readonly string[] = [
   "get_posts_liking_users",
   "get_posts_quoted_posts",
   "get_posts_reposted_by",
+  "get_scheduled_broadcast",
+  "get_scheduled_call",
+  "get_spaces_by_creator_ids",
+  "get_spaces_by_id",
+  "get_spaces_by_ids",
+  "get_spaces_posts",
   "get_trends_by_woeid",
+  "get_usage_credits",
+  "get_users_blocking",
   "get_users_bookmark_folders",
   "get_users_bookmarks",
   "get_users_bookmarks_by_folder_id",
   "get_users_by_id",
   "get_users_by_username",
   "get_users_by_usernames",
+  "get_users_followed_lists",
+  "get_users_liked_posts",
+  "get_users_list_memberships",
   "get_users_me",
+  "get_users_me_followers",
+  "get_users_me_following",
   "get_users_mentions",
+  "get_users_owned_lists",
+  "get_users_pinned_lists",
   "get_users_posts",
   "get_users_timeline",
+  "list_broadcasts",
+  "list_scheduled_broadcasts",
+  "list_scheduled_calls",
+  "search_communities",
   "search_news",
   "search_posts_all",
+  "search_spaces",
   "search_users",
 ]
 
 /**
- * Known writes: they ask before they run. Each changes only the user's own account, and the bookmark ones are
- * reversible and notify no one.
+ * Reads that ask because their output can carry a secret: an X stream source holds the RTMP URL and its stream key.
+ * The captured output schema is empty, so the plugin cannot confirm the shape and keeps them ask.
  */
-export const WRITE_TOOLS: readonly string[] = ["article_create_draft", "create_users_bookmark", "create_users_bookmark_folder", "delete_users_bookmark"]
+export const ASK_READ_TOOLS: readonly string[] = [
+  "get_source",
+  "list_sources",
+]
+
+/** Private writes that ask: bookmarks, a private Article draft, and the user's own lists. */
+export const WRITE_TOOLS: readonly string[] = [
+  "article_create_draft",
+  "create_lists",
+  "create_users_bookmark",
+  "create_users_bookmark_folder",
+  "delete_users_bookmark",
+  "pin_list",
+  "unpin_list",
+  "update_lists",
+]
+
+/** Writes that reach other people: `create_posts` posts or edits a Post publicly. It asks, every time. */
+export const PUBLIC_TOOLS: readonly string[] = [
+  "create_posts",
+]
 
 /**
- * Writes that reach other people: they ask, and the x-write skill says they are public. The catch-all ask already
- * covers them, so they add no rule of their own; Jelly and the skills read this list.
+ * Off by default, from the live list: DMs and chat (reads included), follows, blocks, mutes, list membership,
+ * moderator roles, scheduled calls, and live video with its ingest sources. A user turns one on with a later `ask`
+ * rule in an agent's own permissions.
  */
-export const PUBLIC_TOOLS: readonly string[] = ["article_publish"]
-
-/**
- * Empty today: X's MCP exposes no DM, follow, block, mute, post-delete, list-change or account-setting tool. A tool
- * that appears later with one of those effects goes here, not in WRITE_TOOLS, and is off until the user turns it on.
- */
-export const DENY_TOOLS: readonly string[] = []
-
-/**
- * Name patterns for the tools the owner ruled out: a future tool that messages, follows or unfollows, blocks or mutes,
- * deletes a post, changes list membership or changes the account is denied even before a release classifies it. They
- * are the tool name without the server prefix, and deliberately narrow, so no known read matches one; the test checks
- * that. A user turns one on with a later `ask` rule in an agent's own permissions.
- */
-/**
- * The tools the owner ruled out from the live list, by their exact names, plus narrow patterns for a future tool of
- * the same effect. They are the tool name without the server prefix, and no allowed read or write matches one; the test
- * checks that. A user turns one on with a later `ask` rule in an agent's own permissions.
- */
-export const DENY_PATTERNS: readonly string[] = [
-  "send_chat_message",
-  "send_chat_typing_indicator",
+export const DENY_TOOLS: readonly string[] = [
   "accept_chat_message_request",
+  "add_chat_moderator",
+  "add_conversation_keys",
+  "add_lists_member",
   "archive_chat_conversation",
-  "unarchive_chat_conversation",
-  "mark_chat_conversation_read",
-  "mark_chat_conversation_unread",
+  "cancel_scheduled_call",
+  "chat_media_download",
+  "chat_media_upload_append",
+  "chat_media_upload_finalize",
+  "chat_media_upload_initialize",
+  "create_scheduled_broadcast",
+  "create_source",
+  "delete_scheduled_broadcast",
+  "delete_source",
+  "follow_list",
   "get_chat_conversation",
   "get_chat_conversation_events",
   "get_chat_conversations",
   "get_chat_message_request",
   "get_chat_message_requests",
-  "add_conversation_keys",
   "get_users_public_key",
   "get_users_public_keys",
-  "chat_media_download",
-  "chat_media_upload_append",
-  "chat_media_upload_finalize",
-  "chat_media_upload_initialize",
-  "follow_list",
+  "go_live_scheduled_broadcast",
+  "mark_chat_conversation_read",
+  "mark_chat_conversation_unread",
+  "mute_broadcast_chat_user",
+  "remove_chat_moderator",
+  "remove_lists_member_by_user_id",
+  "respond_to_scheduled_call",
+  "schedule_call",
+  "send_chat_message",
+  "send_chat_typing_indicator",
+  "unarchive_chat_conversation",
   "unfollow_list",
+  "unmute_broadcast_chat_user",
+  "update_scheduled_broadcast",
+  "update_scheduled_call",
+  "update_source",
   "users_id_block",
   "users_id_unblock",
-  "mute_broadcast_chat_user",
-  "unmute_broadcast_chat_user",
-  "add_lists_member",
-  "remove_lists_member_by_user_id",
+]
+
+/**
+ * Patterns for a tool X adds later with one of the denied effects. They are narrow so no allowed tool matches one;
+ * the test checks that. The explicit names above are the live list's own tools.
+ */
+export const DENY_PATTERNS: readonly string[] = [
+  "create_dm*",
+  "send_dm*",
+  "delete_dm*",
+  "get_dm*",
+  "send_chat_*",
+  "archive_chat_*",
+  "unarchive_chat_*",
+  "mark_chat_*",
+  "get_chat_conversation*",
+  "get_chat_message*",
+  "accept_chat_message*",
+  "add_conversation_keys",
+  "get_users_public_key*",
+  "chat_media_*",
   "add_chat_moderator",
   "remove_chat_moderator",
+  "follow_*",
+  "unfollow_*",
+  "create_follow*",
+  "delete_follow*",
+  "block_*",
+  "unblock_*",
+  "mute_*",
+  "unmute_*",
+  "delete_post*",
+  "delete_tweet*",
+  "add_*list_member*",
+  "remove_*list_member*",
+  "add_*lists_member*",
+  "remove_*lists_member*",
   "schedule_call",
   "update_scheduled_call",
   "cancel_scheduled_call",
@@ -104,28 +180,6 @@ export const DENY_PATTERNS: readonly string[] = [
   "create_source",
   "update_source",
   "delete_source",
-  "create_dm*",
-  "send_dm*",
-  "delete_dm*",
-  "get_dm*",
-  "follow_*",
-  "unfollow_*",
-  "create_follow*",
-  "delete_follow*",
-  "block_*",
-  "unblock_*",
-  "mute_*",
-  "unmute_*",
-  "delete_post*",
-  "delete_tweet*",
-  "create_*list_member*",
-  "delete_*list_member*",
-  "add_*list_member*",
-  "remove_*list_member*",
-  "create_*lists_member*",
-  "delete_*lists_member*",
-  "add_*lists_member*",
-  "remove_*lists_member*",
   "update_account*",
   "update_profile*",
   "delete_account*",
@@ -138,17 +192,118 @@ const wildcard = (pattern: string) => new RegExp(`^${pattern.replace(/[.+^${}()|
 export const deniedByDefault = (name: string) => DENY_TOOLS.includes(name) || DENY_PATTERNS.some((pattern) => wildcard(pattern).test(name))
 
 /**
- * Each known tool's input parameters, as `name:type`, with `*` after a required name. Empty until a tool list from a
- * signed-in server is recorded: X publishes no MCP schemas, and its 401 is a bare bearer challenge. The drift script
- * compares a saved tool list with this record and lists every tool still to record; the skills test lets a skill write
- * a literal call only with parameters recorded here, so until then the skills name tools without their inputs.
+ * Each known tool's input parameters, as `name:type`, with `*` after a required name, from the live list's schemas.
+ * The drift script compares them with a saved list; the skills test lets a skill write a literal call only with
+ * parameters recorded here.
  */
-export const PARAMETERS: Readonly<Record<string, readonly string[]>> = {}
+export const PARAMETERS: Readonly<Record<string, readonly string[]>> = {
+  "accept_chat_message_request": ["id*:string"],
+  "add_chat_moderator": ["user_id*:string"],
+  "add_conversation_keys": ["action_signatures:array<object>", "base64_encoded_key_rotation:string", "conversation_key_version*:string", "conversation_participant_keys*:array<object>", "id*:string"],
+  "add_lists_member": ["id*:string", "user_id*:string"],
+  "archive_chat_conversation": ["action_signatures:array<object>", "id*:string"],
+  "article_create_draft": ["content_state*:object", "cover_media:object", "title*:string"],
+  "cancel_scheduled_call": ["id*:string", "notify_invitees:boolean", "occurrence_start_time:string", "scope:string"],
+  "chat_media_download": ["id*:string", "media_hash_key*:string"],
+  "chat_media_upload_append": ["conversation_id*:string", "id*:string", "media*:string", "media_hash_key*:string", "segment_index*:integer"],
+  "chat_media_upload_finalize": ["conversation_id*:string", "id*:string", "media_hash_key*:string", "message_id:string", "num_parts*:string", "ttl_msec:string"],
+  "chat_media_upload_initialize": ["conversation_id*:string", "total_bytes*:integer"],
+  "create_lists": ["description:string", "name*:string", "private:boolean"],
+  "create_posts": ["card_uri:string", "community_id:string", "direct_message_deep_link:string", "edit_options:object", "for_super_followers_only:boolean", "geo:object", "made_with_ai:boolean", "media:object", "nullcast:boolean", "paid_partnership:boolean", "poll:object", "quote_tweet_id:string", "reply:object", "reply_settings:string", "share_with_followers:boolean", "text:string"],
+  "create_scheduled_broadcast": ["available_for_replay:boolean", "chat_option:string", "description:string", "is_locked:boolean", "locale:string", "manual_publish:boolean", "recurrence:object", "scheduled_end_ms:string", "scheduled_start_ms*:string", "source_id*:string", "telecast_id:string", "thumbnail_media_id:string", "title:string"],
+  "create_source": ["name*:string", "region*:string"],
+  "create_users_bookmark": ["folder_id:string", "id*:string", "tweet_id:string", "tweet_ids:array<string>"],
+  "create_users_bookmark_folder": ["id*:string", "name*:string"],
+  "delete_scheduled_broadcast": ["id*:string", "roll_forward:boolean"],
+  "delete_source": ["id*:string"],
+  "delete_users_bookmark": ["id*:string", "tweet_id*:string"],
+  "follow_list": ["id*:string", "list_id*:string"],
+  "get_broadcast": ["broadcast.fields:string", "id*:string"],
+  "get_broadcast_chat": ["broadcast_chat_message.fields:string", "expansions:string", "id*:string", "max_results:integer", "pagination_token:string", "user.fields:string"],
+  "get_chat_conversation": ["chat_conversation.fields:string", "expansions:string", "id*:string", "user.fields:string"],
+  "get_chat_conversation_events": ["chat_message_event.fields:string", "id*:string", "max_results:integer", "pagination_token:string"],
+  "get_chat_conversations": ["chat_conversation.fields:string", "end_time:string", "expansions:string", "is_archived:boolean", "is_muted:boolean", "max_results:integer", "pagination_token:string", "participant_ids:string", "participant_query:string", "start_time:string", "type:string", "unread_only:boolean", "user.fields:string"],
+  "get_chat_message_request": ["chat_message_request_detail.fields:string", "id*:string"],
+  "get_chat_message_requests": ["chat_message_request.fields:string", "inbox_type:string", "max_results:integer", "pagination_token:string"],
+  "get_chat_moderators": ["expansions:string", "post.fields:string", "user.fields:string"],
+  "get_communities_by_id": ["community.fields:string", "id*:string"],
+  "get_lists_by_id": ["expansions:string", "id*:string", "list.fields:string", "user.fields:string"],
+  "get_lists_followers": ["expansions:string", "id*:string", "max_results:integer", "pagination_token:string", "post.fields:string", "user.fields:string"],
+  "get_lists_members": ["expansions:string", "id*:string", "max_results:integer", "pagination_token:string", "post.fields:string", "user.fields:string"],
+  "get_lists_posts": ["expansions:string", "id*:string", "max_results:integer", "media.fields:string", "pagination_token:string", "place.fields:string", "poll.fields:string", "post.fields:string", "user.fields:string"],
+  "get_news": ["id*:string", "news.fields:string"],
+  "get_posts_by_id": ["expansions:string", "id*:string", "media.fields:string", "place.fields:string", "poll.fields:string", "post.fields:string", "user.fields:string"],
+  "get_posts_by_ids": ["expansions:string", "ids*:string", "media.fields:string", "place.fields:string", "poll.fields:string", "post.fields:string", "user.fields:string"],
+  "get_posts_counts_recent": ["end_time:string", "granularity:string", "next_token:string", "pagination_token:string", "query*:string", "search_count.fields:string", "since_id:string", "start_time:string", "until_id:string"],
+  "get_posts_liking_users": ["expansions:string", "id*:string", "max_results:integer", "pagination_token:string", "post.fields:string", "user.fields:string"],
+  "get_posts_quoted_posts": ["exclude:string", "expansions:string", "id*:string", "max_results:integer", "media.fields:string", "pagination_token:string", "place.fields:string", "poll.fields:string", "post.fields:string", "user.fields:string"],
+  "get_posts_reposted_by": ["expansions:string", "id*:string", "max_results:integer", "pagination_token:string", "post.fields:string", "user.fields:string"],
+  "get_scheduled_broadcast": ["id*:string"],
+  "get_scheduled_call": ["call.fields:string", "expansions:string", "id*:string", "scheduled_call.fields:string", "user.fields:string"],
+  "get_source": ["id*:string"],
+  "get_spaces_by_creator_ids": ["expansions:string", "space.fields:string", "topic.fields:string", "user.fields:string", "user_ids*:string"],
+  "get_spaces_by_id": ["expansions:string", "id*:string", "space.fields:string", "topic.fields:string", "user.fields:string"],
+  "get_spaces_by_ids": ["expansions:string", "ids*:string", "space.fields:string", "topic.fields:string", "user.fields:string"],
+  "get_spaces_posts": ["expansions:string", "id*:string", "max_results:integer", "media.fields:string", "pagination_token:string", "place.fields:string", "poll.fields:string", "post.fields:string", "user.fields:string"],
+  "get_trends_by_woeid": ["max_trends:integer", "trend.fields:string", "woeid*:integer"],
+  "get_usage_credits": [],
+  "get_users_blocking": ["expansions:string", "id*:string", "max_results:integer", "pagination_token:string", "post.fields:string", "user.fields:string"],
+  "get_users_bookmark_folders": ["id*:string", "max_results:integer", "pagination_token:string"],
+  "get_users_bookmarks": ["expansions:string", "id*:string", "max_results:integer", "media.fields:string", "pagination_token:string", "place.fields:string", "poll.fields:string", "post.fields:string", "user.fields:string"],
+  "get_users_bookmarks_by_folder_id": ["folder_id*:string", "id*:string", "max_results:integer", "pagination_token:string"],
+  "get_users_by_id": ["expansions:string", "id*:string", "post.fields:string", "user.fields:string"],
+  "get_users_by_username": ["expansions:string", "post.fields:string", "user.fields:string", "username*:string"],
+  "get_users_by_usernames": ["expansions:string", "post.fields:string", "user.fields:string", "usernames*:string"],
+  "get_users_followed_lists": ["expansions:string", "id*:string", "list.fields:string", "max_results:integer", "pagination_token:string", "user.fields:string"],
+  "get_users_liked_posts": ["expansions:string", "id*:string", "max_results:integer", "media.fields:string", "pagination_token:string", "place.fields:string", "poll.fields:string", "post.fields:string", "user.fields:string"],
+  "get_users_list_memberships": ["expansions:string", "id*:string", "list.fields:string", "max_results:integer", "pagination_token:string", "user.fields:string"],
+  "get_users_me": ["expansions:string", "post.fields:string", "user.fields:string"],
+  "get_users_me_followers": ["expansions:string", "max_results:integer", "pagination_token:string", "post.fields:string", "user.fields:string"],
+  "get_users_me_following": ["expansions:string", "max_results:integer", "pagination_token:string", "post.fields:string", "user.fields:string"],
+  "get_users_mentions": ["end_time:string", "expansions:string", "id*:string", "max_results:integer", "media.fields:string", "pagination_token:string", "place.fields:string", "poll.fields:string", "post.fields:string", "since_id:string", "start_time:string", "until_id:string", "user.fields:string"],
+  "get_users_owned_lists": ["expansions:string", "id*:string", "list.fields:string", "max_results:integer", "pagination_token:string", "user.fields:string"],
+  "get_users_pinned_lists": ["expansions:string", "id*:string", "list.fields:string", "user.fields:string"],
+  "get_users_posts": ["end_time:string", "exclude:string", "expansions:string", "id*:string", "max_results:integer", "media.fields:string", "pagination_token:string", "place.fields:string", "poll.fields:string", "post.fields:string", "since_id:string", "start_time:string", "until_id:string", "user.fields:string"],
+  "get_users_public_key": ["id*:string", "public_key.fields:string"],
+  "get_users_public_keys": ["ids*:string", "public_key.fields:string"],
+  "get_users_timeline": ["end_time:string", "exclude:string", "expansions:string", "id*:string", "max_results:integer", "media.fields:string", "pagination_token:string", "place.fields:string", "poll.fields:string", "post.fields:string", "since_id:string", "start_time:string", "until_id:string", "user.fields:string"],
+  "go_live_scheduled_broadcast": ["id*:string"],
+  "list_broadcasts": ["broadcast.fields:string", "ids:string", "max_results:integer", "pagination_token:string"],
+  "list_scheduled_broadcasts": ["max_results:integer", "newest_start_time:string", "oldest_start_time:string", "pagination_token:string"],
+  "list_scheduled_calls": ["call.fields:string", "end_time:string", "expansions:string", "max_results:integer", "scheduled_call.fields:string", "start_time:string", "user.fields:string"],
+  "list_sources": [],
+  "mark_chat_conversation_read": ["action_signatures:array<object>", "id*:string"],
+  "mark_chat_conversation_unread": ["id*:string"],
+  "mute_broadcast_chat_user": ["end_at_ms:string", "id*:string", "message_id:string", "user_id*:string"],
+  "pin_list": ["id*:string", "list_id*:string"],
+  "remove_chat_moderator": ["user_id*:string"],
+  "remove_lists_member_by_user_id": ["id*:string", "user_id*:string"],
+  "respond_to_scheduled_call": ["id*:string", "occurrence_start_time:string", "response*:string", "scope:string"],
+  "schedule_call": ["description:string", "duration_minutes:integer", "invitee_ids:array<string>", "notify_invitees:boolean", "recurrence:string", "start_time*:string", "time_zone:string", "title:string"],
+  "search_communities": ["community.fields:string", "max_results:integer", "next_token:string", "pagination_token:string", "query*:string"],
+  "search_news": ["max_age_hours:integer", "max_results:integer", "news.fields:string", "query*:string"],
+  "search_posts_all": ["end_time:string", "expansions:string", "max_results:integer", "media.fields:string", "next_token:string", "pagination_token:string", "place.fields:string", "poll.fields:string", "post.fields:string", "query*:string", "since_id:string", "sort_order:string", "start_time:string", "until_id:string", "user.fields:string"],
+  "search_spaces": ["expansions:string", "max_results:integer", "query*:string", "space.fields:string", "state:string", "topic.fields:string", "user.fields:string"],
+  "search_users": ["expansions:string", "max_results:integer", "next_token:string", "post.fields:string", "query*:string", "user.fields:string"],
+  "send_chat_message": ["content:object", "conversation_token:string", "encoded_message_create_event:string", "encoded_message_event_signature:string", "id*:string", "message_id*:string", "xdk_version:string"],
+  "send_chat_typing_indicator": ["id*:string"],
+  "unarchive_chat_conversation": ["id*:string"],
+  "unfollow_list": ["id*:string", "list_id*:string"],
+  "unmute_broadcast_chat_user": ["id*:string", "user_id*:string"],
+  "unpin_list": ["id*:string", "list_id*:string"],
+  "update_lists": ["description:string", "id*:string", "name:string", "private:boolean"],
+  "update_scheduled_broadcast": ["available_for_replay:boolean", "chat_option:string", "description:string", "id*:string", "is_locked:boolean", "locale:string", "manual_publish:boolean", "roll_forward:boolean", "scheduled_broadcast_id*:string", "scheduled_end_ms*:string", "scheduled_start_ms*:string", "source_id:string", "thumbnail_media_id:string", "title:string"],
+  "update_scheduled_call": ["description:string", "duration_minutes:integer", "id*:string", "invitee_ids:array<string>", "notify_invitees:boolean", "occurrence_start_time:string", "recurrence:string", "scope:string", "start_time:string", "time_zone:string", "title:string"],
+  "update_source": ["id*:string", "name*:string"],
+  "users_id_block": ["id*:string", "target_user_id*:string"],
+  "users_id_unblock": ["source_user_id*:string", "target_user_id*:string"],
+}
 
-export type ToolClass = "read" | "write" | "public" | "denied" | "unknown"
+export type ToolClass = "read" | "ask_read" | "write" | "public" | "denied" | "unknown"
 
 export function classify(name: string): ToolClass {
   if (READ_TOOLS.includes(name)) return "read"
+  if (ASK_READ_TOOLS.includes(name)) return "ask_read"
   if (WRITE_TOOLS.includes(name)) return "write"
   if (PUBLIC_TOOLS.includes(name)) return "public"
   if (deniedByDefault(name)) return "denied"

@@ -13,22 +13,27 @@
 // can run a real session turn that calls X's tools.
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
 import type { AddressInfo } from "node:net"
-import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { ASK_READ_TOOLS, DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 
 const schema = { type: "object", properties: { query: { type: "string" } } }
 /** A tool the plugin has never seen. */
 export const NEW_TOOL = { name: "shiny_new_tool", description: "A tool added upstream after the tool lists were written", annotations: {} }
 const tool = (name: string, readOnlyHint: boolean) => ({ name, description: `X ${name}`, annotations: { readOnlyHint }, inputSchema: schema })
+/** The off tools the host tests exercise, chosen to cover chat, blocking and list membership. */
+export const DENIED_SAMPLE = ["add_lists_member", "send_chat_message", "users_id_block"]
 const TOOLS = [
   tool("search_posts_all", true),
   tool("get_users_me", true),
   ...WRITE_TOOLS.map((name) => tool(name, false)),
   ...PUBLIC_TOOLS.map((name) => tool(name, false)),
+  ...DENIED_SAMPLE.map((name) => tool(name, false)),
   { ...NEW_TOOL, inputSchema: schema },
 ]
 const CATALOG = [
   ...READ_TOOLS.map((name) => tool(name, true)),
-  ...[...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS].map((name) => tool(name, false)),
+  ...ASK_READ_TOOLS.map((name) => tool(name, true)),
+  ...[...WRITE_TOOLS, ...PUBLIC_TOOLS].map((name) => tool(name, false)),
+  ...DENY_TOOLS.map((name) => tool(name, false)),
   { ...NEW_TOOL, inputSchema: schema },
 ]
 

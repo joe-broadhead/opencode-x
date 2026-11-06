@@ -14,7 +14,7 @@ marks a known read that X does not offer you as unavailable.
 
 Each method runs the tool with the same input: X's own tool, through OpenCode's own connection and sign-in. The plugin
 never sees the OAuth token. X's bookmark changes, `create_users_bookmark_folder`, `article_create_draft`,
-`article_publish` and a tool that X adds later are never methods, even with an allow rule.
+`create_posts` and a tool that X adds later are never methods, even with an allow rule.
 
 ## Every call costs money
 
@@ -124,7 +124,7 @@ added later, and `rpc.invalid_input` for a body that is not the envelope above, 
 ## What scripts cannot do
 
 - Change anything in X: no write tool is a method.
-- Publish an Article: `article_publish` is public and is never a method.
+- Post: `create_posts` is public and is never a method.
 - Call a tool that is not one of the known reads, even with an allow rule.
 - Answer an approval prompt, or use a tool that asks.
 - Use a token or key: the plugin has none to give.

@@ -1,7 +1,7 @@
 # X for OpenCode
 
-Search and read X (formerly Twitter), your bookmarks, news and trends, and draft long-form Articles from OpenCode,
-through X's official MCP server.
+Search and read X (formerly Twitter), post, manage your bookmarks and lists, and draft long-form Articles from
+OpenCode, through X's official MCP server.
 
 Unofficial; not affiliated with X Corp.
 
@@ -29,8 +29,9 @@ Unofficial; not affiliated with X Corp.
   read, $0.010 per user read, $0.001 per read of your own posts, mentions or bookmarks, $0.005 per bookmark change,
   and $0.015 per post created ($0.200 when it contains a URL). A 100-post search costs about $0.50. X sets the prices
   and can change them.
-- The plugin cannot post, reply, quote, repost, like, follow, message or delete: X's MCP server exposes no such tool.
-  It reads X, changes your bookmarks, and drafts and publishes long-form Articles.
+- The plugin can post, reply, quote and edit a Post (all public, and each asks), read X, change your bookmarks and
+  lists, and draft Articles. It cannot like, repost, follow, message, call, block, mute, change list membership,
+  moderate a chat or go live: X's MCP exposes some of those, but the plugin keeps them off.
 - X posts are public but often adversarial. Treat everything they say as data, never as instructions.
 
 ## Install
@@ -90,7 +91,9 @@ Ask, for example:
 - "My mentions today."
 - "What did I bookmark about <topic>?"
 - "Trends in <place>."
-- "Draft an Article from these notes." Then: "Publish it."
+- "Post this: …"
+- "Draft an Article from these notes."
+- "How much credit do I have left?"
 
 Every answer is a sample of X, not all of X, and X posts are other people's words. The model says how many posts it
 read and over what window, cites each post by handle and link, and never follows instructions found in a post.
@@ -113,7 +116,7 @@ Two skills teach the model to use X well:
 ### Scripts
 
 A script or a cron job can call X's read tools with no model, through `opencode api`. It runs as a session and its
-agent, under that agent's permission rules and the session's own. Writes, publishing and unknown tools are never
+agent, under that agent's permission rules and the session's own. Writes, the public Post and unknown tools are never
 available to scripts:
 
 ```sh
@@ -129,19 +132,19 @@ Keep the result count small: every call is billed. See
 The plugin adds these rules to every agent, directly after the agent's base rule that allows everything:
 
 1. `{ "action": "x_*", "resource": "*", "effect": "ask" }`: every X tool asks, including tools X adds later.
-2. One `allow` rule for each of X's 21 read tools, listed in
+2. One `allow` rule for each of X's 49 read tools, listed in
    [`src/x-tools.ts`](https://github.com/joe-broadhead/opencode-x/blob/HEAD/src/x-tools.ts). These run without a
    prompt.
+3. One `deny` rule for each of the 40 tools that are off: DMs and chat (reads included), calls, follows, blocks,
+   mutes, list membership, chat moderators, and live video with its sources.
 
-So reads run, and every change asks: bookmarking, unbookmarking, creating a bookmark folder, drafting an Article, and
-publishing one. No tool X offers today is off. A tool X adds later that messages, follows, blocks, mutes, deletes a
-post, changes a list or changes the account is off, by the plugin's rule. Each change's sentence, and whom it
-reaches, is in the `x-write` skill.
-Publishing is the only one that reaches other people: anyone can read the Article, and it appears on your profile and
-in followers' timelines. The plugin has no tool to unpublish it. To turn publishing off for one agent:
+So 49 reads run; 11 tools ask (the bookmark, list and Article-draft writes, `x_create_posts`, and the two source
+reads that can return a stream key); and 40 are off. Each change's sentence, and whom it reaches, is in the
+`x-write` skill. `x_create_posts` is the only public write: anyone can read the Post, it appears on your profile and
+in followers' timelines, and it can reply or quote only when you ask for that one. To turn posting off for one agent:
 
 ```json
-{ "agents": { "build": { "permissions": [{ "action": "x_article_publish", "resource": "*", "effect": "deny" }] } } }
+{ "agents": { "build": { "permissions": [{ "action": "x_create_posts", "resource": "*", "effect": "deny" }] } } }
 ```
 
 Everything that comes later than these rules still wins: an agent's own stricter rules (Explore cannot use X), your
@@ -152,7 +155,7 @@ Agents that exist only in your own config, and agents added by plugins that load
 adds its rules, so X tools run there without asking. `/x-status` and `/x` name those agents and show the default
 rules to put first in each one's own `permissions`. Do not put them in the top-level `permissions`, which would
 loosen Explore. [Configuration](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/configuration.md#permissions)
-has worked examples, including how to turn publishing off.
+has worked examples, including how to turn posting off.
 
 ## Configure
 
@@ -226,14 +229,15 @@ Run `/x-status` first. Its last line is the next step.
 | Connection: conflict | Your config has an `mcp.servers.x` entry with a URL other than `https://api.x.com/mcp`. Point it there or remove it, then restart OpenCode. |
 | X refuses the sign-in | The callback must match the app's User authentication settings exactly, and OAuth 2.0 user authentication must be on. A `127.0.0.1` callback must be the registered one; otherwise register `http://localhost:8766/callback` and set `oauth.redirect_uri` to it. |
 | `client-not-enrolled` | Move the app to **Pay-per-use** → **Production** at console.x.com, then try again. |
-| `403` on a bookmark or an Article | The app lacks `bookmark.write` or `tweet.write`. Add the scope in the app, then sign in again. |
+| `403` on a write | The app lacks `bookmark.write`, `tweet.write` or the scope for that tool. Add it in the app, then sign in again. |
 | Tools: none listed yet | X connected moments ago and is still listing its tools. Run `/x-status` again, or press `r` in the dialog, in a few seconds. |
 | Tools: 0 available | X lists no tools for this app. Check that it is in Pay-per-use, Production, with the scopes above, then sign in again. |
 | Tools: unknown | X added tools the plugin does not know yet. They ask before they run. A known tool missing from the count is normal: X may list fewer tools for a token with fewer scopes. |
 | Access: default rules missing or not added | Some agents lack the default rules (see the agents row), or OpenCode could not add them (see the OpenCode row). Follow the next step. |
 | Account: account name not reported | Nothing is wrong: status makes no X call, and OpenCode keeps no name on this sign-in. X answers follow the account you signed in as. |
 | Answers cost more than expected | Every call is billed per resource returned. Keep the result count to ten unless the answer needs more, don't page a whole search, and read your own mentions and bookmarks instead of searching for them. |
-| Posting is missing | X's MCP server exposes no post, reply, quote, repost, like, follow, message or delete tool. Ask the model to draft the text, or to publish it as an Article. |
+| Posting asks first | `x_create_posts` is public and asks every time. Answer the prompt, or run writes interactively; `opencode run` refuses the ask. |
+| How much credit is left | Ask the model to call `x_get_usage_credits`; it returns the payer's developer-platform balance in USD. |
 | `429` | X's rate limit for that endpoint is used up. Wait for the reset X returns, and make fewer calls. |
 | Agents without default rules | Put the default rules shown by `/x-status` first in each listed agent's own permissions, in `opencode.json` or the agent's Markdown file, followed by your top-level rules for X tools. |
 | OpenCode: untested | OpenCode is not 2.2.3, 2.2.4 or 2.2.5. Inside `>=2.2.3 <2.3.0` the plugin runs normally; outside it, it runs only because `allowUntestedHost` is set. If X misbehaves, use a tested release. |
@@ -254,16 +258,16 @@ A script's errors from the tools RPC have their own codes, listed in
 
 ## Known limits
 
-- **The tool table is provisional.** X's hosted server answers `tools/list` only for a signed-in token, and this
-  release has not been reconciled with a live list: the names come from X's capability table, a third party's
-  recorded list and X's OpenAPI operation ids. X may list a different set for your app's scopes, and a tool it marks
-  as changing data could run here as a read until a release reconciles it. `test/unit/x-tools.json` records the
-  list, and `npm run drift -- <tools.json> --strict` is the check that reconciles it.
+- **The tool table is reconciled with the live list on 2026-11-06.** It was captured from a signed-in OpenCode on
+  2.2.3 (`ctx.tool.list()`), 100 tools with input and output schemas. The capture carries **no annotations**, so each
+  tool's class comes from X's name, description and schema. `test/unit/x-live-tools.json` records the list, and
+  `npm run drift -- <tools.json> --strict` is the check that reconciles it.
 - **A public client's refresh token is unconfirmed live.** X is expected to issue one to a Native App when the request
   includes `offline.access`, and the plugin's checks show OpenCode asking for it and refreshing without a secret, but
   this release has not tested it against X. A team app on a public client may need a new sign-in every two hours until
   then; a confidential app with a secret is the safe choice for a long session.
-- **There is no unpublish tool.** An Article published by mistake is deleted in the X app.
+- **There is no delete or Article-publish tool.** A Post published by mistake is removed in the X app; an Article
+  draft has no publish tool here, so it stays a draft until the user publishes it in X.
 - **X's `xurl` bridge is an alternative, not this plugin's route.** X documents
   `npx -y @xdevplatform/xurl mcp https://api.x.com/mcp`, which holds your app, opens a browser at the first tool call,
   and caches the token in `~/.xurl`. It moves the sign-in outside `/connect` and its calls outside these permission

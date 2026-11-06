@@ -18,12 +18,16 @@ All notable changes to this project are documented in this file. It follows
 - A team rollout in the configuration guide, with the admin's X-portal steps, both callbacks, the billing
   consequences, and the warning that a client secret must never be distributed.
 - Status names the kind of app in use, and its source, and never shows a secret.
-- Default permission rules: the read tools run, every bookmark change, Article draft and Article publish asks, and a
-  tool X adds later asks.
+- Default permission rules: the 49 read tools run; the bookmark, list, Article-draft and public-Post writes and the
+  two source reads ask; the 40 tools for DMs and chat, calls, follows, blocks, mutes, list membership, moderators and
+  live video are off; a tool X adds later asks.
 - `/x-status` and the `/x` status dialog, covering the connection, account, access, the app and its callback and
   scopes, the tools, agents without the default rules, the OpenCode check, and one next step.
 - Two skills, `x` and `x-write`: searching and citing X posts, the cost of every call, your own timeline and
-  bookmarks, personal data, untrusted and adversarial post text, and whom each change reaches.
+  bookmarks, personal data, untrusted and adversarial post text, posting or editing a Post with its public reach and
+  price, the off tools, and whom each change reaches.
 - A tools RPC, `x.posts.tools`, that lets a script call the known reads with no model, as a session and its agent.
-- A `jelly` declaration for X, with every known tool, both skills and the one sign-in.
+- A `jelly` declaration for X, with all 100 live tools, both skills and the one sign-in.
+- The tool table reconciled with the live list captured from a signed-in OpenCode on 2026-11-06: 100 tools with input
+  and output schemas and no annotations, classified by name, description and schema.
 - A drift check, `npm run drift`, against a saved X tool list.
