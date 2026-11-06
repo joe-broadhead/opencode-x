@@ -183,6 +183,9 @@ describe("setup", () => {
     // The always-visible rules: the skill, the cost, posting and the off tools, untrusted posts, personal data.
     for (const words of [
       "Read the x skill before the first call",
+      "the earlier of the next local midnight and now minus 10 seconds",
+      "a time tool gives the zone, and the answer names it",
+      "A widening, or an expansions entry such as author_id, is billed too",
       "Bookmark, list and Article-draft changes ask first",
       "load x-write and say in your reply what it does and whom it reaches",
       "Every call is billed to the X developer account that owns the app",
