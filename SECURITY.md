@@ -50,8 +50,8 @@ What the model can do in X is limited by these layers, in this order:
    Without `bookmark.write` or `tweet.write`, those tools fail with `403` or are not listed. X's app-only bearer token
    cannot reach your timeline, mentions or bookmarks; the hosted server uses the user's sign-in.
 2. **Default permission rules.** Every X tool asks before it runs, except the read tools listed in `src/x-tools.ts`,
-   which run without a prompt. Every change asks, and `x_article_publish` is public: the Article appears on the user's
-   profile and in followers' timelines, and the plugin has no tool to unpublish it. No tool X offers today is
+   which run without a prompt. Every change asks, and `x_article_publish` is public: anyone can read the
+   Article, it appears on the user's profile and in followers' timelines, and the plugin has no tool to unpublish it. No tool X offers today is
    denied; `DENY_PATTERNS` in `src/x-tools.ts` and the last rules of `defaultRules()` deny a future DM, follow,
    block, mute, post-delete, list-membership or account-settings tool by its effect, before any release classifies
    it.
