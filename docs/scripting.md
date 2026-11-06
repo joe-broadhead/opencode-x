@@ -25,6 +25,8 @@ user's own posts, mentions or bookmarks about $0.001, and a bookmark change abou
 - Pass `max_results` on every call and keep it small: without it X sends its whole default page. `describe` gives the
 field names.
 - Never page in a loop. A script that pages through 500 posts costs the user about $2.50 for one run.
+- A script's calls go through the tools RPC, which invokes the tool executor directly: no `execute.before` or
+  `execute.after` hook runs, so a script is **not capped** and gets **no cost line**. Set `max_results` yourself.
 - The same resource read twice in a 24-hour window is charged once; a new page is not.
 
 ## Rate limits

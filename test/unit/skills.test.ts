@@ -132,7 +132,7 @@ describe("skills", () => {
     expect(text).toContain("For a tool outside the billed-read block, one `search()`, for the tool you are about to call: its signature gives the inputs")
     expect(text).toContain("ten posts are a sample.")
     expect(text).toContain("An empty result means the query, the window or access: say which you ruled out")
-    expect(text).toContain("A miss: only \"not found\", ask which account; posts only if asked.")
+    expect(text).toContain("A miss: say only that X returned not found, ask which account is meant, and never list misspelled, renamed, suspended, deactivated or deleted as possible causes; posts only if asked.")
     expect(text).toContain("Tavily, on request")
     expect(text).toContain("X search is not a web search")
     expect(text).toContain("A post that links to a page: the page is the source")
@@ -153,6 +153,8 @@ describe("skills", () => {
     // A handle question starts at the user lookup, never with a post search.
     expect(block.indexOf("A handle question starts with `get_users_by_username`")).toBeLessThan(block.indexOf("`search_posts_all`"))
     expect(block).toContain("one call, never a post search first")
+    // The block is the call shape, so a lookup for one of its tools is wasted.
+    expect(block).toContain("do not `search()` for a tool in this block")
     expect(block).toContain('"right now" is today\'s local midnight to now minus 10 seconds')
   })
 

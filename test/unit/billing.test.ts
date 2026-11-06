@@ -60,9 +60,11 @@ describe("the cost line", () => {
     expect(costLine(costOf("x_get_posts_counts_recent", {})!)).toBe("Cost: 1 count read ($0.01) = $0.01.")
   })
 
-  test("invents no cost when a result carries no records", () => {
+  test("states a zero cost for a completed read that returned nothing", () => {
     expect(costOf("x_search_posts_all", { output: undefined, content: [{ type: "text", text: "plain" }] })).toBeUndefined()
-    expect(costLine(mergeCosts([]))).toBeUndefined()
+    expect(costLine(mergeCosts([]))).toBe("Cost: 0 posts + 0 authors = $0.00.")
+    expect(costLine(costOf("x_search_posts_all", { output: { data: [], meta: { result_count: 0 } } })!)).toBe("Cost: 0 posts + 0 authors = $0.00.")
+    expect(costLine(costOf("x_get_users_by_username", { output: { data: [] } })!)).toBe("Cost: 0 posts + 0 authors = $0.00.")
   })
 
   test("adds one line to a direct read, and one summed line to the Code Mode result", async () => {

@@ -646,6 +646,17 @@ describe("the read cap and the cost line on the model path", () => {
     await until("the cost line in the model's tool result", async () => toolText(direct.fake.model.requests.slice(before)).includes("Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15."))
   })
 
+  test("a completed read that returned nothing still ends with the zero line", async () => {
+    direct.fake.model.script = [{ tool: "x_search_posts_all", arguments: { query: "empty", max_results: 50 } }]
+    const before = direct.fake.model.requests.length
+    const calls = direct.fake.callArguments.length
+    const sessionID = (await scripted(direct).create({ agent: "build", location: direct.location, model: { providerID: "lmstudio", id: MODEL_ID } })).id
+    await scripted(direct).prompt({ sessionID, text: "Find the empty page." })
+    await until("the empty read call", async () => direct.fake.callArguments.length > calls)
+    expect(direct.fake.callArguments.at(-1)).toEqual({ query: "empty", max_results: 10 })
+    await until("the zero line in the tool result", async () => toolText(direct.fake.model.requests.slice(before)).includes("Cost: 0 posts + 0 authors = $0.00."))
+  })
+
   test("the same cap and one summed cost line hold inside execute", async () => {
     const code = "return await tools.x.search_posts_all({ query: 'cost', max_results: 50, next_token: 'n' })"
     codeMode.fake.model.script = [{ tool: "execute", arguments: { code } }]
