@@ -19,7 +19,8 @@ or a screenshot.
   timelines. Show the exact text first, then say: "This posts '…' publicly to anyone; it costs $0.015, or $0.200 if it
   contains a link." A reply (`reply.in_reply_to_tweet_id`) or a quote (`quote_tweet_id`) only when the user explicitly
   asks for that one reply or quote, and say the author is notified. Editing (`edit_options.previous_post_id`) changes a
-  published post: show the new text. One call, never a loop.
+  published post: show the new text. One call, never a loop. `nullcast` keeps a Post out of the public timeline and
+  `for_super_followers_only` limits it: use either only when the user asks.
 - Bookmarks: `create_users_bookmark`, `delete_users_bookmark` and `create_users_bookmark_folder` reach only the user.
   Private, reversible, no notification. Say the post's author and opening words.
 - `article_create_draft`: private. Nothing is public. There is no publish tool: it stays a draft, and publishing is done

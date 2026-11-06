@@ -239,6 +239,7 @@ describe("skills", () => {
     for (const name of WRITE_TOOLS) expect(reach).toContain(`\`${name}\``)
     expect(reach).toContain("There is no publish tool")
     expect(reach).toContain("A list is public unless `private` is")
+    expect(reach).toContain("`nullcast` keeps a Post out of the public timeline")
     expect(reach).not.toContain("article_publish")
   })
 
