@@ -25,7 +25,7 @@ choice replaces it), and denies a read-only helper every tool not marked `readOn
   (removes that bookmark, not the post), `x_create_users_bookmark_folder` (a folder only the user
   sees), `x_article_create_draft` (a private draft) and `x_article_publish` (**public**: the Article
   appears on the user's profile and in followers' timelines, and the plugin cannot unpublish it).
-- Nothing is off by default.
+- Nothing X offers today is off. The plugin itself denies a future DM, follow, block, mute, post-delete, list-membership or account tool, but Jelly does not: it declares no such tool, so set it to deny there.
 - Everything else runs, as the plugin's own rules let it.
 
 A tool X adds later, a write included, is not declared, so in Jelly it is not asked about: it runs

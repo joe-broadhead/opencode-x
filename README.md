@@ -119,7 +119,9 @@ The plugin adds these rules to every agent, directly after the agent's base rule
    prompt.
 
 So reads run, and every change asks: bookmarking, unbookmarking, creating a bookmark folder, drafting an Article, and
-publishing one. No tool is off by default. Each change's sentence, and whom it reaches, is in the `x-write` skill.
+publishing one. No tool X offers today is off. A tool X adds later that messages, follows, blocks, mutes, deletes a
+post, changes a list or changes the account is off, by the plugin's rule. Each change's sentence, and whom it
+reaches, is in the `x-write` skill.
 Publishing is the only one that reaches other people: the Article appears on your profile and in followers'
 timelines, and the plugin has no tool to unpublish it.
 
