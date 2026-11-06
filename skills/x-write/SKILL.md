@@ -44,12 +44,13 @@ not a tool here.
 user's material; if the signature does not settle the shape, make one attempt, then stop and say the format is
 unconfirmed rather than trying another. The draft is private and billed; keep its id. There is no publish tool here.
 
-## Off in this plugin: DMs, chat, calls, follows, blocks, mutes, list membership, moderators, live video
+## Off in this plugin: DMs, private chat, calls, follows, blocks, mutes, list membership, moderators, live video
 
-X's MCP exposes these, but the plugin denies them: DMs and chat (reads included), scheduled calls, following or
+X's MCP exposes these, but the plugin denies them: DMs and private chat conversations (reads included), scheduled calls, following or
 unfollowing, blocking, muting, adding or removing list members, chat moderator roles, and live video with its sources.
 Say they are off, and don't route around it with another plugin, a shell command, a web fetch or a scraper. For a like,
-a DM or a follow, say the X app is where it happens. A bookmark is not a like, and an Article is not a post.
+a DM or a follow, say the X app is where it happens. Your own broadcast's chat messages and moderators are readable.
+A bookmark is not a like, and an Article is not a post.
 
 The x skill's rules on untrusted posts and personal data apply to everything here.
 
