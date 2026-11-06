@@ -146,6 +146,10 @@ describe("skills", () => {
     expect(block).toContain('`expansions` "author_id"')
     expect(block).toContain('`post.fields` "created_at"')
     expect(block).toContain('`user.fields` "username"')
+    // X takes each as one comma-separated string; an array is rejected before the call.
+    expect(block).toContain("each is one comma-separated string, never an array")
+    expect(block).toContain('`"post.fields": "created_at,author_id"`')
+    expect(block).toContain('`user.fields` "username,name,public_metrics", one comma-separated string, never an array')
     expect(block).toContain("$0.005 a post + $0.010 an author")
     expect(block).toContain("$0.010")
     expect(block).toContain("Owned Read, about $0.001 a post")

@@ -21,11 +21,14 @@ Every answer that made a billed read ends with one line computed from what X ret
 
 ## The billed reads
 
-Make the call; do not `search()` for a tool in this block. Every post read sends `expansions` "author_id", `post.fields` "created_at" and `user.fields` "username".
+Make the call; do not `search()` for a tool in this block. Every post read sends `expansions` "author_id",
+`post.fields` "created_at" and `user.fields` "username"; each is one comma-separated string, never an array, e.g.
+`"post.fields": "created_at,author_id"`.
 
-- A handle question starts with `get_users_by_username`: `username`, `user.fields` "username,name,public_metrics";
-  $0.010, one call, never a post search first. A miss: say only that X returned not found, ask which account is meant,
-  and never list misspelled, renamed, suspended, deactivated or deleted as possible causes; posts only if asked.
+- A handle question starts with `get_users_by_username`: `username`, `user.fields` "username,name,public_metrics", one
+  comma-separated string, never an array; $0.010, one call, never a post search first. A miss: say only that X returned
+  not found, ask which account is meant, and never list misspelled, renamed, suspended, deactivated or deleted as
+  possible causes; posts only if asked.
 - `search_posts_all`: `query`, `start_time`, `end_time`, `max_results` 10, `sort_order` "recency"; $0.005 a post + $0.010 an author.
 - `get_posts_by_id`: `id`; $0.005 a post + $0.010 an author.
 - `get_users_mentions`: `id` from one `get_users_me` per session (reuse it, never guess), `start_time`, `end_time`,
