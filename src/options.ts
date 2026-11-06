@@ -74,7 +74,7 @@ export function parseOptions(input: unknown): ParsedOptions {
 
   const clientId = oauth.client_id
   if (clientId !== undefined && (typeof clientId !== "string" || !NO_SPACES.test(clientId))) {
-    return fail("oauth.client_id", "Must be a non-empty string without spaces.", "Copy the client ID from your X app's Keys and tokens page at console.x.com.")
+    return fail("oauth.client_id", "Must be a non-empty string without spaces.", "Copy the client ID from your X app's User authentication settings at console.x.com.")
   }
 
   const redirectUri = oauth.redirect_uri ?? REDIRECT_URI

@@ -26,11 +26,11 @@ describe("skill loading", () => {
 
   test("parses LF and CRLF frontmatter into a skill", () => {
     for (const newline of ["\n", "\r\n"]) {
-      const text = ["---", "name: x", 'description: "Use X: find and read candidates and jobs."', "---", "", "# X", "Body."].join(newline)
+      const text = ["---", "name: x", 'description: "Use X: find and read posts."', "---", "", "# X", "Body."].join(newline)
       expect(parseSkill("x", "/pkg/skills/x/SKILL.md", text)).toEqual({
         id: "x",
         name: "x",
-        description: "Use X: find and read candidates and jobs.",
+        description: "Use X: find and read posts.",
         path: "/pkg/skills/x/SKILL.md",
         content: "# X\nBody.",
       } as never)

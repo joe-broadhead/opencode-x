@@ -413,7 +413,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(url.searchParams.get("code_challenge_method")).toBe("S256")
     expect(url.searchParams.get("client_id")).toBe("client-1")
     expect(url.searchParams.get("redirect_uri")).toBe(REDIRECT_URI)
-    // The stock releases send no prompt=consent with offline.access: docs/architecture.md, "MCP client registration".
+    // The stock releases send no prompt=consent with offline.access: docs/architecture.md, "Platform facts".
     expect(url.searchParams.get("prompt")).toBeNull()
     expect(fake.registrations).toHaveLength(0)
     // Complete the flow: the authorization endpoint redirects the pinned loopback callback, and the token endpoint

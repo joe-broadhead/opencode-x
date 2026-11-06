@@ -46,6 +46,8 @@ model has:
 - No one answers a prompt for a script, so an `ask` is refused with `PERMISSION_DENIED` at once, and no prompt is left
   waiting. The plugin's default rules allow the reads, so an agent with the default rules needs nothing more. An agent
   defined only in your config gets no default rules; `/x-status` names it.
+- The session must belong to the location you call. A session in another directory runs under the serving location's
+  agent rules, and only a `deny` is refused in between, so run the script in the project whose agent you mean.
 
 Create the session once, with the agent the script runs as, and keep its id. Never reuse a session found through
 history or a list: the script would run as that session's agent, under its rules.

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { APP_NAME, registerAppIntegration, resolveClient, sameClient, SERVER_DISPLAY_NAME, type ClientState } from "../../src/connect.js"
+import { APP_NAME, registerAppIntegration, resolveClient, sameClient, type ClientState } from "../../src/connect.js"
 import { REDIRECT_URI, SCOPES } from "../../src/constants.js"
 import { parseOptions } from "../../src/options.js"
 import { clientMode, serverConfig } from "../../src/server.js"
@@ -94,9 +94,5 @@ describe("the server entry", () => {
     expect(serverConfig(options({ client_id: "client-1" }), { id: "client-1", source: "options" }, "http://127.0.0.1:1/mcp").url).toBe("http://127.0.0.1:1/mcp")
     expect(clientMode({ id: "client-1", source: "options" })).toBe("public_pkce")
     expect(clientMode({ id: "client-1", secret: "secret-1", source: "options" })).toBe("confidential")
-  })
-
-  test("the display name for the sign-in is the brand", () => {
-    expect(SERVER_DISPLAY_NAME).toBe("X")
   })
 })

@@ -30,6 +30,9 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
   agent's base allow. A stricter agent is never weakened. An agent counts as guarded only with the whole block after
   its base allow. Agents that miss the rules are named in status with the per-agent fix, never patched, and the fix
   never goes in the top-level `permissions`.
+- **Never advise an `allow` for a write.** A write is approved per call through the permission prompt; the only recipe
+  this repository documents is a per-call `ask` in a named agent's own `permissions`. A saved "Always allow" applies
+  to every agent in the project.
 - **Transforms are cheap, synchronous and never throw.** Record failures for status instead.
 - **Errors** read `CODE: What happened. Next step: What to do.`, built by `xError` or `errorText`. Codes have no
   service prefix; shared failures use the shared names (`HOST_UNTESTED`, `OPTIONS_INVALID`, `STATUS_UNAVAILABLE`,
@@ -43,7 +46,9 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
   account is the label OpenCode keeps on the sign-in, if any.
 - **A user's own server entry** is read for its type, URL and whether `oauth` is `false`, never its `headers` or its
   client fields.
-- **`src/x-tools.ts` is the one record of X's tools**, and has no runtime imports. Everything else derives from it;
+- **`src/x-tools.ts` is the one record of X's tools**, and has no runtime imports. `DENY_PATTERNS` is the owner's
+  effect deny for a future DM, follow, block, mute, post-delete, list-membership or account tool; never weaken it.
+  Everything else derives from it;
   `jelly.tools` and the skills are checked against it. Its names are provisional until a tool list from a signed-in
   server is recorded, and `PARAMETERS` is empty until then: reconciling is a change to that file,
   `test/unit/x-tools.json`, `jelly.tools` and the skills, which `npm run drift` guides. `src/constants.ts` has no

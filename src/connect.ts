@@ -22,9 +22,6 @@ const NO_SPACES = /^\S+$/
 const APP_INTEGRATION_ID = "x-app"
 /** The name `/connect` shows for the entry that stores the client ID. */
 export const APP_NAME = "X app"
-/** The name `/connect` shows for the X MCP server's own integration. */
-export const SERVER_DISPLAY_NAME = "X"
-
 /**
  * Adds "X app" to `/connect`: a key method whose key is the client ID, because OpenCode asks for a non-empty key.
  * The optional secret is a form field, for a confidential (Web App) X app; a Native App is a public client with no

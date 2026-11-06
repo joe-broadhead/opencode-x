@@ -49,13 +49,43 @@ describe("docs", () => {
     expect(text("README.md")).not.toMatch(/opencode-x@\d|\bv\d+\.\d+\.\d+\b|(?<![\d.])0\.\d+\.\d+(?![\d.])/)
   })
 
-  test("the README and the configuration guide give the narrowing recipes, and no allow for publishing", () => {
+  test("the README and the configuration guide give the narrowing recipes, and no allow for any write", () => {
     for (const file of ["README.md", "docs/configuration.md"]) {
       const body = text(file)
       expect(body).toContain('{ "action": "x_article_publish", "resource": "*", "effect": "deny" }')
-      expect(body).not.toContain('{ "action": "x_article_publish", "resource": "*", "effect": "allow" }')
     }
-    expect(text("docs/configuration.md")).toContain("Never advise an `allow` for `x_article_publish`")
+    expect(text("docs/configuration.md")).toContain("This plugin documents no `allow` for a write")
+    // No document may teach an allow for a private write or the public write.
+    const writeActions = [...WRITE_TOOLS, ...PUBLIC_TOOLS].map((tool) => `x_${tool}`)
+    for (const file of FILES) {
+      const raw = readFileSync(join(ROOT, file), "utf8")
+      for (const action of writeActions) {
+        expect({ file, action, allowed: new RegExp(`"action":\\s*"${action}"[^}]*"effect":\\s*"allow"`).test(raw) }).toEqual({ file, action, allowed: false })
+      }
+    }
+    expect(text("README.md")).toContain("this plugin documents no `allow` for one")
+  })
+
+  test("the secret has a documented environment route, and no example puts a literal one in the config", () => {
+    for (const file of ["README.md", "docs/configuration.md", "SECURITY.md"]) {
+      expect(text(file)).toContain("{env:X_CLIENT_SECRET}")
+      expect(text(file)).toContain("empty string")
+    }
+    expect(text("README.md")).toContain("a config file may be synced, backed up or shared")
+    expect(text("docs/configuration.md")).toContain("### `{env:NAME}`")
+    expect(text("docs/configuration.md")).toContain("`OPTIONS_INVALID` rejects")
+    // The console page that issues the OAuth 2.0 pair, named the same way everywhere.
+    for (const file of ["README.md", "docs/configuration.md"]) {
+      expect(text(file)).toContain("User authentication settings")
+      expect(text(file)).not.toContain("Keys and tokens")
+    }
+  })
+
+  test("the README warns that dropping offline.access loses the refresh token, and has the matching row", () => {
+    const readme = text("README.md")
+    expect(readme).toContain("dropping `offline.access` means no refresh token")
+    expect(readme).toContain("| Connection: sign-in required soon after signing in |")
+    expect(readme).toContain("the two-hour token expired")
   })
 
   test.each(FILES)("%s puts no ask or allow recipe for an X tool at the top level, where it would reach Explore", (file) => {
