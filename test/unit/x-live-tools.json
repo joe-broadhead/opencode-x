@@ -1,6 +1,6 @@
 {
   "server": "x",
-  "source": "OpenCode ctx.tool.list() in ~/opencode-release/newplugins/live-x",
+  "source": "OpenCode 2.2.3 ctx.tool.list()",
   "host": "2.2.3",
   "listedAt": "2026-11-06T13:52:53.945Z",
   "title": null,
