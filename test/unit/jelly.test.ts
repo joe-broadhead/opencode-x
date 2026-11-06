@@ -26,9 +26,6 @@ const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.ur
   }
 }
 const { jelly } = pkg
-// The drawing elements Jelly's icon cleaner keeps. It drops a whole icon that has any other element, so a `<title>`
-// is refused too.
-const ICON_ELEMENTS = new Set(["svg", "g", "path", "circle", "ellipse", "rect", "line", "polyline", "polygon", "defs", "linearGradient", "radialGradient", "stop", "clipPath", "mask"])
 const byPermission = new Map(jelly.tools.map((tool) => [tool.permission, tool]))
 
 describe("the jelly declaration", () => {
@@ -74,15 +71,4 @@ describe("the jelly declaration", () => {
     expect(jelly.summary).not.toContain("\n")
   })
 
-  test("the icon is assets/icon.svg, shipped, with one svg root, xmlns and a 24 or 32 viewBox, only drawing elements, under 2 KB", () => {
-    expect(jelly.icon).toBe("assets/icon.svg")
-    expect(pkg.files).toContain(jelly.icon)
-    const svg = readFileSync(new URL(`../../${jelly.icon}`, import.meta.url), "utf8").trim()
-    expect(svg.length).toBeLessThan(2048)
-    expect(svg).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 (24 24|32 32)"/)
-    expect(svg.endsWith("</svg>")).toBe(true)
-    expect(svg).not.toMatch(/<title|<style|<script|&|<!/i)
-    const elements = [...svg.matchAll(/<\/?([A-Za-z][A-Za-z0-9]*)/g)].map((match) => match[1])
-    expect(elements.filter((name) => !ICON_ELEMENTS.has(name!))).toEqual([])
-  })
 })

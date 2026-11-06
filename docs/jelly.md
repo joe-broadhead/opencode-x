@@ -8,9 +8,23 @@ Jelly names the plugin **X** (`jelly.title`), with the package name and version 
 that name it shows the one line in `jelly.summary`, and beside it the mark in `jelly.icon`
 (`assets/icon.svg`, shipped in the package): Jelly reads that file once, when it records the
 plugin, and keeps it only if it is a clean SVG of drawing elements, with no script, style, link
-or outside reference. The mark is a neutral speech bubble with a search lens on a slate tile, not
-X's logo. Jelly's declaration contracts drop a top-level key they don't know, and refuse an unknown
-key inside a tool, sign-in or `contributes` entry, so the section uses only the keys Jelly reads.
+or outside reference. The mark is the family's **Neutral slate** tile — a spine with three nodes
+and three rules, drawn by us — and not X's logo or letterform. Jelly's declaration contracts drop
+a top-level key they don't know, and refuse an unknown key inside a tool, sign-in or `contributes`
+entry, so the section uses only the keys Jelly reads.
+
+## Icons and vendor
+
+`jelly.icon` stays `assets/icon.svg`, and `opencode.icons` declares the same mark three ways, in
+MCP's `Icon` shape: the clean SVG (`sizes: ["any"]`), a 128×128 PNG and a 256×256 PNG, each with
+its `mimeType` and a relative `src` inside the package. `opencode.icons[0].src` equals
+`jelly.icon`, so the two declarations cannot drift. `exports` exposes the three files as
+`./icon.svg`, `./icon-128.png` and `./icon-256.png`, and all three ship in the tarball.
+
+`opencode.vendor` is `{ "id": "x", "name": "X", "domain": "x.com" }`. A display app that has
+decided to show X's official logo reads the domain and fetches it from X's own site, under X's
+terms; the official mark never passes through this package, its tarball or a CDN. The package
+carries no vendor marks, colours or letterforms: only our own Neutral slate tile.
 
 ## Tools and permissions
 

@@ -18,6 +18,8 @@ All notable changes to this project are documented in this file. It follows
 - A team rollout in the configuration guide, with the admin's X-portal steps, both callbacks, the billing
   consequences, and the warning that a client secret must never be distributed.
 - Status names the kind of app in use, and its source, and never shows a secret.
+- The family icon kit's Neutral slate mark, with `opencode.icons` (SVG, 128 and 256 PNG), the
+  `opencode.vendor` declaration for X, and the three asset `exports`.
 - Default permission rules: the 49 read tools run; the bookmark, list, Article-draft and public-Post writes and the
   two source reads ask; the 40 tools for DMs and chat, calls, follows, blocks, mutes, list membership, moderators and
   live video are off; a tool X adds later asks.
