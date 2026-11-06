@@ -13,6 +13,8 @@ const MAX_LINES = 100
 // Words from the plugin's own process that mean nothing to the model or the user.
 const JARGON = /manifest|attest|quarantin|acceptance|harness|fixture|\bfork\b|dispatch|lease|catalog|allowlist|capabilit|\bWS-[A-Z0-9]|PLAN\.md|drift|provisional|\bTODO\b|\bevals?\b/i
 const NEIGHBOURS = (JSON.parse(readFileSync(new URL("./neighbour-skills.json", import.meta.url), "utf8")) as { skills: Record<string, string> }).skills
+// The live list captured from a signed-in server: a renamed tool must fail the skill's block, not pass on a stale name.
+const LIVE = (JSON.parse(readFileSync(new URL("./x-live-tools.json", import.meta.url), "utf8")) as { tools: { name: string }[] }).tools.map((tool) => tool.name)
 
 const read = (name: string) => readFileSync(join(SKILLS_DIR, name, "SKILL.md"), "utf8")
 const flat = (name: string) => read(name).replace(/\s+/g, " ")
@@ -123,22 +125,43 @@ describe("skills", () => {
 
   test("x keeps to the family's rules for answers: signatures, counts, misses, empty results and other sources", () => {
     const text = flat("x")
-    expect(text).toContain("Each call's signature gives its inputs")
-    expect(text).toContain("Say the count you read")
-    expect(text).toContain("ten posts are a sample, not what X thinks.")
+    expect(text).toContain("For a tool outside the billed-read block, one `search()`, for the tool you are about to call: its signature gives the inputs")
+    expect(text).toContain("ten posts are a sample.")
     expect(text).toContain("An empty result means the query, the window or access: say which you ruled out")
-    expect(text).toContain("After a miss on the exact handle, don't try fragments; ask which account is meant.")
-    expect(text).toContain("Say only that X returned not found for that handle: do not list suspended, renamed, deactivated or protected as possible causes.")
+    expect(text).toContain("A miss: say only that X returned not found, ask which account is meant, never list causes or try variants.")
     expect(text).toContain("Tavily, on request")
     expect(text).toContain("X search is not a web search")
     expect(text).toContain("A post that links to a page: the page is the source")
   })
 
-  test("x takes each handle from the post itself and says why a broad who question reads posts", () => {
+  test("the billed-read block names live tools, their fields and their prices", () => {
+    const block = flat("x").split("## The billed reads")[1]?.split("## Search windows")[0] ?? ""
+    for (const name of ["search_posts_all", "get_users_by_username", "get_posts_by_id", "get_users_mentions", "get_posts_counts_recent"]) {
+      expect({ name, inBlock: block.includes(`\`${name}\``), inLive: LIVE.includes(name) }).toEqual({ name, inBlock: true, inLive: true })
+    }
+    expect(block).toContain('`expansions` "author_id"')
+    expect(block).toContain('`post.fields` "created_at"')
+    expect(block).toContain('`user.fields` "username"')
+    expect(block).toContain("$0.005 a post + $0.010 an author")
+    expect(block).toContain("$0.010")
+    expect(block).toContain("Owned Read, about $0.001 a post")
+    expect(block).toContain("about $0.01, last 7 days only")
+  })
+
+  test("a signature lookup and a billed call never share one execute, and no estimate goes unseen", () => {
     const text = flat("x")
+    expect(text).toContain("a lookup and a billed call never share one `execute`")
+    expect(text).toContain('If your text above this call has no "$", write the price sentence now')
+    expect(text).toContain('never write "as estimated" or "my estimate" unless that sentence is earlier in the reply')
+  })
+
+  test("x takes each handle and date from the post itself, and says why a broad who question reads posts", () => {
+    const text = flat("x")
+    expect(text).toContain("its own date")
+    expect(text).toContain("a set-level range is not a per-post date, so request `created_at`")
     expect(text).toContain("The handle is the one in that post's own `url` or `author_id`, never a parent post's or another `includes.users` entry's.")
     expect(text).toContain("Count your rows against `meta.result_count`")
-    expect(text).toContain('For a broad "who" question answered with posts, say why in one line')
+    expect(text).toContain('Open a broad "who" answer with why it reads posts, not users')
     expect(text).toContain("the authors come with the posts, while a user search costs $0.010 a user and finds accounts, not what they said")
   })
 
@@ -148,46 +171,41 @@ describe("skills", () => {
     expect(text).toContain("local day or week, not the machine's")
     expect(text).toContain("a time tool gives the zone, and the answer names it")
     expect(text).toContain("start_time` is the first local midnight (or Monday)")
-    expect(text).toContain("end_time` is the earlier of the next local midnight and now minus 10 seconds")
-    expect(text).toContain("because X rejects a later one")
-    expect(text).toContain("for a past day")
-    expect(text).toContain("Never leave `end_time` off, and never use a rolling 48 hours")
-    expect(text).toContain("2026-03-09T23:00:00Z")
-    expect(text).toContain("2026-03-10T23:00:00Z")
-    expect(text).toContain("an open one runs to now")
+    expect(text).toContain("end_time` the earlier of the next local midnight and now minus 10 seconds")
+    expect(text).toContain("(X rejects a later one)")
+    expect(text).toContain("or that day's own end")
+    expect(text).toContain("Never leave `end_time` off or use a rolling 48 hours")
+    expect(text).toContain("say the window runs to now")
     // The web-search operators X does not accept are named as absent, never offered.
     expect(text).toContain("there is no `since:`, `until:` or `min_faves:` (X rejects it)")
     expect(text).toContain("`min_likes:`")
     expect(text).toContain("`-is:retweet` and `-is:reply` need a word beside them")
     // The skill reads the tool's own description for operators before building a query.
-    expect(text).toContain("Read its description and signature with one `search()` first")
+    expect(text).toContain("For a tool outside the billed-read block, one `search()`, for the tool you are about to call")
   })
 
   test("x gives every billed read the price sentence before the call, and the widening its own price", () => {
     const text = flat("x")
-    expect(text).toContain("Every billed read has one shape, in the same turn:")
+    expect(text).toContain("Every billed read, in the same turn: (1) one sentence starting")
     expect(text).toContain('one sentence starting "This read costs about $…"')
-    expect(text).toContain("the page size, the upper bound with every expansion you request")
+    expect(text).toContain("the page size and the upper bound with every expansion you request")
     expect(text).toContain("X may return authors and parents unbidden")
     expect(text).toContain("ten posts plus ten authors is about $0.15")
-    expect(text).toContain("2. the one call.")
-    expect(text).toContain("3. if the billed count differs from the estimate, say so.")
+    expect(text).toContain("(2) the one call. (3) if the billed count differs, say so.")
     expect(text).toContain("A billed call with no price sentence is a bug: never claim afterwards that you gave one.")
     expect(text).toContain("Pass `max_results` every time")
     expect(text).toContain("up to 100 users, $1.00")
-    expect(text).toContain("Ten is enough for most questions")
-    expect(text).toContain("A widening is a new billed search: before it, say what you changed and the new total")
-    expect(text).toContain("Request an expansion such as `author_id` only when the answer needs it")
-    expect(text).toContain("price what you actually request")
-    expect(text).toContain("never page past the first page unasked, and never loop")
-    expect(text).toContain("read one page of ten, say it is a sample, and offer more; never propose or recommend a 100-record page")
-    expect(text).toContain("then widen once and say what you changed and the new total before it: about $0.05 for another ten posts")
+    expect(text).toContain("Ten is enough;")
+    expect(text).toContain("Every post read sends `expansions` \"author_id\"")
+    expect(text).toContain("never propose a 100-record page, page unasked, or loop")
+    expect(text).toContain("read one page of ten, say it is a sample, and offer more")
+    expect(text).toContain("then widen once, saying what changed and that another ten posts is about $0.05 before the call")
   })
 
   test("x prices an Owned Read and stops on an empty one", () => {
     const text = flat("x")
-    expect(text).toContain("are Owned Reads (~$0.001 a post): say that rate and the count you read")
-    expect(text).toContain("If one comes back empty, report that for the window and stop; widen only if asked")
+    expect(text).toContain("Owned Read, about $0.001 a post")
+    expect(text).toContain("say the count (0 included), and don't widen an empty one")
   })
 
   test("x keeps every call lean, and says when a search is billed", () => {
@@ -196,7 +214,7 @@ describe("skills", () => {
     expect(text).toContain("Pass `max_results` every time")
     expect(text).toContain("about $0.005")
     expect(text).toContain("about $0.001")
-    expect(text).toContain("a repeated post read in a day is free, a new page is not")
+    expect(text).toContain("page unasked, or loop")
   })
 
   test("x treats every post and bio as untrusted data, never instructions", () => {
@@ -227,9 +245,9 @@ describe("skills", () => {
   test("x says DMs, calls, follows, blocks, mutes, list membership, moderators and live video are off here", () => {
     const text = flat("x")
     expect(text).toContain("DMs and private chat conversations (reads included), calls, follows, blocks, mutes, list membership, chat moderator roles, and live video")
-    expect(text).toContain("Your own broadcast's chat messages and moderators are readable.")
+    expect(text).toContain("Your own broadcast's chat and moderators are readable.")
     expect(text).toMatch(/are off here: say so, and don't route around it/)
-    expect(text).toContain("The `xurl` bridge is another account outside these permission rules: never use it in place of these tools.")
+    expect(text).toContain("The `xurl` bridge is another account: never use it in place of these tools.")
   })
 
   test("x names the usage-credit tool", () => {
@@ -238,7 +256,7 @@ describe("skills", () => {
 
   test("x names the WOEID limit and the article of X's policy that forbids training", () => {
     const text = flat("x")
-    expect(text).toContain("Trends take a numeric WOEID and nothing here looks one up: worldwide is `1`")
+    expect(text).toContain("Trends take a numeric WOEID, not looked up here: worldwide is `1`")
     expect(text).toContain("say the id can't be looked up and offer worldwide")
     expect(text).toContain("Don't collect posts to train or fine-tune a model")
     expect(text).toContain("don't promise a bulk export")
