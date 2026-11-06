@@ -98,15 +98,13 @@ describe("skills", () => {
     expect(text).toContain("`403` on a write")
   })
 
-  test("the descriptions route X's public posts here, and the web, chat, mail and meetings elsewhere", () => {
-    expect(description("x")).toContain("Load before the first X (Twitter) tool call")
-    expect(description("x")).toContain("what is X saying about a topic")
-    expect(description("x")).toContain("what people are saying about it on X or Twitter")
-    expect(description("x")).toContain("how many posts mention a term")
-    expect(description("x")).toContain("who liked or reposted a post")
-    expect(description("x")).toContain("my credit balance")
-    expect(description("x")).toContain("posting or drafting on X")
-    expect(description("x")).toContain("Not for the open web (Tavily), team chat (Slack), email or calendar (Google Workspace), or meeting notes (Granola).")
+  test("the descriptions route X-named and own-account requests here, and a bare topic to the web", () => {
+    expect(description("x")).toContain("Load when the user names X or Twitter")
+    expect(description("x")).toContain('says "my mentions", "my timeline" or "my bookmarks"')
+    expect(description("x")).toContain("even if X is not named")
+    expect(description("x")).toContain("Never load this for a bare \"what are people saying about <topic>\"")
+    expect(description("x")).toContain("For any change, load x-write.")
+    expect(description("x")).not.toContain("posting or drafting on X")
     expect(description("x-write")).toContain("Load before any X (Twitter) change")
     expect(description("x-write")).toContain("posting, replying, quoting or editing a Post")
     expect(description("x-write")).toContain("go live on X (Twitter)")
@@ -128,6 +126,7 @@ describe("skills", () => {
     expect(text).toContain("ten posts are a sample, not what X thinks.")
     expect(text).toContain("An empty result means the query, the window or access: say which you ruled out")
     expect(text).toContain("After a miss on the exact handle, don't try fragments; ask which account is meant.")
+    expect(text).toContain("Say only that X returned not found for that handle: do not list suspended, renamed, deactivated or protected as possible causes.")
     expect(text).toContain("Tavily, on request")
     expect(text).toContain("X search is not a web search")
     expect(text).toContain("A post that links to a page: the page is the source")
@@ -135,9 +134,11 @@ describe("skills", () => {
 
   test("x dates a window in the tool's format, at the user's local day or week, end exclusive", () => {
     const text = flat("x")
-    expect(text).toContain("`start_time`/`end_time` (RFC 3339 UTC, `Z`)")
-    expect(text).toContain("local day or week, end exclusive, from a time tool")
+    expect(text).toContain("A window always sets both bounds, as RFC 3339 UTC instants ending `Z`")
+    expect(text).toContain("local day or week, not the machine's")
+    expect(text).toContain("Never leave `end_time` off, and never use a rolling 48 hours")
     expect(text).toContain("2026-03-09T23:00:00Z")
+    expect(text).toContain("2026-03-10T23:00:00Z")
     // The web-search operators X does not accept are named as absent, never offered.
     expect(text).toContain("there is no `since:`, `until:` or `min_faves:` (X rejects it)")
     expect(text).toContain("`min_likes:`")
@@ -155,6 +156,7 @@ describe("skills", () => {
     expect(text).toContain("$0.05 for ten posts")
     expect(text).toContain("$1.00 for a full user page")
     expect(text).toContain("Never page past the first page unasked, and never loop")
+    expect(text).toContain("read one page of ten, say it is a sample, and offer more; never propose or recommend a 100-record page")
   })
 
   test("x keeps every call lean, and says when a search is billed", () => {
@@ -185,17 +187,16 @@ describe("skills", () => {
     expect(text).toContain("X content goes to no other tool or message unless the user names that destination.")
   })
 
-  test("x says posting is available and public, and that writing load x-write", () => {
+  test("x routes every change to x-write and does not claim posting in its own description", () => {
     const text = flat("x")
-    expect(text).toContain("`create_posts` posts publicly, and asks first.")
-    expect(text).toContain("say it is public to anyone and its price")
-    expect(text).toContain("A reply (`reply.in_reply_to_tweet_id`) or quote (`quote_tweet_id`) only when the user asks for that one")
-    expect(text).toContain("Load `x-write` first.")
+    expect(text).toContain("For any change, load `x-write`.")
+    expect(text).not.toContain("`create_posts` posts publicly, and asks first.")
   })
 
   test("x says DMs, calls, follows, blocks, mutes, list membership, moderators and live video are off here", () => {
     const text = flat("x")
-    expect(text).toContain("DMs and chat (reads included), calls, follows, blocks, mutes, list membership, chat moderator roles, and live video")
+    expect(text).toContain("DMs and private chat conversations (reads included), calls, follows, blocks, mutes, list membership, chat moderator roles, and live video")
+    expect(text).toContain("Your own broadcast's chat messages and moderators are readable.")
     expect(text).toMatch(/are off here: say so, and don't route around it/)
     expect(text).toContain("The `xurl` bridge is another account outside these permission rules: never use it in place of these tools.")
   })
@@ -255,7 +256,7 @@ describe("skills", () => {
 
   test("x-write says DMs, calls, follows, blocks, list membership, moderators and live video are off", () => {
     const text = flat("x-write")
-    expect(text).toContain("the plugin denies them: DMs and chat (reads included), scheduled calls, following or")
+    expect(text).toContain("the plugin denies them: DMs and private chat conversations (reads included), scheduled calls, following or")
     expect(text).toContain("Say they are off")
     expect(text).toContain("A bookmark is not a like, and an Article is not a post.")
     expect(text).toContain("The x skill's rules on untrusted posts and personal data apply to everything here.")
