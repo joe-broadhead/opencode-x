@@ -134,6 +134,14 @@ describe("skills", () => {
     expect(text).toContain("A post that links to a page: the page is the source")
   })
 
+  test("x takes each handle from the post itself and says why a broad who question reads posts", () => {
+    const text = flat("x")
+    expect(text).toContain("The handle is the one in that post's own `url` or `author_id`, never a parent post's or another `includes.users` entry's.")
+    expect(text).toContain("Count your rows against `meta.result_count`")
+    expect(text).toContain('For a broad "who" question answered with posts, say why in one line')
+    expect(text).toContain("the authors come with the posts, while a user search costs $0.010 a user and finds accounts, not what they said")
+  })
+
   test("x dates a window in the tool's format, at the user's local day or week, end exclusive or clamped to now", () => {
     const text = flat("x")
     expect(text).toContain("A window always sets both bounds, as RFC 3339 UTC instants ending `Z`")
@@ -155,20 +163,25 @@ describe("skills", () => {
     expect(text).toContain("Read its description and signature with one `search()` first")
   })
 
-  test("x names the cost of X's default page, and the two calls that return many records", () => {
+  test("x gives every billed read the price sentence before the call, and the widening its own price", () => {
     const text = flat("x")
-    expect(text).toContain("pass `max_results` every time")
+    expect(text).toContain("Every billed read has one shape, in the same turn:")
+    expect(text).toContain('one sentence starting "This read costs about $…"')
+    expect(text).toContain("the page size, the upper bound with every expansion you request")
+    expect(text).toContain("X may return authors and parents unbidden")
+    expect(text).toContain("ten posts plus ten authors is about $0.15")
+    expect(text).toContain("2. the one call.")
+    expect(text).toContain("3. if the billed count differs from the estimate, say so.")
+    expect(text).toContain("A billed call with no price sentence is a bug: never claim afterwards that you gave one.")
+    expect(text).toContain("Pass `max_results` every time")
     expect(text).toContain("up to 100 users, $1.00")
     expect(text).toContain("Ten is enough for most questions")
-    expect(text).toContain("Before a user search or a broad post search, say it is billed")
-    expect(text).toContain("$0.05 for ten posts")
-    expect(text).toContain("$1.00 for a full user page")
     expect(text).toContain("A widening is a new billed search: before it, say what you changed and the new total")
-    expect(text).toContain("`expansions` such as `author_id` bills a user read for each author")
-    expect(text).toContain("ten posts with ten authors is about $0.15")
-    expect(text).toContain("skip an expansion unless the answer needs it")
-    expect(text).toContain("Never page past the first page unasked, and never loop")
+    expect(text).toContain("Request an expansion such as `author_id` only when the answer needs it")
+    expect(text).toContain("price what you actually request")
+    expect(text).toContain("never page past the first page unasked, and never loop")
     expect(text).toContain("read one page of ten, say it is a sample, and offer more; never propose or recommend a 100-record page")
+    expect(text).toContain("then widen once and say what you changed and the new total before it: about $0.05 for another ten posts")
   })
 
   test("x prices an Owned Read and stops on an empty one", () => {
@@ -180,7 +193,7 @@ describe("skills", () => {
   test("x keeps every call lean, and says when a search is billed", () => {
     const text = flat("x")
     expect(text).toContain("Every call costs money")
-    expect(text).toContain("smallest result count")
+    expect(text).toContain("Pass `max_results` every time")
     expect(text).toContain("about $0.005")
     expect(text).toContain("about $0.001")
     expect(text).toContain("a repeated post read in a day is free, a new page is not")
