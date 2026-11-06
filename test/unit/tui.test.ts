@@ -111,7 +111,7 @@ describe("status view", () => {
     expect(view.calls.at(-1)).toEqual({ id: StatusRpc.id, input: {}, request: { location: { directory: "/project" } } })
     expect(view.alerts).toHaveLength(1)
     expect(view.alerts[0]!.title).toBe("X status")
-    expect(view.alerts[0]!.message).toBe(`${formatStatus(answer).split("\n").slice(1).join("\n")}\n\nr refresh · esc close`)
+    expect(view.alerts[0]!.message).toBe(`${formatStatus(answer, { compactRules: true }).split("\n").slice(1).join("\n")}\n\nr refresh · esc close`)
     expect(view.alerts[0]!.message).toContain(`- Next step: ${SIGN_IN}`)
     expect(view.alerts[0]!.message).toContain("- Account: Example Recruiter")
     expect(view.alerts[0]!.message).toContain("- Agents without default rules: reviewer\n")

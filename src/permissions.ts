@@ -15,7 +15,7 @@ const rule = (tool: string, effect: Rule["effect"]): Rule => ({ action: actionOf
 
 /**
  * Broad first, narrow last, because the last matching rule wins: every X tool asks, including tools X adds later, then
- * the known reads run, then the tools the owner ruled out are off. `DENY_TOOLS` is empty today; `DENY_PATTERNS` holds
+ * the known reads run, then the tools the owner ruled out are off. `DENY_TOOLS` names the 40 live tools that are off; `DENY_PATTERNS` holds
  * the effect-based deny that catches a future DM, follow, block, mute, post-delete, list-membership or account tool
  * before any release classifies it.
  */

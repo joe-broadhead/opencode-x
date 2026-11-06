@@ -13,7 +13,8 @@
 // can run a real session turn that calls X's tools.
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
 import type { AddressInfo } from "node:net"
-import { ASK_READ_TOOLS, DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { SCOPES } from "../../src/constants.js"
+import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 
 const schema = { type: "object", properties: { query: { type: "string" } } }
 /** A tool the plugin has never seen. */
@@ -31,7 +32,6 @@ const TOOLS = [
 ]
 const CATALOG = [
   ...READ_TOOLS.map((name) => tool(name, true)),
-  ...ASK_READ_TOOLS.map((name) => tool(name, true)),
   ...[...WRITE_TOOLS, ...PUBLIC_TOOLS].map((name) => tool(name, false)),
   ...DENY_TOOLS.map((name) => tool(name, false)),
   { ...NEW_TOOL, inputSchema: schema },
@@ -41,7 +41,7 @@ const CATALOG = [
 export const UPSTREAM_FAILURE = "X refused https://files.x.example/a.png?signature=fake-signature-123 for this input\nTraceback: second line"
 
 /** The scopes the plugin pins, and X's protected-resource metadata lists. */
-export const X_SCOPES = "tweet.read users.read bookmark.read bookmark.write tweet.write offline.access"
+export const X_SCOPES = SCOPES.join(" ")
 
 export interface FakeMcpOptions {
   /** `x` lists every tool the plugin knows, and the new tool. */

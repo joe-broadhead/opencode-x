@@ -11,7 +11,7 @@ import { allow } from "./fake.js"
 const SIGN_IN = "Run `/connect` and choose X, then press `o` or Enter to open the link (in a terminal, `opencode mcp auth x` opens it automatically)."
 const NOTHING_TO_DO = "Nothing to do."
 const NO_TOOLS =
-  "X lists no tools for this app. Check that the app is in Pay-per-use, Production at console.x.com, that it has the OAuth 2.0 scopes tweet.read users.read bookmark.read bookmark.write tweet.write offline.access, then sign in again."
+  `X lists no tools for this app. Check that the app is in Pay-per-use, Production at console.x.com, that it has the OAuth 2.0 scopes ${SCOPES.join(" ")}, then sign in again.`
 /** The default rules as /x-status shows them: one rule a line, a JSON array body. */
 const AGENT_RULES = defaultRules().map((rule, index, rules) => `  ${JSON.stringify(rule)}${index < rules.length - 1 ? "," : ""}`).join("\n")
 const parsed = (oauth: Record<string, unknown> = { client_id: "client-1" }) => {
@@ -27,7 +27,7 @@ const CLIENT = { client: { id: "client-1", source: "options" as const }, invalid
 const base: StatusFacts = { server: { status: "connected" }, source: { type: "plugin", url: URL, signIn: "oauth" }, host, client: CLIENT, options: OPTS, tools: ["search_posts_all"] }
 const guarded = { id: "build", permissions: [allow("*"), ...defaultRules()] }
 const RULES = "no agent runs new X tools unasked"
-const POSTURE = "reads run without asking; 11 tools ask first (bookmarks, lists, an Article draft, source keys and a public Post); 40 are off (DMs and chat, calls, follows, blocks, mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the app"
+const POSTURE = "reads run without asking; 9 tools ask first (bookmarks, lists, an Article draft and a public Post); 40 are off (DMs and private chat conversations, calls, follows, blocks, mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the app"
 const ACCESS = `${POSTURE}; ${RULES}`
 
 describe("buildStatus", () => {
@@ -43,6 +43,7 @@ describe("buildStatus", () => {
       scopes: [...SCOPES],
       tools: 1,
       deniedTools: [],
+      deniedCount: 0,
       listing: false,
       unknownCount: 0,
       unknownTools: [],
@@ -188,8 +189,8 @@ describe("buildStatus", () => {
 
   test("the Access row says whether the default rules are in place, from what status can see", () => {
     expect(formatStatus(buildStatus(base))).toContain(`- Access: ${ACCESS}\n`)
-    expect(ACCESS).toContain("11 tools ask first (bookmarks, lists, an Article draft, source keys and a public Post)")
-    expect(ACCESS).toContain("40 are off (DMs and chat, calls, follows, blocks, mutes, list membership, moderators and live video)")
+    expect(ACCESS).toContain("9 tools ask first (bookmarks, lists, an Article draft and a public Post)")
+    expect(ACCESS).toContain("40 are off (DMs and private chat conversations, calls, follows, blocks, mutes, list membership, moderators and live video)")
     const missing = buildStatus({ ...base, agents: [{ id: "reviewer", permissions: [allow("*")] }] })
     expect(formatStatus(missing)).toContain(`- Access: ${POSTURE}; default rules missing in the agents listed below\n`)
     const problem = "RULES_NOT_ADDED: X's default permission rules could not be added (boom), so X tools may run without asking. Next step: Restart OpenCode."
@@ -212,7 +213,7 @@ describe("buildStatus", () => {
     expect(formatStatus(buildStatus({ ...base, tools: odd }))).toContain("- Tools: 4 available, 4 unknown (unknown tools ask before running)")
     // A future tool the owner ruled out is counted as off, not as available or unknown.
     const future = buildStatus({ ...base, tools: ["search_posts_all", "create_dm", "delete_post"] })
-    expect(future).toMatchObject({ tools: 1, deniedTools: ["create_dm", "delete_post"], unknownCount: 0 })
+    expect(future).toMatchObject({ tools: 1, deniedTools: ["create_dm", "delete_post"], deniedCount: 2, unknownCount: 0 })
     expect(formatStatus(future)).toContain("- Tools: 1 available, 0 unknown; off by default: create_dm and delete_post\n")
   })
 
@@ -242,6 +243,25 @@ describe("buildStatus", () => {
     expect(text).toContain(`- Connection: sign-in required (${URL}, registered by this plugin)`)
     expect(text).toContain("- Agents without default rules: reviewer\n")
     expect(text.match(/Next step/g)).toHaveLength(1)
+  })
+
+  test("denied tool names are stripped of controls, kept plain, and capped, while the count stays exact", () => {
+    const status = buildStatus({ ...base, tools: ["search_posts_all", "send_chat_\u001b[31mred", "users_id_block"] })
+    expect(status).toMatchObject({ tools: 1, deniedCount: 2, deniedTools: ["users_id_block"], unknownCount: 0 })
+    expect(formatStatus(status)).toContain("- Tools: 1 available, 0 unknown; off by default: users_id_block and 1 more\n")
+    expect(formatStatus(status)).not.toContain("\u001b")
+    const many = Array.from({ length: 25 }, (_, i) => `send_chat_${i}`)
+    const capped = buildStatus({ ...base, tools: many })
+    expect(capped.deniedCount).toBe(25)
+    expect(capped.deniedTools).toHaveLength(20)
+    expect(formatStatus(capped)).toContain("and 5 more")
+  })
+
+  test("a failed rules insert shows its own restart step before the agent fix", () => {
+    const problem = "RULES_NOT_ADDED: X's default permission rules could not be added (boom), so X tools may run without asking. Next step: Restart OpenCode."
+    const status = buildStatus({ ...base, agents: [{ id: "reviewer", permissions: [allow("*")] }], problems: [problem] })
+    expect(status.nextStep).toBe("Restart OpenCode.")
+    expect(formatStatus(status)).toContain("- Access: " + POSTURE + "; default rules not added (see the OpenCode row)\n")
   })
 
   test("the rows come in the standard order, with X's own rows between Access and Tools", () => {

@@ -2,10 +2,10 @@
 // derives from it. These tests pin every one of the 100 to its list and its intended default rule.
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
-import { ASK_READ_TOOLS, classify, DENY_TOOLS, deniedByDefault, PARAMETERS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { classify, DENY_TOOLS, deniedByDefault, PARAMETERS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
 
-const ALL = [...READ_TOOLS, ...ASK_READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
+const ALL = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
 const LIVE = (JSON.parse(readFileSync(new URL("./x-live-tools.json", import.meta.url), "utf8")) as { tools: { name: string }[] }).tools.map((tool) => tool.name)
 const base: Rule = { action: "*", resource: "*", effect: "allow" }
 const effectOf = (name: string) => evaluate([base, ...defaultRules()], `x_${name}`)
@@ -19,9 +19,9 @@ describe("X's live tool lists", () => {
     expect(ALL.filter((name) => name.startsWith("x_"))).toEqual([])
   })
 
-  test("count 49 reads that run, 2 reads that ask, 8 private writes, 1 public write and 40 off", () => {
-    expect(READ_TOOLS).toHaveLength(49)
-    expect(ASK_READ_TOOLS).toEqual(["get_source", "list_sources"])
+  test("count 51 reads that run, 8 private writes, 1 public write and 40 off", () => {
+    expect(READ_TOOLS).toHaveLength(51)
+    expect(READ_TOOLS).toEqual(expect.arrayContaining(["get_source", "list_sources"]))
     expect(WRITE_TOOLS).toHaveLength(8)
     expect(PUBLIC_TOOLS).toEqual(["create_posts"])
     expect(DENY_TOOLS).toHaveLength(40)
@@ -29,7 +29,6 @@ describe("X's live tool lists", () => {
 
   test("classify each tool by its list, and everything else as unknown", () => {
     for (const tool of READ_TOOLS) expect(classify(tool)).toBe("read")
-    for (const tool of ASK_READ_TOOLS) expect(classify(tool)).toBe("ask_read")
     for (const tool of WRITE_TOOLS) expect(classify(tool)).toBe("write")
     for (const tool of PUBLIC_TOOLS) expect(classify(tool)).toBe("public")
     for (const tool of DENY_TOOLS) expect(classify(tool)).toBe("denied")
@@ -38,7 +37,7 @@ describe("X's live tool lists", () => {
 
   test("every tool gets its intended default rule", () => {
     for (const tool of READ_TOOLS) expect({ tool, effect: effectOf(tool) }).toEqual({ tool, effect: "allow" })
-    for (const tool of [...ASK_READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect({ tool, effect: effectOf(tool) }).toEqual({ tool, effect: "ask" })
+    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect({ tool, effect: effectOf(tool) }).toEqual({ tool, effect: "ask" })
     for (const tool of DENY_TOOLS) expect({ tool, effect: effectOf(tool) }).toEqual({ tool, effect: "deny" })
   })
 
@@ -46,8 +45,6 @@ describe("X's live tool lists", () => {
     const change = /^(create|add|change|update|delete|set|publish|send|schedule|archive|pin|unpin|follow|unfollow|block|mute)_/
     expect(READ_TOOLS.filter((tool) => change.test(tool))).toEqual([])
     expect(READ_TOOLS.every((tool) => /^(get|search|list)_/.test(tool))).toEqual(true)
-    // The two secret-bearing reads are gets too, but they ask.
-    for (const tool of ASK_READ_TOOLS) expect(tool).toMatch(/^(get|list)_/)
   })
 
   test("posting is the one public write, and it is not a private write or a read", () => {
@@ -59,7 +56,7 @@ describe("X's live tool lists", () => {
     expect(WRITE_TOOLS).toContain("article_create_draft")
   })
 
-  test("the off list holds the DMs and chat, follows, blocks, mutes, list membership, moderators, calls and live video", () => {
+  test("the off list holds the DMs and private chat, follows, blocks, mutes, list membership, moderators, calls and live video", () => {
     for (const name of [
       "send_chat_message",
       "send_chat_typing_indicator",
@@ -107,7 +104,7 @@ describe("X's live tool lists", () => {
   })
 
   test("the safety patterns catch a later tool of a denied effect, and no known tool", () => {
-    for (const name of ["create_dm", "send_chat_message_reaction", "get_chat_conversation_by_id", "follow_user", "block_user", "mute_user", "delete_post", "add_lists_member_to_list", "update_account"]) {
+    for (const name of ["create_dm", "send_chat_message_reaction", "get_chat_conversation_by_id", "follow_user", "block_user", "mute_user", "delete_post", "add_lists_member_to_list", "update_account", "users_id_follow", "users_id_mute", "create_chat_conversation", "update_chat_conversation", "delete_chat_conversation"]) {
       expect({ name, denied: deniedByDefault(name) }).toEqual({ name, denied: true })
     }
     for (const name of ALL) expect({ name, denied: deniedByDefault(name) }).toEqual({ name, denied: DENY_TOOLS.includes(name) })

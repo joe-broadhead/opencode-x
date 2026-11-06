@@ -18,7 +18,7 @@ import { basename, join, relative, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { ENDPOINT, REDIRECT_URI, SUPPORTED_HOST, TESTED_HOSTS } from "../../src/constants.js"
 import { TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
-import { ASK_READ_TOOLS, DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, type Rule } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { X_SCOPES, NEW_TOOL, startFakeMcp, UPSTREAM_FAILURE, type FakeMcp } from "../host/fake-mcp.js"
@@ -296,10 +296,10 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
       agents: { locked: { permissions: [rule("x_*", "deny")] }, careful: { permissions: [rule(`x_${READ_A}`, "ask")] } },
     })
     // Every known tool except the 40 off ones, and the fake's new one, which is the only unknown.
-    const tools = READ_TOOLS.length + ASK_READ_TOOLS.length + WRITE_TOOLS.length + PUBLIC_TOOLS.length + 1
+    const tools = READ_TOOLS.length + WRITE_TOOLS.length + PUBLIC_TOOLS.length + 1
     await host.until(`x is connected with its ${tools} tools`, async () => {
       const output = await status()
-      return output.state === "connected" && output.tools === tools && output.unknownCount === 1 && output.deniedTools.length === DENY_TOOLS.length
+      return output.state === "connected" && output.tools === tools && output.unknownCount === 1 && output.deniedCount === DENY_TOOLS.length
     })
     const create = async (body: Record<string, unknown>) => {
       const created = await host.api<Record<string, any>>("POST", "/api/session", body)
@@ -317,6 +317,13 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     await host?.close()
     await fake?.close()
   }, 60_000)
+
+  test("status and the status RPC make no X call", async () => {
+    const from = fake.calls.length
+    await status()
+    await host.api("POST", "/api/rpc/x.posts/status", { input: {} })
+    expect(fake.calls.slice(from)).toEqual([])
+  })
 
   test("describes exactly the known reads, each available with its live schema", async () => {
     const { value } = await script("describe", {})

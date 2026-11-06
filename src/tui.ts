@@ -16,7 +16,7 @@ export function viewMessage(result: { readonly status: Status } | { readonly err
 }
 
 function reportOf(result: { readonly status: Status } | { readonly error: unknown }) {
-  if ("status" in result) return formatStatus(result.status).split("\n").slice(1).join("\n")
+  if ("status" in result) return formatStatus(result.status, { compactRules: true }).split("\n").slice(1).join("\n")
   const { error } = result
   const type = typeof error === "object" && error !== null && "type" in error ? error.type : undefined
   // The server part could not read the status; it says why and what to do.

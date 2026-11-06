@@ -6,7 +6,7 @@
 // - OpenCode's tool list (`ctx.tool.list()`): `{ "tools": [{ "name", "description", "inputSchema" }] }`, names with or
 //   without the `x_` prefix, or an MCP client's `tools/list` result, which adds `annotations`;
 // - the research form: `{ "tools": [{ "name", "annotations", "inputs": ["name*:type", …] }] }`, where `annotations` and
-//   `inputs` may be missing, as in a list of names from X's docs (test/unit/x-tools.json).
+//   `inputs` may be missing, as in a list of names from X's docs (test/unit/x-live-tools.json).
 // The script reads that file only: it never reads a credential and never calls X. It compares the list with
 // READ_TOOLS, WRITE_TOOLS, PUBLIC_TOOLS, DENY_TOOLS and PARAMETERS in src/x-tools.ts, and prints only tool names, parameter
 // names and types, and X's readOnlyHint and destructiveHint annotations. A known tool whose input the list gives but
@@ -73,7 +73,7 @@ const annotated = [...live.values()].some((tool) => tool.annotations !== undefin
 const reclassified = [...live]
   .filter(([name, { annotations: hints = {} }]) => {
     const kind = known.classOf.get(name)
-    return (kind === "read" && (hints.readOnlyHint === false || hints.destructiveHint === true)) || (kind === "ask_read" && hints.readOnlyHint === false) || (kind !== undefined && kind !== "read" && kind !== "ask_read" && hints.readOnlyHint === true)
+    return (kind === "read" && (hints.readOnlyHint === false || hints.destructiveHint === true)) || (kind !== undefined && kind !== "read" && hints.readOnlyHint === true)
   })
   .map(([name]) => name)
   .sort()
@@ -85,7 +85,7 @@ const changeWording = [...live]
   .sort()
 
 const count = (kind) => [...live.keys()].filter((name) => known.classOf.get(name) === kind).length
-console.log(`The list holds ${live.size} tools: ${count("read")} read, ${count("ask_read")} ask-read, ${count("write")} write, ${count("public")} public, ${count("denied")} denied, ${added.length} unclassified.`)
+console.log(`The list holds ${live.size} tools: ${count("read")} read, ${count("write")} write, ${count("public")} public, ${count("denied")} denied, ${added.length} unclassified.`)
 section("Added: listed by X, in no list of src/x-tools.ts", added, true)
 section("Removed: in src/x-tools.ts, not in this list (X may list fewer tools for a token with fewer scopes)", removed, false)
 section("Possibly renamed: a removed tool and an added one take mostly the same parameters", renamed, false)
@@ -218,7 +218,7 @@ async function loadKnown() {
     fail(`cannot load src/x-tools.ts (${error?.code ?? error?.message ?? error}). Keep it free of runtime imports so Node can strip its types.`)
   }
   const classOf = new Map()
-  for (const [list, kind] of [["READ_TOOLS", "read"], ["ASK_READ_TOOLS", "ask_read"], ["WRITE_TOOLS", "write"], ["PUBLIC_TOOLS", "public"], ["DENY_TOOLS", "denied"]]) {
+  for (const [list, kind] of [["READ_TOOLS", "read"], ["WRITE_TOOLS", "write"], ["PUBLIC_TOOLS", "public"], ["DENY_TOOLS", "denied"]]) {
     if (!Array.isArray(module[list])) fail(`src/x-tools.ts must export ${list} as an array of tool names.`)
     for (const name of module[list]) classOf.set(name, kind)
   }
