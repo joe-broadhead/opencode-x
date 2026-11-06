@@ -18,9 +18,8 @@ import { readFileSync } from "node:fs"
 const USAGE = "Usage: npm run drift -- <tools.json> [--strict]"
 const PREFIX = "x_"
 // A sentence whose subject is the tool and whose verb changes or sends something: "Sends an email…", "This tool
-// creates…". A known read whose description says so needs a second look. Nouns ("a Job Posting"), enum values (ARCHIVED,
-// HIRED), other tools' names (change_application_stage) and instructions to call another tool ("Create a candidate")
-// don't count.
+// creates…". A known read whose description says so needs a second look. Nouns ("a post"), enum values (PROMOTED), other tools'
+// names (create_users_bookmark) and instructions to call another tool ("Post this thread") don't count.
 const CHANGE_VERBS = "creates|updates|deletes|removes|edits|modifies|writes|sends|posts|uploads|archives|rejects|enrolls|saves|shares|publishes"
 const CHANGE_SENTENCE = new RegExp(`^(?:this (?:tool|call) |it )?(${CHANGE_VERBS})\\b(?!\\s*:)`, "i")
 // Two tools whose parameters overlap this much are reported as a possible rename.

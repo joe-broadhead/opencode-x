@@ -54,7 +54,7 @@ X has no way for an app to register itself, so you bring your own X app. Its cli
 (Web App) app, its client secret are the sign-in.
 
 1. In [console.x.com](https://console.x.com), open your app's **User authentication settings**, set OAuth 2.0 on,
-   choose **Web App** (or **Native App** for a public client with no secret), add the callback and scopes above, and
+   choose **Web App** (recommended; the no-secret **Native App**, a public client, is untested here), add the callback and scopes above, and
    copy the **Client ID** and **Client secret**.
 2. In OpenCode, run `/connect` and choose **X app**. Paste the client ID; paste the secret in the optional field.
 3. Run `/connect` and choose **X**, then press `o` or Enter to open the link. Sign in and approve the scopes.
@@ -145,7 +145,7 @@ Set options with the object form of the plugin entry:
     {
       "package": "@joe-broadhead/opencode-x",
       "options": {
-        "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "YOUR_X_CLIENT_SECRET" }
+        "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" }
       }
     }
   ]
@@ -155,11 +155,15 @@ Set options with the object form of the plugin entry:
 | Option | Values | Default | Effect |
 | --- | --- | --- | --- |
 | `oauth.client_id` | Your X app's client ID | none | The app OpenCode signs in with. Set in managed config, it replaces the `/connect` X app entry. |
-| `oauth.client_secret` | Your X app's client secret | none | For a confidential (Web App) app. Leave it out for a Native App. |
+| `oauth.client_secret` | Your X app's client secret, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out only for a Native App, which is untested here. |
 | `oauth.redirect_uri` | A URL registered in the app | `http://127.0.0.1:8766/callback` | Must match X's registered callback exactly. |
 | `oauth.callback_port` | `1`–`65535` | none | Only with an `https:` redirect: the local port a proxy forwards to. |
-| `oauth.scopes` | X OAuth 2.0 scopes | `tweet.read users.read bookmark.read bookmark.write tweet.write offline.access` | Dropping `bookmark.write` or `tweet.write` makes those tools fail with `403`. |
+| `oauth.scopes` | X OAuth 2.0 scopes | `tweet.read users.read bookmark.read bookmark.write tweet.write offline.access` | Dropping `bookmark.write` or `tweet.write` makes those tools fail with `403`; dropping `offline.access` means no refresh token, so the sign-in expires within two hours. |
 | `allowUntestedHost` | `true` or `false` | `false` | Starts on an OpenCode version outside `>=2.2.3 <2.3.0`, with a warning in status. |
+
+`{env:NAME}` is substituted when OpenCode loads the config, so the secret can stay in your environment instead of the
+file. An unset variable arrives as an empty string, which the plugin rejects with `OPTIONS_INVALID`. Prefer it: a
+config file may be synced, backed up or shared.
 
 [docs/configuration.md](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/configuration.md) has the details,
 including your own `mcp.servers.x` entry, permission recipes and every error.
@@ -176,7 +180,7 @@ example also turns Article publishing off for everyone:
   "plugins": [
     {
       "package": "@joe-broadhead/opencode-x",
-      "options": { "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "YOUR_X_CLIENT_SECRET" } }
+      "options": { "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" } }
     }
   ],
   "permissions": [{ "action": "x_article_publish", "resource": "*", "effect": "deny" }]
@@ -194,7 +198,7 @@ Run `/x-status` first. Its last line is the next step.
 | Status or error | What to do |
 | --- | --- |
 | Connection: not configured, `CLIENT_ID_MISSING` | Run `/connect`, choose **X app**, and paste your X app's client ID. |
-| Connection: not configured, `CLIENT_ID_INVALID` | The saved client ID is empty or has spaces. Save it again from the app's Keys and tokens page. |
+| Connection: not configured, `CLIENT_ID_INVALID` | The saved client ID is empty or has spaces. Save it again from the app's User authentication settings. |
 | Connection: sign-in required | Run `/connect` and choose X, then press `o` or Enter. In a terminal, `opencode mcp auth x` opens it automatically. |
 | Connection: connecting | Wait a few seconds, then run `/x-status` again. |
 | Connection: failed | Check your network, then run `/x-status` again. With your own `mcp.servers.x` that has `"oauth": false`, remove that line: X's server signs in only with OAuth. |
@@ -213,6 +217,7 @@ Run `/x-status` first. Its last line is the next step.
 | `429` | X's rate limit for that endpoint is used up. Wait for the reset X returns, and make fewer calls. |
 | Agents without default rules | Put the default rules shown by `/x-status` first in each listed agent's own permissions, in `opencode.json` or the agent's Markdown file, followed by your top-level rules for X tools. |
 | OpenCode: untested | OpenCode is not 2.2.3, 2.2.4 or 2.2.5. Inside `>=2.2.3 <2.3.0` the plugin runs normally; outside it, it runs only because `allowUntestedHost` is set. If X misbehaves, use a tested release. |
+| Connection: sign-in required soon after signing in | The app lacks `offline.access`, so X issued no refresh token and the two-hour token expired. Add the scope in the app and sign in again. |
 | Signed in to the wrong X account | Run `opencode mcp logout x` (or remove the account in `/connect` → X), then sign in again. |
 | An X tool is refused in `opencode run` | Nobody could answer its prompt. A read runs if you add an `allow` rule for it to the agent's own `permissions`. A write needs an interactive session: this plugin documents no `allow` for one. |
 | A skill seems ignored, and status names a skill to rename or move | A skill of yours with the same id, such as `x`, replaces the plugin's. Rename or move it. |

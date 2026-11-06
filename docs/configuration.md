@@ -16,7 +16,7 @@ To set options, use the object form:
     {
       "package": "@joe-broadhead/opencode-x",
       "options": {
-        "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "YOUR_X_CLIENT_SECRET" }
+        "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" }
       }
     }
   ]
@@ -34,13 +34,20 @@ so it needs the app's OAuth 2.0 client. The values go in the plugin options (man
 | Key | Values | Default | Notes |
 | --- | --- | --- | --- |
 | `client_id` | A non-empty string without spaces | none | The app's **Client ID**. Without it, status is `not configured` and asks for the X app. |
-| `client_secret` | A non-empty string | none | For a confidential (Web App) app. Leave it out for a Native App, a public client with PKCE and no secret. Needs `client_id`. |
+| `client_secret` | A non-empty string, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out only for a Native App, a public client with PKCE and no secret; that route is untested here. Needs `client_id`. |
 | `redirect_uri` | An `http:` loopback URL with an explicit port and a path, or an `https:` URL | `http://127.0.0.1:8766/callback` | X matches it exactly. Register the same URL in the app's **User authentication settings**. |
 | `callback_port` | `1`–`65535` | none | Only, and always, with an `https:` redirect: the local port a proxy forwards the callback to. With a loopback redirect, OpenCode listens on the redirect's own port. |
 | `scopes` | A non-empty list of X OAuth 2.0 scopes | `tweet.read users.read bookmark.read bookmark.write tweet.write offline.access` | `offline.access` is what makes X issue a refresh token. Dropping `bookmark.write` or `tweet.write` makes those tools fail with `403`, or removes them from the list. |
 
 The plugin never shows the client secret: status and the RPC name the client ID, whether a secret is set, and where it
 came from. The secret lives in OpenCode's credential store, or in managed config.
+
+### `{env:NAME}`
+
+OpenCode substitutes `{env:NAME}` in a config value when it loads the file, so `"client_secret": "{env:X_CLIENT_SECRET}"`
+keeps the secret in your environment, not in a file that may be synced, backed up or shared. An unset variable arrives
+as an empty string, which `OPTIONS_INVALID` rejects: export it before OpenCode starts, or save the secret through
+`/connect` → **X app** instead.
 
 ### `allowUntestedHost`
 
@@ -75,7 +82,7 @@ If your config defines no server named `x`, and the plugin has a client, it regi
   "url": "https://api.x.com/mcp",
   "oauth": {
     "client_id": "YOUR_X_CLIENT_ID",
-    "client_secret": "YOUR_X_CLIENT_SECRET",
+    "client_secret": "{env:X_CLIENT_SECRET}",
     "redirect_uri": "http://127.0.0.1:8766/callback",
     "scope": "tweet.read users.read bookmark.read bookmark.write tweet.write offline.access"
   }
@@ -194,29 +201,20 @@ Turn off every bookmark change, in one agent:
 }
 ```
 
-Make every X tool ask in one agent, reads included. The last match wins, so this `x_*` ask is the whole recipe; it
-does not turn any denied tool on, because there is none:
-
-```json
-[
-  { "action": "x_*", "resource": "*", "effect": "ask" }
-]
-```
-
-Run bookmarking without a prompt in the build agent (answering "Always allow" once does the same, for every agent in
-the project):
+Make every X tool ask in one agent, reads included. The last match wins, so this `x_*` ask is the whole recipe:
 
 ```json
 {
   "agents": {
     "build": {
-      "permissions": [{ "action": "x_create_users_bookmark", "resource": "*", "effect": "allow" }]
+      "permissions": [{ "action": "x_*", "resource": "*", "effect": "ask" }]
     }
   }
 }
 ```
 
-Never advise an `allow` for `x_article_publish`: it is public and permanent from the plugin's side.
+A write is approved per call, through the permission prompt. This plugin documents no `allow` for a write, publishing
+included: an "Always allow" saves an allow for every agent in the project, and a top-level `allow` would reach Explore.
 
 ### Agents that miss the rules
 
@@ -263,7 +261,7 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `OPTIONS_INVALID` | Setup: an option is unknown or has a wrong value. `/x-status` shows the message, which names the option. | Fix the plugin options in `opencode.json`. |
 | `HOST_UNTESTED` | Setup: OpenCode is outside `>=2.2.3 <2.3.0`, and `allowUntestedHost` is not set. | Use OpenCode `>=2.2.3 <2.3.0`, or set `"allowUntestedHost": true`. |
 | `CLIENT_ID_MISSING` | Setup: no X app client ID is in the options or the `/connect` X app entry. | Run `/connect` and choose X app, and paste your X app's client ID. |
-| `CLIENT_ID_INVALID` | Setup: the saved client ID is empty or has spaces. | Save the client ID again from the app's Keys and tokens page. |
+| `CLIENT_ID_INVALID` | Setup: the saved client ID is empty or has spaces. | Save the client ID again from the app's User authentication settings. |
 | `STATUS_UNAVAILABLE` | `/x-status`, `/x` or the status RPC: the status could not be read, or the plugin is not running on the server. The RPC answers with its error `unavailable`. | The message's own next step: restart OpenCode and run the command again, or, when the plugin is not running, run `/plugins` to see why. |
 | `SKILLS_INVALID` | Setup: a skill file is missing or broken. The plugin still starts; status shows the problem. | Reinstall the plugin. |
 | `SERVER_NOT_REGISTERED` | Setup: the `x` server could not be registered. Status shows the problem. | Restart OpenCode. |

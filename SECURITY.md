@@ -75,8 +75,10 @@ Things to know:
 - **The rules follow the name, not the server.** When your own `mcp.servers.x` points at another URL, status reports a
   conflict and the plugin adds no server, but the default rules still allow the known read names, so a tool of that
   server with such a name runs without asking. Point the entry at X's URL, or remove it.
-- **The client secret is a credential.** Prefer `{env:X_CLIENT_SECRET}` in `opencode.json`, or the `/connect` X app
-  entry, over a literal value in a file you share. A Native App needs no secret; use one when you can.
+- **The client secret is a credential.** A config file may be synced, backed up or shared, so prefer
+  `{env:X_CLIENT_SECRET}` in `opencode.json`, or the `/connect` X app entry, over a literal value. OpenCode substitutes
+  the variable when it loads the config; an unset variable arrives as an empty string, which `OPTIONS_INVALID`
+  rejects. A Native App needs no secret, but that route is untested here: use a confidential app.
 
 ## Scripts
 
