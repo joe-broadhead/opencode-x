@@ -296,7 +296,7 @@ meanings:
 | `code`, `message` | For a setup state, or a missing or unusable client: `OPTIONS_INVALID`, `HOST_UNTESTED`, `CLIENT_ID_MISSING` or `CLIENT_ID_INVALID`, and one sentence on it. |
 | `error` | For a failed connection only: OpenCode's reason, on one line of at most 160 characters, with any URL cut before its query. The text for a needed sign-in can hold an authorization URL, so it is never shown. |
 | `source` | `type` (`plugin`, `adopted` or `conflict`), `url`, `signIn` (`oauth`, or `own` for your own entry with `"oauth": false`), and for a conflict the `expected` URL |
-| `account` | The name OpenCode keeps on the active sign-in, on one line of at most 80 characters; absent when it keeps none. X's MCP has no account tool in this report, so the plugin learns nothing else about the account. |
+| `account` | The name OpenCode keeps on the active sign-in, on one line of at most 80 characters; absent when it keeps none. Status makes no X call, so the plugin learns nothing else about the account. |
 | `client` | `id`, `mode` (`public_pkce` for a Native App, `confidential` when a secret is set) and `source` (`options` or `connect`). The secret is never shown. |
 | `callback`, `callbackPort`, `scopes` | The redirect URI the app must have registered, the local port for an `https:` redirect, and the scopes OpenCode requests |
 | `tools` | How many X tools OpenCode lists that the default rules let run or ask: the listed ones, without the denied ones |
