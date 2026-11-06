@@ -12,8 +12,10 @@ const env = { ...process.env, PATH: `${join(root, "node_modules", ".bin")}${deli
 const { TESTED_HOSTS } = await import(new URL("../src/constants.ts", import.meta.url).href)
 
 // The approved package shape. Change it here only together with the release policy.
-const FILES = ["dist", "assets/icon.svg", "skills", "README.md", "LICENSE", "CHANGELOG.md"]
+const FILES = ["dist", "assets/icon.svg", "assets/icon-128.png", "assets/icon-256.png", "skills", "README.md", "LICENSE", "CHANGELOG.md"]
 const EXPORTS = { ".": "index", "./tui": "tui" }
+// The three asset exports the icon contract adds; exact key and value, beside the two bundles.
+const ASSET_EXPORTS = { "./icon.svg": "./assets/icon.svg", "./icon-128.png": "./assets/icon-128.png", "./icon-256.png": "./assets/icon-256.png" }
 // dist/ holds one self-contained bundle per export, and nothing else (scripts/build.mjs).
 const DIST = Object.values(EXPORTS).map((base) => `${base}.js`).sort()
 // The tested OpenCode line. The host provides @opencode/plugin, OpenTUI and Solid, so the package declares no peers.
@@ -26,6 +28,7 @@ const stages = {
   typecheck: () => run("tsc", ["--noEmit", "-p", "tsconfig.json"]),
   unit: () => run("bun", ["test", "./test/unit"]),
   build: () => run("node", ["scripts/build.mjs"]),
+  icons: () => run("node", ["scripts/check-icons.mjs"]),
   host: host,
   pack: () => run("bun", ["test", "./test/pack"]),
   forbidden: () => run("node", ["scripts/check-forbidden.mjs"]),
@@ -98,8 +101,12 @@ function whitelist() {
     if (pkg.devDependencies?.[name] !== HOST_DEV_PIN) problems.push(`devDependency "${name}" must be exactly ${HOST_DEV_PIN}, the tested host.`)
   }
   const exportsSeen = Object.keys(pkg.exports ?? {})
-  for (const key of Object.keys(EXPORTS)) if (!exportsSeen.includes(key)) problems.push(`"exports" is missing "${key}".`)
+  for (const key of [...Object.keys(EXPORTS), ...Object.keys(ASSET_EXPORTS)]) if (!exportsSeen.includes(key)) problems.push(`"exports" is missing "${key}".`)
   for (const key of exportsSeen) {
+    if (ASSET_EXPORTS[key]) {
+      if (pkg.exports[key] !== ASSET_EXPORTS[key]) problems.push(`"exports"["${key}"] must be ${JSON.stringify(ASSET_EXPORTS[key])}.`)
+      continue
+    }
     const base = EXPORTS[key]
     if (!base) { problems.push(`"exports" must not contain "${key}".`); continue }
     // No declaration files ship: nothing consumes the plugin's types.
