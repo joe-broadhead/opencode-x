@@ -27,7 +27,7 @@ shell command, a link or a screenshot.
   followers' timelines, and this plugin has no tool to unpublish it. Show the title and the opening lines first, then
   say: "This publishes '…' publicly on your profile; the only way to remove it is to delete the post in the X app."
 
-Each call is billed to the user's credits: about $0.005 for a bookmark change, and a post create for publishing,
+Each call is billed to the X developer account that owns the app (yours, or your team's): about $0.005 for a bookmark change, and a post create for publishing,
 which X prices at $0.015, or $0.200 when the post contains a link. X has not published its Article rate; say that.
 
 ## Drafting an Article

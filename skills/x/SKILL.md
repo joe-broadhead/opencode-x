@@ -9,8 +9,8 @@ Mode. Read its description and signature with one `search()` first. Each call's 
 
 ## Every call costs money
 
-X bills each call to the user's X API credits: a post read about $0.005, a user read about $0.010, the user's own
-reads about $0.001, a bookmark change about $0.005. A search page holds 10 to 100 posts.
+X bills each call to the X developer account that owns the app (yours, or your team's): a post read about $0.005, a
+user read about $0.010, the user's own reads about $0.001, a bookmark change about $0.005. A search page holds 10 to 100 posts.
 
 - Use the smallest result count the signature allows, and pass `max_results` every time: without it X sends its whole
   default page, up to 100 users, $1.00. Ten is enough for most questions.
