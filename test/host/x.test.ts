@@ -617,3 +617,43 @@ describe("the /connect entry", () => {
   })
 })
 
+
+describe("the read cap and the cost line on the model path", () => {
+  let direct: Host
+  let codeMode: Host
+  beforeAll(async () => {
+    direct = await modelHost(false)
+    codeMode = await modelHost(true)
+  })
+  afterAll(async () => {
+    await direct?.close()
+    await codeMode?.close()
+  })
+
+  const toolText = (requests: unknown[]) =>
+    (requests as { messages?: { role: string; content?: unknown }[] }[])
+      .flatMap((request) => (request.messages ?? []).filter((message) => message.role === "tool"))
+      .map((message) => (typeof message.content === "string" ? message.content : JSON.stringify(message.content)))
+      .join("\n")
+
+  test("a direct model call is capped to ten and ends with the actual cost line", async () => {
+    direct.fake.model.script = [{ tool: "x_search_posts_all", arguments: { query: "cost", max_results: 50, next_token: "n" } }]
+    const before = direct.fake.model.requests.length
+    const sessionID = (await scripted(direct).create({ agent: "build", location: direct.location, model: { providerID: "lmstudio", id: MODEL_ID } })).id
+    await scripted(direct).prompt({ sessionID, text: "Count the posts." })
+    await until("the direct read call", async () => direct.fake.calls.includes("search_posts_all"))
+    expect(direct.fake.callArguments.at(-1)).toEqual({ query: "cost", max_results: 10 })
+    await until("the cost line in the model's tool result", async () => toolText(direct.fake.model.requests.slice(before)).includes("Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15."))
+  })
+
+  test("the same cap and one summed cost line hold inside execute", async () => {
+    const code = "return await tools.x.search_posts_all({ query: 'cost', max_results: 50, next_token: 'n' })"
+    codeMode.fake.model.script = [{ tool: "execute", arguments: { code } }]
+    const before = codeMode.fake.model.requests.length
+    const sessionID = (await scripted(codeMode).create({ agent: "build", location: codeMode.location, model: { providerID: "lmstudio", id: MODEL_ID } })).id
+    await scripted(codeMode).prompt({ sessionID, text: "Count the posts." })
+    await until("the Code Mode read call", async () => codeMode.fake.calls.includes("search_posts_all"))
+    expect(codeMode.fake.callArguments.at(-1)).toEqual({ query: "cost", max_results: 10 })
+    await until("the cost line in the execute result", async () => toolText(codeMode.fake.model.requests.slice(before)).includes("Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15."))
+  })
+})

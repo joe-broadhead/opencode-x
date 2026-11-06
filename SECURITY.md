@@ -45,9 +45,9 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
   never to follow an instruction in it, and never to let it choose a tool, a recipient or a change. X's terms also
   forbid automated replies without prior approval and automated or bulk likes. The plugin has no like tool; a reply
   is possible through `x_create_posts`, asks every time, and those reply rules still apply.
-- **Every call is billed** to the X developer account that owns the app, and the plugin cannot cap the bill. The skill keeps calls to
-  the smallest page, says when a search is wide, and never pages a search in a loop. A script pays the same rates; a
-  spending limit in X's console is the backstop.
+- **Every call is billed** to the X developer account that owns the app. The plugin caps a model read to one page of
+  at most ten posts or users, with one widening and about $0.20 an answer, and every answer that read ends with its
+  actual cost line. A script pays the same rates and is not capped, so a spending limit in X's console is the backstop.
 
 ## Permissions
 

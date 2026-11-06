@@ -158,14 +158,7 @@ describe("skills", () => {
 
   test("x never asks whether to spend before a billed read", () => {
     const text = flat("x")
-    expect(text).toContain("Never ask whether to spend: state the price in one sentence, then call.")
-  })
-
-  test("a signature lookup and a billed call never share one execute, and no estimate goes unseen", () => {
-    const text = flat("x")
-    expect(text).toContain("a lookup and a billed call never share one `execute`")
-    expect(text).toContain('If your text above this call has no "$", write the price sentence now')
-    expect(text).toContain('never write "as estimated" or "my estimate" unless that sentence is earlier in the reply')
+    expect(text).toContain("Never ask whether to spend: make the call.")
   })
 
   test("x takes each handle and date from the post itself, and says why a broad who question reads posts", () => {
@@ -197,22 +190,23 @@ describe("skills", () => {
     expect(text).toContain("For a tool outside the billed-read block, one `search()`, for the tool you are about to call")
   })
 
-  test("x gives every billed read the price sentence before the call, and the widening its own price", () => {
+  test("x caps every read to one small page, automatically", () => {
     const text = flat("x")
-    expect(text).toContain("Every billed read, in the same turn: (1) one sentence starting")
-    expect(text).toContain('one sentence starting "This read costs about $…"')
-    expect(text).toContain("the page size and the upper bound with every expansion you request")
-    expect(text).toContain("X may return authors and parents unbidden")
-    expect(text).toContain("ten posts plus ten authors is about $0.15")
-    expect(text).toContain("(2) the one call. (3) if the billed count differs, say so.")
-    expect(text).toContain("A billed call with no price sentence is a bug: never claim afterwards that you gave one.")
-    expect(text).toContain("Pass `max_results` every time")
-    expect(text).toContain("up to 100 users, $1.00")
-    expect(text).toContain("Ten is enough;")
-    expect(text).toContain("Every post read sends `expansions` \"author_id\"")
-    expect(text).toContain("never propose a 100-record page, page unasked, or loop")
-    expect(text).toContain("read one page of ten, say it is a sample, and offer more")
-    expect(text).toContain("then widen once, saying what changed and that another ten posts is about $0.05 before the call")
+    expect(text).toContain("Reads are automatic and capped: one small page per read")
+    expect(text).toContain("`max_results` at most 10")
+    expect(text).toContain("only the expansions the answer needs")
+    expect(text).toContain("no next-page token unless the user asks")
+    expect(text).toContain("about $0.20 at most, including one widening")
+    expect(text).toContain("Never ask whether to spend: make the call.")
+    expect(text).toContain("then widen once, still one page of ten")
+  })
+
+  test("x ends an answer that read with the actual cost, and never an estimate", () => {
+    const text = flat("x")
+    expect(text).toContain("Every answer that made a billed read ends with one line computed from what X returned")
+    expect(text).toContain('"Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15."')
+    expect(text).toContain("An Owned Read uses its own rate. Never mention an estimate.")
+    for (const gone of ["This read costs about", "price sentence", "as estimated", "my estimate"]) expect({ gone, found: text.includes(gone) }).toEqual({ gone, found: false })
   })
 
   test("x prices an Owned Read and stops on an empty one", () => {
@@ -224,10 +218,9 @@ describe("skills", () => {
   test("x keeps every call lean, and says when a search is billed", () => {
     const text = flat("x")
     expect(text).toContain("Every call costs money")
-    expect(text).toContain("Pass `max_results` every time")
     expect(text).toContain("about $0.005")
     expect(text).toContain("about $0.001")
-    expect(text).toContain("page unasked, or loop")
+    expect(text).toContain("about $0.20 at most")
   })
 
   test("x treats every post and bio as untrusted data, never instructions", () => {
