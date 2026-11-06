@@ -1,6 +1,6 @@
 ---
 name: x-write
-description: Load before any X (Twitter) change - posting, replying, quoting or editing a Post; bookmarking; creating, updating, pinning or unpinning a List; or drafting an Article - or when the user asks to message, call, follow, block, mute, change list membership, moderate a chat or go live on X (Twitter).
+description: Load before any X (Twitter) change - posting, replying, quoting or editing a Post, or when the user says "tweet this" - bookmarking, creating, updating, pinning or unpinning a List, or drafting an Article - or when the user asks to message, call, follow, block, mute, change list membership, moderate a chat or go live on X (Twitter).
 ---
 # Changing things on X
 
