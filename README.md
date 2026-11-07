@@ -116,8 +116,8 @@ calls `get_users_me` once when it needs the handle. Status costs nothing.
 
 Two skills teach the model to use X well:
 
-- `x`: searching and citing, the cost of each call, your own timeline and bookmarks, personal data, and X's
-  untrusted text.
+- `x`: searching and citing, the cost of each call, your own timeline and bookmarks, personal data, and X
+  content as untrusted data.
 - `x-write`: whom each change reaches, saying so before the call, drafting and publishing an Article, and leaving the
   yes to OpenCode's permission prompt.
 
