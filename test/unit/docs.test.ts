@@ -20,7 +20,9 @@ const FILES = [
 const KNOWN = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
 const text = (file: string) => readFileSync(join(ROOT, file), "utf8").replace(/\s+/g, " ")
 // Every code the plugin raises, whether through an error helper or a status field.
-const CODES = ["OPTIONS_INVALID", "HOST_UNTESTED", "CLIENT_ID_MISSING", "CLIENT_ID_INVALID", "STATUS_UNAVAILABLE", "SKILLS_INVALID", "SERVER_NOT_REGISTERED", "RULES_NOT_ADDED"]
+const CODES = ["OPTIONS_INVALID", "HOST_UNTESTED", "CLIENT_ID_MISSING", "CLIENT_ID_INVALID", "STATUS_UNAVAILABLE", "SKILLS_INVALID", "SERVER_NOT_REGISTERED", "RULES_NOT_ADDED", "X_BUDGET"]
+// The tools RPC's budget code names the vendor on purpose: it is the plugin's own, not a shared host code.
+const PREFIXED = ["X_BUDGET"]
 
 describe("docs", () => {
   test.each(FILES)("%s states no count of read, write or declared tools that could go stale", (file) => {
@@ -82,15 +84,24 @@ describe("docs", () => {
       expect(body).toContain('{ "action": "x_create_posts", "resource": "*", "effect": "deny" }')
     }
     expect(text("docs/configuration.md")).toContain("This plugin documents no `allow` for a write")
-    // No document may teach an allow for a private write or the public write.
+    // No document may teach an allow for a private write or the public write, except the scripting guide's own session
+    // grant: v2 requires a write to be granted by a prior rule, and that rule must be reviewable and scoped to the
+    // script's session.
     const writeActions = [...WRITE_TOOLS, ...PUBLIC_TOOLS].map((tool) => `x_${tool}`)
-    for (const file of FILES) {
+    for (const file of FILES.filter((name) => name !== "docs/scripting.md")) {
       const raw = readFileSync(join(ROOT, file), "utf8")
       for (const action of writeActions) {
         expect({ file, action, allowed: new RegExp(`"action":\\s*"${action}"[^}]*"effect":\\s*"allow"`).test(raw) }).toEqual({ file, action, allowed: false })
       }
     }
     expect(text("README.md")).toContain("this plugin documents no `allow` for one")
+    // The scripting guide's one grant for a write is a session's own permissions, after a blanket deny, never an
+    // agent's rules or the top-level config.
+    const scripting = readFileSync(join(ROOT, "docs/scripting.md"), "utf8")
+    const grant = /"permissions":\[([^\]]*)\]/.exec(scripting)?.[1] ?? ""
+    expect(grant).toContain('{"action":"x_create_users_bookmark","resource":"*","effect":"allow"}')
+    expect(scripting).toContain("Session rules come after the agent's")
+    expect(scripting).not.toMatch(/"agents"\s*:\s*\{[^}]*"permissions"/)
   })
 
   test("the secret has a documented environment route, and no example puts a literal one in the config", () => {
@@ -174,7 +185,7 @@ describe("docs", () => {
     const errors = /## Errors(.*?)## /.exec(text("docs/configuration.md"))?.[1] ?? ""
     const troubleshooting = /## Troubleshooting(.*?)## /.exec(text("README.md"))?.[1] ?? ""
     for (const code of CODES) {
-      expect(code).not.toStartWith("X_")
+      expect(PREFIXED.includes(code)).toBe(code.startsWith("X_"))
       expect(errors).toContain(`| \`${code}\` |`)
       expect({ code, inReadme: troubleshooting.includes(`\`${code}\``) }).toEqual({ code, inReadme: true })
     }
@@ -214,13 +225,16 @@ describe("docs", () => {
     expect(guide).toContain(`Declared: ${skills.map((name) => `\`${name}\``).join(", ")}.`)
   })
 
-  test("the scripting guide points at the known reads, and gives X's cost and rate limits", () => {
+  test("the scripting guide points at the methods table, and gives X's cost, budget and rate limits", () => {
     const guide = text("docs/scripting.md")
-    expect(guide).toContain("(`READ_TOOLS` in `src/x-tools.ts`)")
+    expect(guide).toContain("(`METHODS` in `src/host/tools-rpc.ts`)")
+    expect(guide).toContain("`scriptBudgetUsd`")
+    expect(guide).toContain("`X_BUDGET`")
+    expect(guide).toContain("x-opencode-directory")
     expect(guide).toContain("Every call costs money")
     expect(guide).toContain("x-rate-limit-reset")
     expect(guide).toContain("make calls one at a time")
-    expect(guide).toContain("Never page in a loop")
+    expect(guide).toContain("A loop is still a loop")
     expect(guide).toContain("`start_time` and `end_time`")
   })
 

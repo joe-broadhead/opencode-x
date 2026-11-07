@@ -3,7 +3,7 @@
 The plugin is a thin layer over X's official MCP server. OpenCode owns the MCP transport, OAuth, credentials,
 permission prompts and tool output limits. The plugin registers the server with the user's own X app as its OAuth
 client, names its `/connect` entries, adds default permission rules, reports status, ships two skills, and lets
-scripts call the known reads through a tools RPC. It adds no tool of its own, makes no X call of its own, and has no
+scripts call the known tools through a tools RPC. It adds no tool of its own, makes no X call of its own, and has no
 runtime dependencies.
 
 ## Layout
@@ -111,17 +111,19 @@ Status makes no X call, because every call costs money.
 
 ## Tools RPC
 
-`x.posts.tools` lets a script call the known reads with no model; [Scripting](scripting.md) is the user's view. Its
-methods are `describe` and one per name in `READ_TOOLS`, named after the upstream tool. It is an allowlist:
-`WRITE_TOOLS`, `PUBLIC_TOOLS`, `DENY_TOOLS` and a tool that X adds later are never methods. `describe` reports each
-method as available or not from what OpenCode lists now.
+`x.posts.tools` lets a script call X's tools with no model; [Scripting](scripting.md) is the user's view. Its
+methods are `describe` and one per entry in `METHODS`, which classifies every known tool by its exact name: the reads,
+the private writes, the public send and the deny-by-default tools. A tool that X adds later is not a method.
+`describe` reports each method's class, its availability from what OpenCode lists now, and, given a session, its
+resolved permission. The model path is unchanged; the RPC's shapers reproduce its hooks: `shapeInput` allows X's 100
+results and pagination and stops a session at its budget, and `shapeResult` appends the actual-cost line.
 
 A call is `{ sessionID, input }`. The module:
 
 1. looks up the session with `ctx.session.get`, and its agent's rules with `ctx.agent.get` in the session's location
    (`SESSION_UNKNOWN`, `SESSION_AGENT_REQUIRED`);
-2. refuses the tool when the last rule that matches `x_<tool>` on `*`, in the agent's rules followed by the session's,
-   is a deny: OpenCode hides such a tool from the model (`PERMISSION_DENIED`);
+2. resolves the method's action against the agent's rules and then the session's, and refuses anything but `allow`
+   (`PERMISSION_DENIED`): an `ask` cannot be answered, and a `deny` is hidden; either refuses before any tool call;
 3. refuses with `SERVER_CONFLICT` while `x` is a user server at another URL; an adopted server is the plugin's;
 4. without a client and without a user entry, refuses with `CLIENT_ID_MISSING` or `CLIENT_ID_INVALID` and the
    `/connect` next step;
@@ -134,8 +136,8 @@ A call is `{ sessionID, input }`. The module:
    when it has none) and the tool's text parts.
 
 While a call runs, its id is live. A `permission.hook("evaluate")` turns an `ask` whose source id is live into a deny,
-so the script gets `PERMISSION_DENIED` at once and no prompt waits. It changes nothing else; this is the plugin's only
-permission hook, and the forbidden scan allows exactly this one.
+so an inner action a method needs is named in the refusal and no prompt waits. It changes nothing else; this is the
+plugin's only permission hook, and the forbidden scan allows exactly this one.
 
 A `Tool.Error` with a cause is a permission refusal; one without a cause is X's own error (`isError`), which becomes
 `UPSTREAM_ERROR` with its first line, at most 300 characters, with tokens and URL queries removed. Any other failure is

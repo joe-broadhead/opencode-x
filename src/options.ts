@@ -1,4 +1,5 @@
 import { REDIRECT_URI, SCOPES } from "./constants.js"
+import { DEFAULT_SCRIPT_BUDGET_USD } from "./billing.js"
 
 export interface Options {
   /** Pins the X app, for example in an organisation's managed config. Otherwise the /connect X app entry sets it. */
@@ -9,6 +10,8 @@ export interface Options {
   readonly scopes: readonly string[]
   readonly clientSecret?: string
   readonly allowUntestedHost: boolean
+  /** The per-session spend budget a script gets, in USD. Every X call a script makes counts against it. */
+  readonly scriptBudgetUsd: number
 }
 
 /** A rejected option. Messages name the field and never echo its value. */
@@ -23,7 +26,7 @@ export type ParsedOptions =
   | { readonly ok: true; readonly options: Options }
   | { readonly ok: false; readonly error: OptionsError }
 
-const TOP_KEYS = ["oauth", "allowUntestedHost"]
+const TOP_KEYS = ["oauth", "allowUntestedHost", "scriptBudgetUsd"]
 const OAUTH_KEYS = ["client_id", "redirect_uri", "callback_port", "scopes", "client_secret"]
 const NO_SPACES = /^\S+$/
 
@@ -115,6 +118,12 @@ export function parseOptions(input: unknown): ParsedOptions {
     return fail("allowUntestedHost", "Must be true or false.", "Set it to true only to run on an OpenCode version outside the supported range.")
   }
 
+  // The budget bounds a runaway script. The default is $1.00; a huge value is nearly always a typo, so it is refused.
+  const scriptBudgetUsd = raw.scriptBudgetUsd ?? DEFAULT_SCRIPT_BUDGET_USD
+  if (typeof scriptBudgetUsd !== "number" || !Number.isFinite(scriptBudgetUsd) || scriptBudgetUsd <= 0 || scriptBudgetUsd > 1_000) {
+    return fail("scriptBudgetUsd", "Must be a number greater than 0 and at most 1000.", "Set the per-session spend budget in US dollars, for example 1.00.")
+  }
+
   return {
     ok: true,
     options: {
@@ -124,6 +133,7 @@ export function parseOptions(input: unknown): ParsedOptions {
       scopes: [...scopes],
       ...(clientSecret === undefined ? {} : { clientSecret }),
       allowUntestedHost,
+      scriptBudgetUsd,
     },
   }
 }

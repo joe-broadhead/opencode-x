@@ -69,6 +69,40 @@ const scriptCall = (host: Host, method: string, input: object) =>
     (error: unknown) => JSON.stringify(error, Object.getOwnPropertyNames(error ?? {})),
   )
 
+/** A session for the tools RPC, with optional rules after the agent's own. */
+const scriptSession = async (host: Host, agent = "build", permissions?: Rule[]) =>
+  (
+    await (
+      host.client.sessions.create as unknown as (input: object) => Promise<{ id: string }>
+    )({ agent, location: host.location, ...(permissions ? { permissions } : {}) })
+  ).id
+
+/** A tools RPC call through the host's RPC: its output, or the RPC error as JSON. A call with no location is the location case. */
+const rpcCall = (
+  host: Host,
+  method: string,
+  input: object,
+  sessionID: string,
+  location: { directory: string } | undefined = host.location,
+): Promise<{ ok: true; output: Record<string, any> } | { ok: false; error: string }> =>
+  (host.client.rpc as unknown as { call: (input: object) => Promise<unknown> })
+    .call({ rpcID: TOOLS_RPC_ID, method, input: { sessionID, input }, ...(location ? { location } : {}) })
+    .then(
+      (output) => ({ ok: true as const, output: ((output as { output?: Record<string, any> }).output ?? output) as Record<string, any> }),
+      (error: unknown) => ({ ok: false as const, error: JSON.stringify(error, Object.getOwnPropertyNames(error ?? {})) }),
+    )
+
+/** describe's output, with or without a session. */
+const rpcDescribe = (host: Host, sessionID?: string) =>
+  (host.client.rpc as unknown as { call: (input: object) => Promise<{ output?: Record<string, any> }> })
+    .call({
+      rpcID: TOOLS_RPC_ID,
+      method: "describe",
+      input: sessionID === undefined ? {} : { sessionID },
+      location: host.location,
+    })
+    .then((result) => (result.output ?? result) as Record<string, any>)
+
 const statusRpc = (host: Host) => (host.client.rpc as unknown as (definition: typeof StatusRpc) => { status: (input: object, options: object) => Promise<Record<string, unknown>> })(StatusRpc).status({}, { location: host.location })
 
 describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
@@ -138,19 +172,93 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     for (const tool of DENIED_SAMPLE) expect(hidden(rules, `x_${tool}`)).toBe(true)
   })
 
-  test("no script reaches a write, the public publish or an unknown tool: the tools RPC has no such method", async () => {
-    const sessionID = await session(host)
-    const described = await scriptCall(host, "describe", {})
-    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENIED_SAMPLE, "shiny_new_tool"]) {
-      expect(described).not.toContain(tool)
-      const call = (host.client.rpc as unknown as { call: (input: object) => Promise<unknown> }).call
-      const outcome = await call({ rpcID: TOOLS_RPC_ID, method: tool, input: { sessionID, input: { query: "q" } }, location: host.location }).then(
-        (output) => ({ ran: true, output }),
-        (error: unknown) => ({ ran: false, error: JSON.stringify(error, Object.getOwnPropertyNames(error ?? {})) }),
-      )
-      expect(outcome).toMatchObject({ ran: false })
-      expect(host.fake.calls).not.toContain(tool)
-    }
+  test("the tools RPC: a read runs with the cost line, a script's page keeps X's maximum and its token", async () => {
+    await xTools(host)
+    const sessionID = await scriptSession(host)
+    const read = await rpcCall(host, "search_posts_all", { query: "cost", max_results: 10 }, sessionID)
+    expect(read.ok).toBe(true)
+    expect((read as unknown as { output: { text: string } }).output.text).toContain("Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15.")
+    // The model path caps a read at ten and drops the token; a script, whose code the user approved, gets as it asked.
+    const wide = await rpcCall(host, "search_posts_all", { query: "q", max_results: 25, pagination_token: "p1" }, sessionID)
+    expect(wide.ok).toBe(true)
+    expect(host.fake.callArguments.at(-1)).toEqual({ query: "q", max_results: 25, pagination_token: "p1" })
+  })
+
+  test("the tools RPC: a write that would ask is refused before dispatch, with no server call", async () => {
+    await xTools(host)
+    const sessionID = await scriptSession(host)
+    const before = host.fake.calls.length
+    const refused = await rpcCall(host, "create_users_bookmark", { id: "1" }, sessionID)
+    expect(refused.ok).toBe(false)
+    expect((refused as unknown as { error: string }).error).toContain("PERMISSION_DENIED")
+    expect((refused as unknown as { error: string }).error).toContain("would ask")
+    expect(host.fake.calls.length).toBe(before)
+  })
+
+  test("the tools RPC: a write the session allows runs, including the public Post", async () => {
+    await xTools(host)
+    const sessionID = await scriptSession(host, "build", [
+      { action: "x_*", resource: "*", effect: "deny" },
+      { action: "x_create_users_bookmark", resource: "*", effect: "allow" },
+    ])
+    const allowed = await rpcCall(host, "create_users_bookmark", { id: "1" }, sessionID)
+    expect(allowed.ok).toBe(true)
+    expect(host.fake.calls).toContain("create_users_bookmark")
+  })
+
+  test("the tools RPC: a deny refuses, and an off tool is refused as hidden, with no server call", async () => {
+    await xTools(host)
+    const denied = await scriptSession(host, "build", [{ action: "x_*", resource: "*", effect: "deny" }])
+    const before = host.fake.calls.length
+    const refused = await rpcCall(host, "search_posts_all", { query: "q" }, denied)
+    expect((refused as unknown as { error: string }).error).toContain("PERMISSION_DENIED")
+    expect((refused as unknown as { error: string }).error).toContain("hidden from this session's agent by a deny rule")
+    const off = await rpcCall(host, "users_id_block", { id: "1", target_user_id: "2" }, await scriptSession(host))
+    expect((off as unknown as { error: string }).error).toContain("hidden from this session's agent by a deny rule")
+    expect(host.fake.calls.length).toBe(before)
+  })
+
+  test("the tools RPC: describe names every method with its class, and each permission for a session", async () => {
+    await xTools(host)
+    const sessionID = await scriptSession(host)
+    const described = await rpcDescribe(host, sessionID)
+    const methods = described.methods as { name: string; class: string; permission?: string }[]
+    expect(methods).toHaveLength(100)
+    const counts: Record<string, number> = {}
+    for (const method of methods) counts[method.class!] = (counts[method.class!] ?? 0) + 1
+    expect(counts).toEqual({ read: 51, write: 8, send: 1, destructive: 40 })
+    const permission = Object.fromEntries(methods.map((method) => [method.name, method.permission]))
+    expect(permission.search_posts_all).toBe("allow")
+    expect(permission.create_users_bookmark).toBe("ask")
+    expect(permission.users_id_block).toBe("deny")
+    expect(described.location).toBe(host.location.directory)
+    expect(described.locationHint).toContain("x-opencode-directory")
+    // Without a session there is no permission field.
+    const plain = await rpcDescribe(host)
+    expect((plain.methods as object[]).every((method) => !Object.hasOwn(method, "permission"))).toBe(true)
+  })
+
+  test("the tools RPC: the location decides; a session this location does not know is SESSION_UNKNOWN and names the header", async () => {
+    await xTools(host)
+    const sessionID = await scriptSession(host)
+    expect((await rpcCall(host, "search_posts_all", { query: "q" }, sessionID)).ok).toBe(true)
+    // The embedded client always names a location, so the host's own rpc.unavailable answer is the shared suite's case;
+    // what this plugin owns is the refusal and the next step that selects the right location.
+    const refused = await rpcCall(host, "search_posts_all", { query: "q" }, "ses_missing_in_this_location")
+    expect(refused.ok).toBe(false)
+    expect((refused as unknown as { error: string }).error).toContain("SESSION_UNKNOWN")
+    expect((refused as unknown as { error: string }).error).toContain("x-opencode-directory")
+  })
+
+  test("the tools RPC: a session that spends its budget is refused with X_BUDGET before the next call", async () => {
+    await xTools(host)
+    const sessionID = await scriptSession(host)
+    for (let call = 0; call < 7; call++) expect((await rpcCall(host, "search_posts_all", { query: "cost" }, sessionID)).ok).toBe(true)
+    const before = host.fake.calls.length
+    const refused = await rpcCall(host, "search_posts_all", { query: "cost" }, sessionID)
+    expect((refused as unknown as { error: string }).error).toContain("X_BUDGET")
+    expect((refused as unknown as { error: string }).error).toContain("scriptBudgetUsd")
+    expect(host.fake.calls.length).toBe(before)
   })
 
   test("P4: a saved 'Always allow' removes the prompt", async () => {

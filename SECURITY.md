@@ -93,24 +93,31 @@ Things to know:
 ## Scripts
 
 The tools RPC (`x.posts.tools`, see
-[docs/scripting.md](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md)) runs X's known read tools
-for a script, with no model. It adds no authority:
+[docs/scripting.md](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md)) calls X's tools for a
+script, with no model. Every known tool is a method, with its class, but a method is not a grant:
 
-- A script names a session that names an agent, and runs as them. A tool that the agent's or the session's rules hide
-  from the model is refused. OpenCode's own executor then checks the call against the agent's rules, the session's
-  rules and saved approvals, as it does for the model. A session in another directory than the server answering the
-  call runs under the serving location's agent rules, and only a deny is refused in between: the README's known limits
-  say so.
-- An ask on a script's call is denied, not prompted: no one is there to answer it. The plugin's permission hook
-  changes only an ask on one of its own script calls in flight, only to a deny, and leaves every other call alone.
-- Only the known reads are methods. The bookmark and list changes, the Article draft, the public `create_posts` and
-  a tool that X adds later never are, even with an allow rule.
+- A script names a session that names an agent, and runs as them. Before any call, the plugin resolves that method's
+  permission action against the agent's rules and then the session's rules, the host's own order. Only `allow` runs: a
+  rule that resolves to `ask` is refused because no one can answer it, and a `deny` is refused. Neither makes an X
+  call. The default rules allow the reads and ask for the writes, so a script reaches a write, the public
+  `create_posts` or an off-by-default tool only with a prior explicit `allow` in the agent's or the session's rules.
+- A saved "Always allow" is **not** consulted: it lives outside the agent's and session's rules, so an old click does
+  not authorize a new script. A grant is reviewable in config, or in a Jobs one-off's approval.
+- After the resolve, the call runs through OpenCode's own executor, which checks `<server>_<tool>` again against the
+  agent's rules, the session's rules and saved approvals, as it does for the model. The plugin's permission hook still
+  changes only an `ask` on one of its own script calls in flight, only to a deny, and leaves every other call alone.
+- A tool the plugin does not classify is not a method, so a tool X adds later is unreachable by a script until a
+  release classifies it.
 - The call goes through OpenCode's own MCP connection and sign-in. The plugin never sees the token, and returns none.
 - X's error text reaches the script only as the first line, at most 300 characters, with tokens and URL query strings
   removed.
-- A script's calls are billed like any other. Keep the result count small, make calls one at a time, and never page in
-  a loop.
+- A script's calls are billed like any other. A script may page and ask for up to X's 100 results, because the user
+  approved its code; each session has a `scriptBudgetUsd` budget ($1.00 by default), counted from the billed resources
+  in the results, and at the budget the next call is refused with `X_BUDGET` before X is contacted.
+- A session in another location is `SESSION_UNKNOWN`, and a call that names no location reaches the service's default
+  location: send `x-opencode-directory` with each call.
 - OpenCode's `execute.before` and `execute.after` tool hooks, from any plugin, do not run for a script's call, so
-  another plugin's policy hook does not see it. A script's calls are not recorded in the session.
+  another plugin's policy hook does not see it. The plugin's own read cap, cost line and budget are reproduced by the
+  RPC's shapers. A script's calls are not recorded in the session.
 - The RPC is reachable only by callers of the OpenCode server API, who already hold the server's full authority. The
   session is not a login: it scopes a script to what its agent may do.

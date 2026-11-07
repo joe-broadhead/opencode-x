@@ -75,9 +75,11 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
 - **The tools RPC.** `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block
   between the `PLUGIN-SPECIFIC` markers here; change the rest in every plugin at once.
   `scripts/check-copies.mjs` holds it, and the declaration kit `test/support/jelly-kit.ts`, equal to the copy every
-  plugin carries. Its methods are `READ_TOOLS`
-  and nothing else: never a write, the public Post, a denied tool or an unknown tool. Keep the RPC id
-  `x.posts.tools` and its method names stable: scripts call them by name.
+  plugin carries. Its methods are every known tool, from `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS` and `DENY_TOOLS`,
+  each with its class, and never an unknown tool. A rule must allow a method before a script can run it: an `ask` is
+  refused, and a saved "Always allow" is not a grant. The model path keeps its ten-result cap; the RPC's `shapeInput`
+  allows X's 100 and pagination, and `shapeResult` always appends the cost line and counts the session's spend against
+  `scriptBudgetUsd`. Keep the RPC id `x.posts.tools` and its method names stable: scripts call them by name.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
   `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`.
   Every temp root of the host and pack tests is a git repository under the system's `/tmp`, never under `TMPDIR` or

@@ -2,7 +2,7 @@ import { Plugin, type Mcp } from "@opencode/plugin"
 import { reasonOf } from "./redact.js"
 import { errorText, ENDPOINT, NAMESPACE_DESCRIPTION, PLUGIN_ID, SERVER_NAME, SUPPORTED_HOST } from "./constants.js"
 import { checkHost, isSupportedHost } from "./host-version.js"
-import { registerToolsRpc } from "./host/tools-rpc.js"
+import { registerToolsRpc, METHODS, configureScriptBudget, resetScriptSpend } from "./host/tools-rpc.js"
 import { watchIntegration } from "./integration.js"
 import { watchListing } from "./listing.js"
 import { parseOptions, type Options } from "./options.js"
@@ -156,10 +156,14 @@ export function createXPlugin(seam: XSeam) {
             await delay(1_000, stopped.signal)
           }
         })()
-        // Scripts call the known reads with no model, as a session and its agent. A user's own server under the name is
-        // not this plugin's. Without a client and without a user entry there is no server: a call gets the status's
-        // code and next step, read at each call, so a client saved in /connect applies at once.
+        // Scripts call X's tools with no model, as a session and its agent: the known tools, under the session's rules.
+        // A user's own server under the name is not this plugin's. Without a client and without a user entry there is
+        // no server: a call gets the status's code and next step, read at each call, so a client saved in /connect
+        // applies at once. The budget bounds what one script session may spend.
+        configureScriptBudget(options.scriptBudgetUsd)
+        resetScriptSpend()
         stopTools = await registerToolsRpc(ctx, {
+          methods: METHODS,
           mcp: {
             server: SERVER_NAME,
             managed: () => source?.type !== "conflict",

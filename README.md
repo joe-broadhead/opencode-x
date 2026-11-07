@@ -123,16 +123,17 @@ Two skills teach the model to use X well:
 
 ### Scripts
 
-A script or a cron job can call X's read tools with no model, through `opencode api`. It runs as a session and its
-agent, under that agent's permission rules and the session's own. Writes, the public Post and unknown tools are never
-available to scripts:
+A script or a cron job can call X's tools with no model, through `opencode api`. It runs as a session and its agent,
+under that agent's permission rules and the session's own. Every known tool is a method. A read needs only the
+plugin's default rules; a write, the public Post and an off-by-default tool need a prior explicit `allow` in the
+session's or the agent's rules, because a script cannot answer a prompt. A saved "Always allow" is not enough.
 
 ```sh
-opencode api post /api/rpc/x.posts.tools/search_posts_all \
+opencode api post /api/rpc/x.posts.tools/search_posts_all -H "x-opencode-directory:$PWD" \
   -d '{"input":{"sessionID":"ses_…","input":{"query":"from:example","max_results":10}}}'
 ```
 
-Keep the result count small: every call is billed. See
+Every call is billed, and each script session has a `scriptBudgetUsd` budget, $1.00 by default. See
 [Scripting](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md).
 
 ## Permissions
@@ -244,7 +245,7 @@ Run `/x-status` first. Its last line is the next step.
 | Tools: unknown | X added tools the plugin does not know yet. They ask before they run. A known tool missing from the count is normal: X may list fewer tools for a token with fewer scopes. |
 | Access: default rules missing or not added | Some agents lack the default rules (see the agents row), or OpenCode could not add them (see the OpenCode row). Follow the next step. |
 | Account: account name not reported | Nothing is wrong: status makes no X call, and OpenCode keeps no name on this sign-in. X answers follow the account you signed in as. |
-| Answers cost more than expected | Every call is billed per resource returned. A model read is capped to one page of ten, one widening, about $0.20 an answer, and each answer reports its actual cost; a script pays the same rates, so keep its result count small and never page in a loop. |
+| Answers cost more than expected | Every call is billed per resource returned. A model read is capped to one page of ten, one widening, about $0.20 an answer, and each answer reports its actual cost; a script pays the same rates, so keep its result count small, never page in a loop, and keep its `scriptBudgetUsd` budget small. |
 | Posting asks first | `x_create_posts` is public and asks every time. Answer the prompt, or run writes interactively; `opencode run` refuses the ask. |
 | How much credit is left | Ask the model to call `x_get_usage_credits`; it returns the payer's developer-platform balance in USD. |
 | `429` | X's rate limit for that endpoint is used up. Wait for the reset X returns, and make fewer calls. |
@@ -262,6 +263,7 @@ Run `/x-status` first. Its last line is the next step.
 | `SKILLS_INVALID` | A skill file in the package is missing or broken. Reinstall the plugin. |
 | `SERVER_NOT_REGISTERED` | The plugin could not register the `x` server. Restart OpenCode. |
 | `RULES_NOT_ADDED` | The default permission rules could not be added, so X tools may run without asking. Restart OpenCode. |
+| `X_BUDGET` | A script session reached its `scriptBudgetUsd` spend. Raise the option or use another session. |
 
 A script's errors from the tools RPC have their own codes, listed in
 [Scripting](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md#errors).
@@ -280,10 +282,9 @@ A script's errors from the tools RPC have their own codes, listed in
   and caches the token in `~/.xurl`. It moves the sign-in outside `/connect` and its calls outside these permission
   rules, needs a Node download and a child process, and OpenCode cannot see its sign-in state, so this plugin does not
   use it. It remains a working fallback if you need a local bridge and accept that.
-- **A script's read can cross projects.** A script's session may belong to another directory than the OpenCode
-  server answering it, and the read then runs under the serving location's agent rules; only a `deny` is refused in
-  between. Run scripts in the project whose agent you mean. This is in the module shared with the other plugins, not
-  in this one.
+- **A script's session must be in the project you call.** A session in another directory is `SESSION_UNKNOWN`, and a
+  call that names no location goes to the service's default location, so send `-H "x-opencode-directory:$PWD"` with
+  every call. This is in the module shared with the other plugins, not in this one.
 - **In Jelly, a tool X adds is not asked about.** Jelly applies each declared tool's effect and nothing else, so an
   undeclared tool, a write included, runs without asking until a release of this plugin declares it. A Jelly admin
   can set it to ask.

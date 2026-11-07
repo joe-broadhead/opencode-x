@@ -30,7 +30,8 @@ Make the call; do not `search()` for a tool in this block. Every post read sends
   not found, ask which account is meant, and never list misspelled, renamed, suspended, deactivated or deleted as
   possible causes; posts only if asked.
 - `search_posts_all`: `query`, `start_time`, `end_time`, `max_results` 10, `sort_order` "recency"; $0.005 a post + $0.010 an author.
-- `get_posts_by_id`: `id`; $0.005 a post + $0.010 an author.
+- `get_posts_by_id`: `id`; $0.005 a post + $0.010 an author. An Article's full text comes from `get_posts_by_ids`
+  with `post.fields` "article": each post's `article.plain_text` holds it.
 - `get_users_mentions`: `id` from one `get_users_me` per session (reuse it, never guess), `start_time`, `end_time`,
   `max_results` 10; Owned Read, about $0.001 a post; say the count (0 included), and don't widen an empty one.
 - `get_posts_counts_recent`: `query`, `granularity` "hour", `start_time`, `end_time`; about $0.01, last 7 days only; "right now" is today's local midnight to now minus 10 seconds.
@@ -91,5 +92,7 @@ sign in again. `client-not-enrolled` means the app is not Pay-per-use, Productio
 
 ## Scripts
 
-A script calls the known reads through `x.posts.tools`, with no model, as a session and its agent: create a session
-for the script, never borrow one, and make one call at a time. Keep the result count small: every call is billed.
+A script calls X's tools through `x.posts.tools`, with no model, as a session and its agent: create a session for
+the script, never borrow one, and make one call at a time. A read runs on the default rules; a write, the public Post
+and an off tool need a prior explicit allow in the session's or the agent's rules. Every call is billed, and each
+script session stops at its budget.

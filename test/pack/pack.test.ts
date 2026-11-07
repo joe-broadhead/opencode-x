@@ -276,8 +276,8 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
   const sessions: Record<string, string> = {}
 
   /** A tools RPC call: its output, or the error's `{ type, code, message }`. */
-  async function script(method: string, input: unknown): Promise<Record<string, any>> {
-    const response = await host.request("POST", `/api/rpc/${TOOLS_RPC_ID}/${method}`, { input })
+  async function script(method: string, input: unknown, location: string | undefined = host.directory, headers: Record<string, string> = {}): Promise<Record<string, any>> {
+    const response = await host.request("POST", `/api/rpc/${TOOLS_RPC_ID}/${method}`, { input }, location, headers)
     const body = response.body as Record<string, any>
     if (response.ok) return { value: body.output }
     const error = (body?.error ?? body) as Record<string, any>
@@ -312,6 +312,8 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     // Session rules come after the agent's: one narrows build, the other reopens one tool for locked.
     sessions.narrow = await create({ agent: "build", permissions: [rule(`x_${READ_A}`, "deny")] })
     sessions.reopen = await create({ agent: "locked", permissions: [rule(`x_${READ_A}`, "allow")] })
+    // A script's own grant: a blanket deny, then one write and the public send, for that session only.
+    sessions.granted = await create({ agent: "build", permissions: [rule("x_*", "deny"), rule("x_create_users_bookmark", "allow"), rule("x_create_posts", "allow")] })
   }, 600_000)
   afterAll(async () => {
     await host?.close()
@@ -325,10 +327,13 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(fake.calls.slice(from)).toEqual([])
   })
 
-  test("describes exactly the known reads, each available with its live schema", async () => {
+  test("describes exactly the known tools, each with its class, available and with its live schema", async () => {
     const { value } = await script("describe", {})
     expect(value.id).toBe(TOOLS_RPC_ID)
-    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...READ_TOOLS])
+    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS])
+    const classes: Record<string, string> = {}
+    for (const method of value.methods) classes[method.class] = (classes[method.class] ?? "") + "."
+    expect(classes).toEqual({ read: ".".repeat(READ_TOOLS.length), write: ".".repeat(WRITE_TOOLS.length), send: ".", destructive: ".".repeat(DENY_TOOLS.length) })
     for (const method of value.methods) {
       expect({ name: method.name, kind: method.kind, action: method.action, available: method.available }).toEqual({
         name: method.name,
@@ -337,7 +342,17 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
         available: true,
       })
       expect(method.input).toEqual({ type: "object", properties: { query: { type: "string" } } })
+      expect(Object.hasOwn(method, "permission")).toBe(false)
     }
+    expect(value.unclassified).toEqual([NEW_TOOL.name])
+  })
+
+  test("with a session, gives each method's resolved permission", async () => {
+    const { value } = await script("describe", { sessionID: sessions.build })
+    const permission = Object.fromEntries(value.methods.map((method: { name: string; permission: string }) => [method.name, method.permission]))
+    expect(permission[READ_A]).toBe("allow")
+    expect(permission.create_users_bookmark).toBe("ask")
+    expect(permission.users_id_block).toBe("deny")
   })
 
   test("runs a known read as the session's agent, with no model turn", async () => {
@@ -354,13 +369,32 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(await call("build", READ_B, { query: "text" })).toEqual({ value: { output: `text from ${READ_B}`, text: `text from ${READ_B}` } })
   })
 
-  test("never makes a known write, a denied tool or an unknown tool a method, though OpenCode lists them all", async () => {
+  test("never makes an unknown tool a method, though OpenCode lists it", async () => {
     const from = fake.calls.length
-    for (const name of [...WRITE_TOOLS, ...PUBLIC_TOOLS, "send_chat_message", "users_id_block", "add_lists_member", NEW_TOOL.name]) {
+    expect(await call("build", NEW_TOOL.name, { query: "q" })).toMatchObject({ type: "rpc.method_not_found" })
+    expect(toolCalls(from)).toEqual([])
+  })
+
+  test("refuses a write, the public Post and an off tool that no rule allows, before X is called", async () => {
+    const from = fake.calls.length
+    for (const name of ["create_users_bookmark", "create_posts", "send_chat_message"]) {
       const result = await call("build", name, { query: "q" })
-      expect({ name, type: result.type }).toEqual({ name, type: "rpc.method_not_found" })
+      expect({ name, code: result.code }).toEqual({ name, code: "PERMISSION_DENIED" })
+      expect(result.message).toMatch(/would ask|hidden from this session's agent/)
     }
     expect(toolCalls(from)).toEqual([])
+  })
+
+  test("runs a write and the public Post that the session's own rules allow", async () => {
+    const from = fake.called.length
+    expect((await call("granted", "create_users_bookmark", { query: "q" })).value).toMatchObject({ output: { tool: "create_users_bookmark" } })
+    expect((await call("granted", "create_posts", { query: "q" })).value).toMatchObject({ output: { tool: "create_posts" } })
+    expect(fake.called.slice(from)).toEqual([
+      { tool: "create_users_bookmark", path: "/mcp" },
+      { tool: "create_posts", path: "/mcp" },
+    ])
+    // The same session's blanket deny still refuses every other tool.
+    expect(await call("granted", READ_A, { query: "q" })).toMatchObject({ code: "PERMISSION_DENIED" })
   })
 
   test("refuses a session whose agent denies X, before X is called", async () => {
@@ -373,7 +407,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     const from = fake.calls.length
     const result = await call("careful", READ_A, { query: "q" })
     expect(result).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
-    expect(result.message).toMatch(/cannot answer an approval prompt/)
+    expect(result.message).toMatch(/would ask for this session's agent, and a script cannot answer/)
     const { data: pending } = await host.api<{ data: unknown[] }>("GET", "/api/permission/request")
     expect(pending.filter((request) => JSON.stringify(request).includes(sessions.careful!))).toEqual([])
     expect(toolCalls(from)).toEqual([])
@@ -403,6 +437,32 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     for (const envelope of [{ sessionID: sessions.build, input: { query: "q" }, extra: true }, { input: { query: "q" } }, { sessionID: sessions.build, input: "q" }])
       expect(await script(READ_A, envelope)).toMatchObject({ type: "rpc.invalid_input" })
     expect(toolCalls(from)).toEqual([])
+  })
+
+  test("stops a session at its spend budget with X_BUDGET, before the next X call", async () => {
+    const budgeted = await (async () => {
+      const created = await host.api<Record<string, any>>("POST", "/api/session", { agent: "build" })
+      return (created.id ?? created.data?.id) as string
+    })()
+    // The fake's "cost" search returns ten posts and their ten authors, $0.15 a call; the default budget is $1.00.
+    for (let read = 0; read < 7; read++) expect((await call(budgeted, READ_A, { query: "cost" })).value).toBeDefined()
+    const from = fake.calls.length
+    const refused = await call(budgeted, READ_A, { query: "cost" })
+    expect(refused.code).toBe("X_BUDGET")
+    expect(refused.message).toMatch(/scriptBudgetUsd/)
+    expect(fake.calls.length).toBe(from)
+  })
+
+  test("the location decides: another location answers rpc.unavailable, and the query and the header name this one", async () => {
+    // A second directory in the same temp root, with no plugin: the host answers before any handler runs.
+    const elsewhere = join(host.directory, "..", "elsewhere")
+    mkdirSync(elsewhere, { recursive: true })
+    const body = { input: { sessionID: sessions.build, input: { query: "q" } } }
+    const missing = await host.request("POST", `/api/rpc/${TOOLS_RPC_ID}/${READ_A}`, body, elsewhere)
+    expect(missing.ok).toBe(false)
+    expect(missing.text).toContain("rpc.unavailable")
+    expect((await host.request("POST", `/api/rpc/${TOOLS_RPC_ID}/${READ_A}`, body, host.directory)).ok).toBe(true)
+    expect((await host.request("POST", `/api/rpc/${TOOLS_RPC_ID}/${READ_A}`, body, undefined, { "x-opencode-directory": host.directory })).ok).toBe(true)
   })
 
   // Last in this block: from here the fake answers every MCP request with X's sign-in challenge. X has no
@@ -492,11 +552,11 @@ async function serve(version: string, installed: string, options: { readonly nam
   const exited = new Promise((done) => server.once("exit", done))
 
   const authorization = `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`
-  /** The response's status and parsed body, whatever the status. */
-  const request = async (method: string, path: string, body?: unknown, location = directory) => {
+  /** The response's status and parsed body, whatever the status. A call with no location is the location case. */
+  const request = async (method: string, path: string, body?: unknown, location: string | undefined = directory, headers: Record<string, string> = {}) => {
     const url = new URL(path, `http://127.0.0.1:${port}`)
-    url.searchParams.set("location[directory]", location)
-    const response = await fetch(url, { method, headers: { authorization, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) })
+    if (location !== undefined) url.searchParams.set("location[directory]", location)
+    const response = await fetch(url, { method, headers: { authorization, "content-type": "application/json", ...headers }, body: body === undefined ? undefined : JSON.stringify(body) })
     const text = await response.text()
     let parsed: unknown = text
     try {

@@ -64,6 +64,25 @@ export function clampRead(tool: string, input: unknown) {
   delete call.pagination_token
 }
 
+/** The per-session spend budget a script gets, in USD, until the plugin's `scriptBudgetUsd` option sets it. */
+export const DEFAULT_SCRIPT_BUDGET_USD = 1
+
+/**
+ * The script path's shape for a billed read: X's own maximum page of 100, and the next-page token as the script wrote
+ * it, because the user approved the script's code. The model path's ten-result cap and token strip are unchanged, in
+ * `clampRead`.
+ */
+export function widenRead(tool: string, input: unknown) {
+  const name = nameOf(tool)
+  const parameters = PARAMETERS[name]
+  if (parameters === undefined || !input || typeof input !== "object") return
+  const call = input as Record<string, unknown>
+  if (!parameters.some((entry) => entry.split(":")[0] === "max_results")) return
+  const size = call.max_results
+  if (typeof size !== "number" || !Number.isFinite(size)) return
+  call.max_results = Math.min(Math.max(1, Math.floor(size)), 100)
+}
+
 const payloadOf = (value: unknown, depth = 0): Record<string, unknown> | undefined => {
   if (depth > 3 || !value || typeof value !== "object") return undefined
   const record = value as Record<string, unknown>
@@ -112,6 +131,11 @@ export function costOf(tool: string, result: Result): ReadCost | undefined {
     return { posts: OWNED_TOOLS.has(name) ? 0 : posts, owned, users, counts: 0, total: posts * rate + users * USER }
   }
   return undefined
+}
+
+/** A tools-RPC result's billed cost, read by the same rules: its structured content, or its text when it has none. */
+export function scriptCostOf(tool: string, result: { readonly output?: unknown; readonly text: string }): ReadCost | undefined {
+  return costOf(tool, { content: result.text, ...(result.output === undefined ? {} : { output: result.output }) })
 }
 
 export const mergeCosts = (costs: readonly ReadCost[]): ReadCost => ({
