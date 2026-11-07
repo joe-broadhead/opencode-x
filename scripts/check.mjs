@@ -32,6 +32,7 @@ const stages = {
   host: host,
   pack: () => run("bun", ["test", "./test/pack"]),
   forbidden: () => run("node", ["scripts/check-forbidden.mjs"]),
+  copies: () => run("node", ["scripts/check-copies.mjs"]),
   whitelist: whitelist,
 }
 
