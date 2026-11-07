@@ -28,7 +28,7 @@ carries no vendor marks, colours or letterforms: only our own Neutral slate tile
 
 ## Tools and permissions
 
-100 tools are declared: 51 reads run, 8 private writes and the public `x_create_posts` ask, and 40 are off — every tool in `src/x-tools.ts`. Jelly's agents have no base "allow
+100 tools are declared (58 read-only): 51 reads run, 8 private writes and the public `x_create_posts` ask, and 40 are off, 7 of them reads of DMs and keys — every tool in `src/x-tools.ts`. Jelly's agents have no base "allow
 everything" rule, so this plugin's own default rules, which it puts after that rule, never reach them. Jelly writes
 each declared `ask` or `deny` as that tool's default instead (the person's own choice replaces it), and denies a
 read-only helper every tool not marked `readOnly`. A declared `allow` changes nothing in Jelly.
@@ -46,6 +46,10 @@ A tool X adds later, a write included, is not declared, so in Jelly it is not as
 even if it changes something, until a new version of this plugin declares it. The plugin itself denies a future tool
 of a denied effect, but Jelly does not, so set it to deny there. Keep `jelly.tools` in step with `src/x-tools.ts`;
 `test/unit/jelly.test.ts` checks the list against it, and each declared effect against the plugin's own default rules.
+
+The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page
+against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit, and the shared part of the tools
+RPC (`src/host/tools-rpc.ts`), equal to the copy every plugin carries.
 
 ## Skills
 

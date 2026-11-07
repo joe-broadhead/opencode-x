@@ -91,7 +91,7 @@
   },
   "jelly": {
     "title": "X",
-    "summary": "Search and read X, post publicly with approval, manage bookmarks and lists, and draft Articles.",
+    "summary": "X posts, profiles, timelines, news and trends, and your bookmarks, lists and Article drafts.",
     "icon": "assets/icon.svg",
     "tools": [
       {
