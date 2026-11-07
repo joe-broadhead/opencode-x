@@ -65,14 +65,17 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
   neither, and no doc or skill suggests a workaround.
 - **The `jelly` section** of `package.json` declares every known tool, the skills, the sign-in, a one-line `summary`
   and the `icon`, with only the keys Jelly reads: its contracts drop an unknown top-level key, and refuse an unknown
-  key inside a tool, sign-in or `contributes` entry. `test/unit/jelly.test.ts` keeps it in step with the tool lists and
-  the default rules.
+  key inside a tool, sign-in or `contributes` entry. The summary names what the plugin reaches and states no policy.
+  `test/unit/jelly.test.ts` runs the shared declaration kit, `test/support/jelly-kit.ts`, against Jelly's plugin
+  authors' standard, and keeps the section in step with the tool lists and the default rules.
 - **The icon** `assets/icon.svg` is a Neutral slate tile with a spine, three nodes and three rules: no X logo, no "𝕏"
   glyph and no brand black, because the plugin is unofficial. It uses only the drawing elements Jelly's icon cleaner
-  keeps, and no `<title>`, which the cleaner refuses.
+  keeps, and no `<title>`: the `jelly.title` is the accessible name.
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
 - **The tools RPC.** `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block
-  between the `PLUGIN-SPECIFIC` markers here; change the rest in the shared copy first. Its methods are `READ_TOOLS`
+  between the `PLUGIN-SPECIFIC` markers here; change the rest in every plugin at once.
+  `scripts/check-copies.mjs` holds it, and the declaration kit `test/support/jelly-kit.ts`, equal to the copy every
+  plugin carries. Its methods are `READ_TOOLS`
   and nothing else: never a write, the public Post, a denied tool or an unknown tool. Keep the RPC id
   `x.posts.tools` and its method names stable: scripts call them by name.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
