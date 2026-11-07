@@ -165,7 +165,7 @@ const append = (result: Result, line: string) => {
 
 /**
  * Registers the read cap and the cost line. `execute.before` can change an MCP call's arguments on the model path and
- * in Code Mode; `execute.after` can add the line to the result. Both were verified on 2.2.3, 2.2.4 and 2.2.5. In Code
+ * in Code Mode; `execute.after` can add the line to the result. Both were verified on 2.2.3, 2.2.4, 2.2.5 and 2.2.6. In Code
  * Mode the inner calls are summed and one line goes on the `execute` result the model reads.
  */
 export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">, managed: () => boolean) {

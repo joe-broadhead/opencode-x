@@ -292,7 +292,7 @@ describe("setup", () => {
   })
 
   test("a host outside the range runs with the override, and an untested release inside the range runs without it", async () => {
-    for (const [input, version] of [[{ allowUntestedHost: true }, "2.3.0"], [{}, "2.2.6"]] as const) {
+    for (const [input, version] of [[{ allowUntestedHost: true }, "2.3.0"], [{}, "2.2.99"]] as const) {
       const { ctx, mcp } = context(input, version)
       const cleanup = await createXPlugin(seam).setup(ctx)
       expect(mcp.callbacks).toHaveLength(1)

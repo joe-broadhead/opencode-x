@@ -297,13 +297,13 @@ describe("buildStatus", () => {
     const status = buildStatus({ ...base, host: outside, problems: [problem] })
     expect(status.nextStep).toBe("Reinstall the plugin.")
     expect(formatStatus(status)).toContain(
-      `- OpenCode: 2.3.0 (untested; supported range >=2.2.3 <2.3.0). It is outside the supported range; the plugin runs because allowUntestedHost is true. If X misbehaves, use OpenCode 2.2.3, 2.2.4 or 2.2.5. ${problem}`,
+      `- OpenCode: 2.3.0 (untested; supported range >=2.2.3 <2.3.0). It is outside the supported range; the plugin runs because allowUntestedHost is true. If X misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5 or 2.2.6. ${problem}`,
     )
     expect(buildStatus({ ...base, host: outside }).nextStep).toBe(NOTHING_TO_DO)
-    const inside = buildStatus({ ...base, host: checkHost("2.2.6", false) })
-    expect(inside).toMatchObject({ state: "connected", host: { version: "2.2.6", tested: false }, nextStep: NOTHING_TO_DO })
-    expect(buildStatus({ ...base, host: checkHost("2.2.6", false), server: { status: "needs_auth" } }).nextStep).toBe(SIGN_IN)
-    expect(formatStatus(inside)).toContain("- OpenCode: 2.2.6 (untested; supported range >=2.2.3 <2.3.0)\n")
+    const inside = buildStatus({ ...base, host: checkHost("2.2.99", false) })
+    expect(inside).toMatchObject({ state: "connected", host: { version: "2.2.99", tested: false }, nextStep: NOTHING_TO_DO })
+    expect(buildStatus({ ...base, host: checkHost("2.2.99", false), server: { status: "needs_auth" } }).nextStep).toBe(SIGN_IN)
+    expect(formatStatus(inside)).toContain("- OpenCode: 2.2.99 (untested; supported range >=2.2.3 <2.3.0)\n")
     expect(formatStatus(buildStatus({ ...base, host: checkHost("2.2.5", false) }))).toContain("- OpenCode: 2.2.5 (tested; supported range >=2.2.3 <2.3.0)\n")
   })
 
