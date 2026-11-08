@@ -167,6 +167,18 @@ describe("docs", () => {
     expect(readme.replace(/\s+/g, " ")).toContain(JSON.stringify(block))
   })
 
+  // R7: the configuration guide prints every value's generated block in full, and none of them is elided.
+  test.each(["all", "ask-changes", "read-only"] as const)("the configuration guide prints the %s block in full", (access) => {
+    const guide = readFileSync(join(ROOT, "docs/configuration.md"), "utf8")
+    const marker = `\`access: "${access}"\``
+    const at = guide.indexOf(marker)
+    expect({ access, found: at !== -1 }).toEqual({ access, found: true })
+    const start = guide.indexOf("```json", at)
+    const end = guide.indexOf("```", start + 7)
+    expect({ access, block: JSON.parse(guide.slice(start + 7, end)) }).toEqual({ access, block: defaultRules(access) })
+    expect(guide.slice(start, end)).not.toMatch(/…|\.\.\.|the rest/)
+  })
+
   test("every tested-hosts mention that lists 2.2.3 and 2.2.5 includes 2.2.6", () => {
     for (const file of ["README.md", "AGENTS.md", "SECURITY.md", "docs/configuration.md", "CHANGELOG.md"]) {
       const body = text(file)

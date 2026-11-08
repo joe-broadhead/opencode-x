@@ -232,11 +232,138 @@ OpenCode asserts every MCP call itself, with the action `x_<tool>` and the resou
 every agent that starts with the base rule `{ "action": "*", "resource": "*", "effect": "allow" }`, directly after it.
 The `access` option generates that block:
 
-| `access` | Block | Effect |
-| --- | --- | --- |
-| `all` (default) | `[{ "action": "x_*", "resource": "*", "effect": "allow" }]` | Every known tool, and any tool X adds later, runs without asking. |
-| `ask-changes` | `x_*` asks, then one `allow` for each of the 51 reads | Reads run; every other tool asks. |
-| `read-only` | `x_*` denies, then one `allow` for each of the 51 reads | Reads run; every other tool is denied. |
+| `access` | What runs |
+| --- | --- |
+| `all` (default) | Every known tool, and any tool X adds later, runs without asking. |
+| `ask-changes` | The 51 reads run; every other tool asks. |
+| `read-only` | The 51 reads run; every other tool is denied. |
+
+The block is generated from `defaultRules(access)`, and it is printed here in full for each value, so it can be copied
+into an agent that gets no block of its own:
+
+`access: "all"` (the default):
+
+```json
+[{"action":"x_*","resource":"*","effect":"allow"}]
+```
+
+`access: "ask-changes"`:
+
+```json
+[
+  {"action":"x_*","resource":"*","effect":"ask"},
+  {"action":"x_get_broadcast","resource":"*","effect":"allow"},
+  {"action":"x_get_broadcast_chat","resource":"*","effect":"allow"},
+  {"action":"x_get_chat_moderators","resource":"*","effect":"allow"},
+  {"action":"x_get_communities_by_id","resource":"*","effect":"allow"},
+  {"action":"x_get_lists_by_id","resource":"*","effect":"allow"},
+  {"action":"x_get_lists_followers","resource":"*","effect":"allow"},
+  {"action":"x_get_lists_members","resource":"*","effect":"allow"},
+  {"action":"x_get_lists_posts","resource":"*","effect":"allow"},
+  {"action":"x_get_news","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_by_id","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_by_ids","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_counts_recent","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_liking_users","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_quoted_posts","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_reposted_by","resource":"*","effect":"allow"},
+  {"action":"x_get_scheduled_broadcast","resource":"*","effect":"allow"},
+  {"action":"x_get_source","resource":"*","effect":"allow"},
+  {"action":"x_get_scheduled_call","resource":"*","effect":"allow"},
+  {"action":"x_get_spaces_by_creator_ids","resource":"*","effect":"allow"},
+  {"action":"x_get_spaces_by_id","resource":"*","effect":"allow"},
+  {"action":"x_get_spaces_by_ids","resource":"*","effect":"allow"},
+  {"action":"x_get_spaces_posts","resource":"*","effect":"allow"},
+  {"action":"x_get_trends_by_woeid","resource":"*","effect":"allow"},
+  {"action":"x_get_usage_credits","resource":"*","effect":"allow"},
+  {"action":"x_get_users_blocking","resource":"*","effect":"allow"},
+  {"action":"x_get_users_bookmark_folders","resource":"*","effect":"allow"},
+  {"action":"x_get_users_bookmarks","resource":"*","effect":"allow"},
+  {"action":"x_get_users_bookmarks_by_folder_id","resource":"*","effect":"allow"},
+  {"action":"x_get_users_by_id","resource":"*","effect":"allow"},
+  {"action":"x_get_users_by_username","resource":"*","effect":"allow"},
+  {"action":"x_get_users_by_usernames","resource":"*","effect":"allow"},
+  {"action":"x_get_users_followed_lists","resource":"*","effect":"allow"},
+  {"action":"x_get_users_liked_posts","resource":"*","effect":"allow"},
+  {"action":"x_get_users_list_memberships","resource":"*","effect":"allow"},
+  {"action":"x_get_users_me","resource":"*","effect":"allow"},
+  {"action":"x_get_users_me_followers","resource":"*","effect":"allow"},
+  {"action":"x_get_users_me_following","resource":"*","effect":"allow"},
+  {"action":"x_get_users_mentions","resource":"*","effect":"allow"},
+  {"action":"x_get_users_owned_lists","resource":"*","effect":"allow"},
+  {"action":"x_get_users_pinned_lists","resource":"*","effect":"allow"},
+  {"action":"x_get_users_posts","resource":"*","effect":"allow"},
+  {"action":"x_get_users_timeline","resource":"*","effect":"allow"},
+  {"action":"x_list_broadcasts","resource":"*","effect":"allow"},
+  {"action":"x_list_scheduled_broadcasts","resource":"*","effect":"allow"},
+  {"action":"x_list_scheduled_calls","resource":"*","effect":"allow"},
+  {"action":"x_list_sources","resource":"*","effect":"allow"},
+  {"action":"x_search_communities","resource":"*","effect":"allow"},
+  {"action":"x_search_news","resource":"*","effect":"allow"},
+  {"action":"x_search_posts_all","resource":"*","effect":"allow"},
+  {"action":"x_search_spaces","resource":"*","effect":"allow"},
+  {"action":"x_search_users","resource":"*","effect":"allow"}
+]
+```
+
+`access: "read-only"`:
+
+```json
+[
+  {"action":"x_*","resource":"*","effect":"deny"},
+  {"action":"x_get_broadcast","resource":"*","effect":"allow"},
+  {"action":"x_get_broadcast_chat","resource":"*","effect":"allow"},
+  {"action":"x_get_chat_moderators","resource":"*","effect":"allow"},
+  {"action":"x_get_communities_by_id","resource":"*","effect":"allow"},
+  {"action":"x_get_lists_by_id","resource":"*","effect":"allow"},
+  {"action":"x_get_lists_followers","resource":"*","effect":"allow"},
+  {"action":"x_get_lists_members","resource":"*","effect":"allow"},
+  {"action":"x_get_lists_posts","resource":"*","effect":"allow"},
+  {"action":"x_get_news","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_by_id","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_by_ids","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_counts_recent","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_liking_users","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_quoted_posts","resource":"*","effect":"allow"},
+  {"action":"x_get_posts_reposted_by","resource":"*","effect":"allow"},
+  {"action":"x_get_scheduled_broadcast","resource":"*","effect":"allow"},
+  {"action":"x_get_source","resource":"*","effect":"allow"},
+  {"action":"x_get_scheduled_call","resource":"*","effect":"allow"},
+  {"action":"x_get_spaces_by_creator_ids","resource":"*","effect":"allow"},
+  {"action":"x_get_spaces_by_id","resource":"*","effect":"allow"},
+  {"action":"x_get_spaces_by_ids","resource":"*","effect":"allow"},
+  {"action":"x_get_spaces_posts","resource":"*","effect":"allow"},
+  {"action":"x_get_trends_by_woeid","resource":"*","effect":"allow"},
+  {"action":"x_get_usage_credits","resource":"*","effect":"allow"},
+  {"action":"x_get_users_blocking","resource":"*","effect":"allow"},
+  {"action":"x_get_users_bookmark_folders","resource":"*","effect":"allow"},
+  {"action":"x_get_users_bookmarks","resource":"*","effect":"allow"},
+  {"action":"x_get_users_bookmarks_by_folder_id","resource":"*","effect":"allow"},
+  {"action":"x_get_users_by_id","resource":"*","effect":"allow"},
+  {"action":"x_get_users_by_username","resource":"*","effect":"allow"},
+  {"action":"x_get_users_by_usernames","resource":"*","effect":"allow"},
+  {"action":"x_get_users_followed_lists","resource":"*","effect":"allow"},
+  {"action":"x_get_users_liked_posts","resource":"*","effect":"allow"},
+  {"action":"x_get_users_list_memberships","resource":"*","effect":"allow"},
+  {"action":"x_get_users_me","resource":"*","effect":"allow"},
+  {"action":"x_get_users_me_followers","resource":"*","effect":"allow"},
+  {"action":"x_get_users_me_following","resource":"*","effect":"allow"},
+  {"action":"x_get_users_mentions","resource":"*","effect":"allow"},
+  {"action":"x_get_users_owned_lists","resource":"*","effect":"allow"},
+  {"action":"x_get_users_pinned_lists","resource":"*","effect":"allow"},
+  {"action":"x_get_users_posts","resource":"*","effect":"allow"},
+  {"action":"x_get_users_timeline","resource":"*","effect":"allow"},
+  {"action":"x_list_broadcasts","resource":"*","effect":"allow"},
+  {"action":"x_list_scheduled_broadcasts","resource":"*","effect":"allow"},
+  {"action":"x_list_scheduled_calls","resource":"*","effect":"allow"},
+  {"action":"x_list_sources","resource":"*","effect":"allow"},
+  {"action":"x_search_communities","resource":"*","effect":"allow"},
+  {"action":"x_search_news","resource":"*","effect":"allow"},
+  {"action":"x_search_posts_all","resource":"*","effect":"allow"},
+  {"action":"x_search_spaces","resource":"*","effect":"allow"},
+  {"action":"x_search_users","resource":"*","effect":"allow"}
+]
+```
 
 With the default, an agent can post, reply, quote, edit, bookmark, create or change lists, draft an Article, send a
 DM, follow, block, mute, change list membership, moderate a chat and go live on the user's real account without asking.
