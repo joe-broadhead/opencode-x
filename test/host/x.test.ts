@@ -876,3 +876,20 @@ describe("the access option", () => {
     expect(evaluate(rules.get("build")!, "x_create_users_bookmark")).toBe("deny")
   })
 })
+
+describe("ownsXApp prices every path as owned", () => {
+  let host: Host
+  beforeAll(async () => {
+    host = await startHost({ options: { ...appOptions(), ownsXApp: true }, fake: { catalog: "x" } })
+  })
+  afterAll(() => host?.close())
+
+  test("the direct RPC and the model path both report basis owned", async () => {
+    await until("X's mentions tool is listed", async () => (await host.probe().tool.list()).some((tool) => tool.id === "x_get_users_mentions"))
+    const sessionID = await scriptSession(host)
+    const read = await rpcCall(host, "get_users_mentions", { id: "1", max_results: 2 }, sessionID)
+    expect(read.ok).toBe(true)
+    expect((read as unknown as { output: { output: { cost: { basis: string; actualUsd: number } } } }).output.output.cost).toMatchObject({ basis: "owned", actualUsd: 0.022 })
+    expect((read as unknown as { output: { text: string } }).output.text).toContain("Cost: 2 posts ($0.002) + 2 authors ($0.02) = $0.022.")
+  })
+})

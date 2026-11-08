@@ -63,10 +63,10 @@ export function resetScriptSpend(): void {
  * X's own maximum page and the pagination it asks for. It also prices the call and refuses it before dispatch when the
  * estimate does not fit the session or the rolling daily cap.
  */
-export function shapeInput(method: string, input: unknown, call: ShapeCall): unknown {
+export function shapeInput(method: string, input: unknown, call: ShapeCall, owns?: boolean): unknown {
   // Widen first: the budget prices the page the script actually asks for, up to X's maximum.
   widenRead(method, input)
-  const estimate = estimateCall(method, input)
+  const estimate = estimateCall(method, input, owns)
   assertBudget(call.sessionID, estimate.estimateUsd)
   rememberEstimate(call.sessionID, estimate)
   return input
@@ -78,9 +78,9 @@ export function shapeInput(method: string, input: unknown, call: ShapeCall): unk
  * cost line, and the structured `cost` beside the output. The model path's one line per Code Mode program is a Code
  * Mode aggregate; a script has no program, so each call gets its own line, as a direct call does.
  */
-export function shapeResult(method: string, result: McpResult, call: ShapeCall): McpResult {
-  const estimate = takeEstimate(call.sessionID) ?? estimateCall(method, {})
-  const cost = scriptCostOfCall(method, {}, result, estimate)
+export function shapeResult(method: string, result: McpResult, call: ShapeCall, owns?: boolean): McpResult {
+  const estimate = takeEstimate(call.sessionID) ?? estimateCall(method, {}, owns)
+  const cost = scriptCostOfCall(method, {}, result, estimate, owns)
   recordCall(call.sessionID, cost.actualUsd)
   const spent = spentOf(call.sessionID)
   const costValue = { estimateUsd: estimate.estimateUsd, actualUsd: cost.actualUsd, sessionSpentUsd: spent.sessionSpentUsd, dailySpentUsd: spent.dailySpentUsd, basis: cost.basis }

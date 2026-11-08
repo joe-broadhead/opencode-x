@@ -73,7 +73,7 @@ describe("buildStatus", () => {
 
   test("shows the rolling 24-hour script spend against the daily cap, and the per-session cap", () => {
     const status = buildStatus({ ...base, billing: { dailySpentUsd: 0.25, dailyBudgetUsd: 1, sessionBudgetUsd: 0.8 } })
-    expect(formatStatus(status)).toContain("- Scripts: $0.25 of $1.00 in the last 24 hours; $0.80 per session")
+    expect(formatStatus(status)).toContain("- Scripts: estimated spend, at most: $0.25 of $1.00 in the last 24 hours; $0.80 per session; X's Developer Console has the real bill")
   })
 
   test("without a sign-in label, the Account row says X's MCP reports no account name, and the RPC has no account", () => {

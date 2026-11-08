@@ -132,6 +132,11 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
         called.push({ tool: name, path })
         const args = message.params?.arguments ?? {}
         callArguments.push(args)
+        if (name === "get_users_mentions") {
+          const data = Array.from({ length: 2 }, (_, index) => ({ id: String(index), author_id: String(index) }))
+          const users = Array.from({ length: 2 }, (_, index) => ({ id: String(index), username: `user${index}` }))
+          return reply({ content: [{ type: "text", text: JSON.stringify({ data, includes: { users }, meta: { result_count: 2 } }) }], structuredContent: { data, includes: { users }, meta: { result_count: 2 } } })
+        }
         if (name === "search_posts_all" && String(args.query ?? "") === "empty") {
           return reply({ content: [{ type: "text", text: JSON.stringify({ data: [], meta: { result_count: 0 } }) }], structuredContent: { data: [], meta: { result_count: 0 } } })
         }

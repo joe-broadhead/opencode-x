@@ -106,8 +106,10 @@ stays the backstop.
 
 The rolling cap on all script spending in any 24 hours, across sessions, scheduled jobs and reloads. The tools RPC
 keeps the ledger in the plugin's storage as amounts and timestamps only, with no content, and loads it at setup, so a
-reload does not forget the spend. A call whose estimate would cross the daily cap is refused with
-`X_BUDGET_EXCEEDED` before dispatch. `/x-status` shows the last 24 hours' spend against this cap.
+reload does not forget the spend. It is an **estimated spend, at most**: it counts every returned resource again,
+while X deduplicates the same resource within a 24-hour UTC window and may charge the Owned Read price. X's Developer
+Console has the real bill. A call whose estimate would cross the daily cap is refused with `X_BUDGET_EXCEEDED` before
+dispatch. `/x-status` shows the estimate against this cap.
 
 ```json
 { "scriptDailyBudgetUsd": 5 }

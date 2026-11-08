@@ -2,7 +2,7 @@ import { Plugin, type Mcp } from "@opencode/plugin"
 import { reasonOf } from "./redact.js"
 import { errorText, ENDPOINT, NAMESPACE_DESCRIPTION, PLUGIN_ID, SERVER_NAME, SUPPORTED_HOST } from "./constants.js"
 import { checkHost, isSupportedHost } from "./host-version.js"
-import { registerToolsRpc, METHODS } from "./host/tools-rpc.js"
+import { registerToolsRpc, METHODS, shapeInput, shapeResult } from "./host/tools-rpc.js"
 import { watchIntegration } from "./integration.js"
 import { watchListing } from "./listing.js"
 import { parseOptions, type Options } from "./options.js"
@@ -129,7 +129,7 @@ export function createXPlugin(seam: XSeam) {
         // Code Mode's catalog describes the server's namespace with this text; a server at another URL keeps its own.
         await ctx.tool.transform((editor) => void (source && source.type !== "conflict" ? editor.namespace({ name: SERVER_NAME, description: NAMESPACE_DESCRIPTION }) : undefined))
         // The read cap and the cost line, on the model path and in Code Mode. A conflicting server is not ours.
-        stopBilling = await registerBilling(ctx.tool, () => source === undefined || source.type !== "conflict")
+        stopBilling = await registerBilling(ctx.tool, () => source === undefined || source.type !== "conflict", options.ownsXApp)
         await registerDefaultRules(ctx.agent, defaultRules(options.access), report("rules"))
         await registerSkills(ctx.skill, skills)
         // A client saved, switched or removed in /connect applies without a restart: the server transform reads the
@@ -180,6 +180,7 @@ export function createXPlugin(seam: XSeam) {
         await configureBilling({ storage: ctx.storage, sessionBudgetUsd: options.scriptBudgetUsd, dailyBudgetUsd: options.scriptDailyBudgetUsd, ownsXApp: options.ownsXApp })
         stopTools = await registerToolsRpc(ctx, {
           methods: METHODS,
+          shapers: { input: (method, input, call) => shapeInput(method, input, call, options.ownsXApp), result: (method, result, call) => shapeResult(method, result, call, options.ownsXApp) },
           mcp: {
             server: SERVER_NAME,
             managed: () => source?.type !== "conflict",

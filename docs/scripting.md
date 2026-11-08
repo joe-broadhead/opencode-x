@@ -32,8 +32,11 @@ table, from [X's pay-per-usage pricing](https://docs.x.com/x-api/getting-started
 - **Two caps.** `scriptBudgetUsd` caps one session, **$1.00** by default. `scriptDailyBudgetUsd` caps all script
   spending in a rolling 24 hours, **$1.00** by default, across sessions, scheduled jobs and reloads. `X_BUDGET` is the
   old single code; it is now `X_BUDGET_EXCEEDED`. Raise either option, or wait for the window to roll.
-- **The ledger persists.** It is kept in the plugin's storage as amounts and timestamps only, with no content, so a
-  reload does not forget the spend.
+- **The ledger is a conservative meter, not X's bill.** It is kept in the plugin's storage as amounts and timestamps
+  only, with no content, so a reload does not forget the spend. It counts every returned resource again on each run,
+  while X deduplicates the same resource within a 24-hour UTC window and may charge the Owned Read price; the meter
+  is therefore an upper bound ("estimated spend, at most"). X's Developer Console has the real bill. The pre-call
+  refusal uses this meter, so it can refuse a run that would have cost less, or nothing.
 - **The script sees its cost.** Every result carries the actual cost line, computed from what X returned, and a
   structured `cost: { estimateUsd, actualUsd, sessionSpentUsd, dailySpentUsd }` beside the output. Where X reports no
   usage the actual is the estimate. Example: `Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15.`

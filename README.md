@@ -135,7 +135,9 @@ opencode api post /api/rpc/x.posts.tools/search_posts_all -H "x-opencode-directo
 ```
 
 Every call is billed, and each script session has a `scriptBudgetUsd` budget, $1.00 by default, with a rolling
-`scriptDailyBudgetUsd` cap of $1.00 per 24 hours across all scripts. See
+`scriptDailyBudgetUsd` cap of $1.00 per 24 hours across all scripts. The ledger is an estimated spend, at most: it
+counts every returned resource again while X deduplicates within 24 hours, so the real bill is in X's Developer Console.
+See
 [Scripting](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md).
 
 ## Permissions

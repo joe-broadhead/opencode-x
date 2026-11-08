@@ -85,6 +85,15 @@ describe("the budget", () => {
     resetBilling()
   })
 
+  test("an explicit per-call owns flag prices owned even when the configured snapshot is conservative", async () => {
+    await fresh({ ownsXApp: false })
+    shapeInput("get_users_mentions", { id: "1", max_results: 2 }, call(), true)
+    const result = shapeResult("get_users_mentions", { output: { data: [{ id: "1" }, { id: "2" }] }, text: "" }, call(), true)
+    expect(result.text).toBe("Cost: 2 posts ($0.002) = $0.002.")
+    expect((result.output as Record<string, unknown>).cost).toMatchObject({ basis: "owned", actualUsd: 0.002 })
+    resetBilling()
+  })
+
   test("persists across a reload and shares the daily ledger across sessions", async () => {
     const store = await fresh({ sessionBudgetUsd: 1, dailyBudgetUsd: 1 })
     shapeInput("search_posts_all", { query: "q", max_results: 10 }, call("ses_a"))

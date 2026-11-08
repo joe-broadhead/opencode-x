@@ -304,7 +304,7 @@ function accessText({ problems, unguardedAgents, access }: Status) {
 
 /** The script budget row: the rolling 24-hour spend against the daily cap, and the per-session cap. */
 function scriptsText(billing: NonNullable<Status["billing"]>) {
-  return `$${billing.dailySpentUsd.toFixed(2)} of $${billing.dailyBudgetUsd.toFixed(2)} in the last 24 hours; $${billing.sessionBudgetUsd.toFixed(2)} per session`
+  return `estimated spend, at most: $${billing.dailySpentUsd.toFixed(2)} of $${billing.dailyBudgetUsd.toFixed(2)} in the last 24 hours; $${billing.sessionBudgetUsd.toFixed(2)} per session; X's Developer Console has the real bill`
 }
 
 /** The OpenCode row: the version, whether it is tested, the supported range, then any setup problems. */

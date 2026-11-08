@@ -121,14 +121,14 @@ const payload = (result: Result) => {
 const countOf = (value: unknown) => (Array.isArray(value) ? value.length : value && typeof value === "object" ? 1 : 0)
 
 /** The cost of one completed read, from what X actually returned. Missing data means no line, never a guess. */
-export function costOf(tool: string, result: Result): ReadCost | undefined {
+export function costOf(tool: string, result: Result, owns = ownsXApp): ReadCost | undefined {
   const name = nameOf(tool)
   if (name === "get_posts_counts_recent") return { posts: 0, owned: 0, users: 0, counts: 1, total: COUNT, basis: "conservative", ownedRate: OWNED, userRate: USER }
   const value = payload(result)
   if (!value) return undefined
   if (USER_TOOLS.has(name)) {
     const users = countOf(value.data)
-    const owned = OWNED_USER_TOOLS.has(name) && ownsXApp
+    const owned = OWNED_USER_TOOLS.has(name) && owns
     const userRate = owned ? OWNED : USER
     return { posts: 0, owned: 0, users, counts: 0, total: users * userRate, basis: owned ? "owned" : "conservative", ownedRate: OWNED, userRate }
   }
@@ -136,7 +136,7 @@ export function costOf(tool: string, result: Result): ReadCost | undefined {
     const posts = countOf(value.data)
     const includes = value.includes && typeof value.includes === "object" ? (value.includes as Record<string, unknown>) : {}
     const users = countOf(includes.users)
-    const owned = OWNED_TOOLS.has(name) && ownsXApp
+    const owned = OWNED_TOOLS.has(name) && owns
     const rate = owned ? OWNED : POST
     return { posts: OWNED_TOOLS.has(name) ? 0 : posts, owned: OWNED_TOOLS.has(name) ? posts : 0, users, counts: 0, total: posts * rate + users * USER, basis: owned ? "owned" : "conservative", ownedRate: rate, userRate: USER }
   }
@@ -182,7 +182,7 @@ const append = (result: Result, line: string) => {
  * in Code Mode; `execute.after` can add the line to the result. Both were verified on 2.2.3, 2.2.4, 2.2.5 and 2.2.6. In Code
  * Mode the inner calls are summed and one line goes on the `execute` result the model reads.
  */
-export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">, managed: () => boolean) {
+export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">, managed: () => boolean, owns = ownsXApp) {
   const pending = new Map<string, ReadCost[]>()
   const before = await tool.hook("execute.before", (event) => {
     if (!managed()) return
@@ -203,7 +203,7 @@ export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">
       return
     }
     if (!event.tool.startsWith("x_") || event.status !== "completed") return
-    const cost = costOf(event.tool, event.result)
+    const cost = costOf(event.tool, event.result, owns)
     if (!cost) return
     const waiting = pending.get(event.sessionID)
     if (waiting) waiting.push(cost)
@@ -312,8 +312,8 @@ export class BudgetExceededError extends Error {
 }
 
 /** The rate actually used: the Owned Read price only when the option says the account owns the app. */
-const rateFor = (price: { readonly perResourceUsd: number; readonly ownedUsd?: number }) => (ownsXApp && price.ownedUsd !== undefined ? price.ownedUsd : price.perResourceUsd)
-const basisFor = (price: { readonly ownedUsd?: number }): CostBasis => (ownsXApp && price.ownedUsd !== undefined ? "owned" : "conservative")
+const rateFor = (price: { readonly perResourceUsd: number; readonly ownedUsd?: number }, owns = ownsXApp) => (owns && price.ownedUsd !== undefined ? price.ownedUsd : price.perResourceUsd)
+const basisFor = (price: { readonly ownedUsd?: number }, owns = ownsXApp): CostBasis => (owns && price.ownedUsd !== undefined ? "owned" : "conservative")
 
 const pageSizeOf = (method: string, input: unknown) => {
   if (!input || typeof input !== "object") return 1
@@ -330,13 +330,13 @@ const hasUrl = (input: unknown) => {
 }
 
 /** The pre-call estimate: the page size times the resource rate, plus any per-request price. */
-export function estimateCall(method: string, input: unknown): CallEstimate {
+export function estimateCall(method: string, input: unknown, owns = ownsXApp): CallEstimate {
   const price = priceOf(method)
   if (price === undefined) throw new PriceUnknownError(method)
   if (price.kind === "request") return { method, pageSize: 1, estimateUsd: exact(price.perRequestUsd), price }
   if (price.kind === "postCreate") return { method, pageSize: 1, estimateUsd: exact(hasUrl(input) ? price.withUrlUsd : price.perRequestUsd), price }
   const pageSize = pageSizeOf(method, input)
-  return { method, pageSize, estimateUsd: exact(pageSize * rateFor(price)), price }
+  return { method, pageSize, estimateUsd: exact(pageSize * rateFor(price, owns)), price }
 }
 
 /** Refuses before dispatch when the estimate does not fit the session or daily cap. */
@@ -369,16 +369,16 @@ const requestLine = (method: string, count: number, usd: number) => {
 }
 
 /** The actual cost of one completed script call, from what X returned; the estimate when it reports no usage. */
-export function scriptCostOfCall(method: string, _input: unknown, result: { readonly output?: unknown; readonly text: string }, estimate: CallEstimate): { actualUsd: number; line: string; resourceCount: number; basis: CostBasis } {
+export function scriptCostOfCall(method: string, _input: unknown, result: { readonly output?: unknown; readonly text: string }, estimate: CallEstimate, owns = ownsXApp): { actualUsd: number; line: string; resourceCount: number; basis: CostBasis } {
   const price = estimate.price
-  const basis = price.kind === "request" || price.kind === "postCreate" ? "conservative" : basisFor(price)
+  const basis = price.kind === "request" || price.kind === "postCreate" ? "conservative" : basisFor(price, owns)
   const atMost = basis === "conservative" ? "at most " : ""
   if (price.kind === "request") return { actualUsd: exact(price.perRequestUsd), line: `Cost: ${atMost}${requestLine(method, 1, price.perRequestUsd)} = ${money(price.perRequestUsd)}.`, resourceCount: 1, basis }
   if (price.kind === "postCreate") {
     const usd = estimate.estimateUsd
     return { actualUsd: usd, line: `Cost: ${atMost}1 post (${money(usd)}) = ${money(usd)}.`, resourceCount: 1, basis }
   }
-  const rate = rateFor(price)
+  const rate = rateFor(price, owns)
   const value = payload(result)
   if (!value) return { actualUsd: estimate.estimateUsd, line: `Cost: ${atMost}${resourceLine(price.kind, estimate.pageSize, estimate.estimateUsd)} = ${money(estimate.estimateUsd)}.`, resourceCount: estimate.pageSize, basis }
   const count = countResources(value.data)
