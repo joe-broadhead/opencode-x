@@ -2,7 +2,7 @@ import { Plugin, type Mcp } from "@opencode/plugin"
 import { reasonOf } from "./redact.js"
 import { errorText, ENDPOINT, NAMESPACE_DESCRIPTION, PLUGIN_ID, SERVER_NAME, SUPPORTED_HOST } from "./constants.js"
 import { checkHost, isSupportedHost } from "./host-version.js"
-import { registerToolsRpc, METHODS, configureScriptBudget, resetScriptSpend } from "./host/tools-rpc.js"
+import { registerToolsRpc, METHODS } from "./host/tools-rpc.js"
 import { watchIntegration } from "./integration.js"
 import { watchListing } from "./listing.js"
 import { parseOptions, type Options } from "./options.js"
@@ -11,7 +11,7 @@ import { loadSkills, registerSkills } from "./skills.js"
 import { clientNextStep, readStatus, registerStatusCommand, registerStatusRpc, type ServerSource } from "./status.js"
 import { registerAppIntegration, resolveClient, sameClient, type ClientState } from "./connect.js"
 import { serverConfig } from "./server.js"
-import { registerBilling } from "./billing.js"
+import { configureBilling, registerBilling } from "./billing.js"
 
 /** Internal seam: tests point the server at a loopback fake without OAuth, and at their own skills. */
 interface XSeam {
@@ -177,8 +177,7 @@ export function createXPlugin(seam: XSeam) {
         // A user's own server under the name is not this plugin's. Without a client and without a user entry there is
         // no server: a call gets the status's code and next step, read at each call, so a client saved in /connect
         // applies at once. The budget bounds what one script session may spend.
-        configureScriptBudget(options.scriptBudgetUsd)
-        resetScriptSpend()
+        await configureBilling({ storage: ctx.storage, sessionBudgetUsd: options.scriptBudgetUsd, dailyBudgetUsd: options.scriptDailyBudgetUsd })
         stopTools = await registerToolsRpc(ctx, {
           methods: METHODS,
           mcp: {

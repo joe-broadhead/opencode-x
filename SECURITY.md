@@ -47,7 +47,10 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
   is possible through `x_create_posts`, asks every time, and those reply rules still apply.
 - **Every call is billed** to the X developer account that owns the app. The plugin caps a model read to one page of
   at most ten posts or users, with one widening and about $0.20 an answer, and every answer that read ends with its
-  actual cost line. A script pays the same rates and is not capped, so a spending limit in X's console is the backstop.
+  actual cost line. A script pays the same rates and is capped by `scriptBudgetUsd` per session and
+  `scriptDailyBudgetUsd` per rolling 24 hours: an estimate above either cap is refused with `X_BUDGET_EXCEEDED`
+  before the call, the daily ledger persists across sessions and reloads, and an unpriced method is refused with
+  `X_PRICE_UNKNOWN`. X's own app spending limit remains the backstop.
 
 ## Permissions
 

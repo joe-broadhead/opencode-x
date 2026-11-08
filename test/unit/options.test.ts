@@ -2,13 +2,14 @@ import { describe, expect, test } from "bun:test"
 import { REDIRECT_URI, SCOPES } from "../../src/constants.js"
 import { parseOptions } from "../../src/options.js"
 
-const defaults = { redirectUri: REDIRECT_URI, scopes: [...SCOPES], allowUntestedHost: false, scriptBudgetUsd: 1 }
+const defaults = { redirectUri: REDIRECT_URI, scopes: [...SCOPES], allowUntestedHost: false, scriptBudgetUsd: 1, scriptDailyBudgetUsd: 1 }
 
 describe("parseOptions", () => {
   test("defaults to the pinned callback and scopes, a tested host, and no client", () => {
     expect(parseOptions(undefined)).toEqual({ ok: true, options: defaults })
     expect(parseOptions({})).toEqual({ ok: true, options: defaults })
     expect(parseOptions({ scriptBudgetUsd: 2.5 })).toMatchObject({ ok: true, options: { scriptBudgetUsd: 2.5 } })
+    expect(parseOptions({ scriptDailyBudgetUsd: 5 })).toMatchObject({ ok: true, options: { scriptDailyBudgetUsd: 5 } })
     expect(REDIRECT_URI).toBe("http://127.0.0.1:8766/callback")
     expect(SCOPES).toContain("offline.access")
   })
@@ -20,7 +21,7 @@ describe("parseOptions", () => {
     })
     expect(parseOptions({ oauth: { redirect_uri: "http://localhost:8766/callback", scopes: ["tweet.read"] }, allowUntestedHost: true })).toEqual({
       ok: true,
-      options: { redirectUri: "http://localhost:8766/callback", scopes: ["tweet.read"], allowUntestedHost: true, scriptBudgetUsd: 1 },
+      options: { redirectUri: "http://localhost:8766/callback", scopes: ["tweet.read"], allowUntestedHost: true, scriptBudgetUsd: 1, scriptDailyBudgetUsd: 1 },
     })
     expect(parseOptions({ oauth: { redirect_uri: "https://example.com/callback", callback_port: 8767 } })).toMatchObject({ ok: true, options: { callbackPort: 8767 } })
   })
@@ -49,6 +50,9 @@ describe("parseOptions", () => {
     [{ scriptBudgetUsd: -1 }, "scriptBudgetUsd", "Must be a number greater than 0 and at most 1000."],
     [{ scriptBudgetUsd: Number.POSITIVE_INFINITY }, "scriptBudgetUsd", "Must be a number greater than 0 and at most 1000."],
     [{ scriptBudgetUsd: 1001 }, "scriptBudgetUsd", "Must be a number greater than 0 and at most 1000."],
+    [{ scriptDailyBudgetUsd: "1.00" }, "scriptDailyBudgetUsd", "Must be a number greater than 0 and at most 1000."],
+    [{ scriptDailyBudgetUsd: 0 }, "scriptDailyBudgetUsd", "Must be a number greater than 0 and at most 1000."],
+    [{ scriptDailyBudgetUsd: 1001 }, "scriptDailyBudgetUsd", "Must be a number greater than 0 and at most 1000."],
   ])("rejects %j with the field, the message and a next step", (input, field, message) => {
     const parsed = parseOptions(input)
     expect(parsed.ok).toBe(false)

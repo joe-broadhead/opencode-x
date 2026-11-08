@@ -8,6 +8,7 @@ import { clientMode } from "./server.js"
 import { APP_NAME, type ClientState } from "./connect.js"
 import type { Options } from "./options.js"
 import { VERSION } from "./version.js"
+import { billingStatus } from "./billing.js"
 
 export { shortReason }
 
@@ -56,6 +57,8 @@ export interface StatusFacts {
   readonly problems?: readonly string[]
   /** The plugin's own skills, and the skills OpenCode lists; the listed one wins when both have an id. */
   readonly skills?: { readonly own: readonly SkillPath[]; readonly listed: readonly SkillPath[] }
+  /** The script budget: what the rolling 24 hours have spent, and both caps. */
+  readonly billing?: { readonly dailySpentUsd: number; readonly dailyBudgetUsd: number; readonly sessionBudgetUsd: number }
 }
 
 /**
@@ -100,6 +103,8 @@ export interface Status {
   readonly unknownTools: readonly string[]
   /** Agents where a new X tool would run without asking; empty when there are none. */
   readonly unguardedAgents: readonly string[]
+  /** The script budget: what the rolling 24 hours have spent, and both caps. */
+  readonly billing?: { readonly dailySpentUsd: number; readonly dailyBudgetUsd: number; readonly sessionBudgetUsd: number }
   /** The plugin's skills that OpenCode loads from another file of the same id instead. */
   readonly shadowedSkills?: readonly SkillPath[]
   readonly host: HostCheck
@@ -182,6 +187,7 @@ export function buildStatus(facts: StatusFacts): Status {
     unknownCount: unknown.length,
     unknownTools: unknown.filter((name) => SAFE_NAME.test(name)).slice(0, LISTED_UNKNOWN),
     unguardedAgents: unguardedAgents(facts.agents ?? []),
+    ...(facts.billing ? { billing: facts.billing } : {}),
     ...(shadowed.length ? { shadowedSkills: shadowed } : {}),
     host: facts.host,
     problems: facts.problems ?? [],
@@ -286,6 +292,11 @@ function accessText({ problems, unguardedAgents }: Status) {
   return `${POSTURE}; ${rules}`
 }
 
+/** The script budget row: the rolling 24-hour spend against the daily cap, and the per-session cap. */
+function scriptsText(billing: NonNullable<Status["billing"]>) {
+  return `$${billing.dailySpentUsd.toFixed(2)} of $${billing.dailyBudgetUsd.toFixed(2)} in the last 24 hours; $${billing.sessionBudgetUsd.toFixed(2)} per session`
+}
+
 /** The OpenCode row: the version, whether it is tested, the supported range, then any setup problems. */
 function hostText({ host, problems }: Status) {
   const { version, range, tested } = host
@@ -309,6 +320,7 @@ function rows(status: Status): { readonly label: string; readonly value: string 
     { label: "Connection", value: head },
     { label: "Account", value: status.account ?? `account name not reported by ${DISPLAY_NAME}'s MCP` },
     { label: "Access", value: accessText(status) },
+    ...(status.billing ? [{ label: "Scripts", value: scriptsText(status.billing) }] : []),
     { label: "Server", value: `${SERVER_NAME} at ${ENDPOINT}` },
   ]
   if (client !== undefined) {
@@ -381,6 +393,7 @@ export async function readStatus(
   const settling = listing !== undefined && Date.now() - listing.changedAt() < LISTING_MS
   return buildStatus({
     ...rest,
+    billing: billingStatus(),
     ...(server ? { server: server.status } : {}),
     ...(connection?.type === "credential" && connection.label ? { account: connection.label } : {}),
     tools: tools.filter((tool) => tool.options?.namespace === SERVER_NAME).map((tool) => tool.name),

@@ -56,14 +56,29 @@ instead.
 - Type: a number greater than 0 and at most 1000.
 - Default: `1.00`.
 
-The per-session spend budget for scripts: what one script session's billed X resources may cost, in US dollars. The
-tools RPC counts each result's billed posts, authors and counts, and once a session reaches the budget the next call is
-refused with `X_BUDGET`, before any X call. A read costs about $0.005 a post and $0.010 an author, so the default is
-about six pages of ten posts with their authors. Raise it for a script that legitimately pages, and keep it small
-otherwise: the budget bounds a runaway script, and X's own app spending limit stays the backstop.
+The per-session spend budget for scripts. Before each call the tools RPC estimates the page size times the method's
+published rate, plus any per-request price, and refuses a call that would not fit with `X_BUDGET_EXCEEDED`, naming the
+remaining amount and the option to raise. No X call is made for a refused estimate. A read costs about $0.005 a post
+and $0.010 an author, so the default is about six pages of ten posts with their authors. Raise it for a script that
+legitimately pages, and keep it small otherwise: the budget bounds a runaway script, and X's own app spending limit
+stays the backstop.
 
 ```json
 { "scriptBudgetUsd": 2.5 }
+```
+
+### `scriptDailyBudgetUsd`
+
+- Type: a number greater than 0 and at most 1000.
+- Default: `1.00`.
+
+The rolling cap on all script spending in any 24 hours, across sessions, scheduled jobs and reloads. The tools RPC
+keeps the ledger in the plugin's storage as amounts and timestamps only, with no content, and loads it at setup, so a
+reload does not forget the spend. A call whose estimate would cross the daily cap is refused with
+`X_BUDGET_EXCEEDED` before dispatch. `/x-status` shows the last 24 hours' spend against this cap.
+
+```json
+{ "scriptDailyBudgetUsd": 5 }
 ```
 
 ### `allowUntestedHost`
@@ -124,7 +139,8 @@ Each member runs `/connect` and chooses X, then presses `o` or Enter. Status sho
 
 - Every member's calls bill the team's X developer account. A model read is capped to one page of at most ten posts
   or users, one widening, about $0.20 an answer, and the answer ends with its actual cost line; a script is not capped,
-  but each script session stops at its `scriptBudgetUsd` budget ($1.00 by default), so the app's spending limit is the
+  but each script session stops at its `scriptBudgetUsd` budget ($1.00 by default) and all scripts together stop at
+  `scriptDailyBudgetUsd` ($1.00 per rolling 24 hours), so the app's spending limit is the
   backstop for many sessions.
 - The owned-reads discount (about $0.001 a post) applies only when the authenticated user owns the app. Other members'
   timeline, mention and bookmark reads bill at the full rate.
@@ -411,12 +427,13 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `SKILLS_INVALID` | Setup: a skill file is missing or broken. The plugin still starts; status shows the problem. | Reinstall the plugin. |
 | `SERVER_NOT_REGISTERED` | Setup: the `x` server could not be registered. Status shows the problem. | Restart OpenCode. |
 | `RULES_NOT_ADDED` | Setup: the default permission rules could not be added, so X tools may run without asking. Status shows the problem. | Restart OpenCode. |
-| `X_BUDGET` | The tools RPC: a script session reached its `scriptBudgetUsd` spend. No X call is made. | Raise `scriptBudgetUsd`, or use another session; each call is billed. |
+| `X_BUDGET_EXCEEDED` | The tools RPC: the next call's estimate does not fit the session's `scriptBudgetUsd` or the rolling `scriptDailyBudgetUsd`. No X call is made. | Raise `scriptBudgetUsd` or `scriptDailyBudgetUsd`, or wait for the 24-hour window to roll; each call is billed. |
+| `X_PRICE_UNKNOWN` | The tools RPC: the method has no published price in the plugin's table. No X call is made. | Use a priced method, or add its price to the plugin's table before a script calls it. |
 
 For example:
 
 ```text
-OPTIONS_INVALID: Option apiKey: This option is not supported. Next step: Remove it. Supported options: oauth, allowUntestedHost, scriptBudgetUsd.
+OPTIONS_INVALID: Option apiKey: This option is not supported. Next step: Remove it. Supported options: oauth, allowUntestedHost, scriptBudgetUsd, scriptDailyBudgetUsd.
 ```
 
 Errors from X's server and from OpenCode pass through unchanged, except in the tools RPC for scripts, whose codes are

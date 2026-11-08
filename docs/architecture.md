@@ -23,7 +23,8 @@ runtime dependencies.
 | `src/status.ts` | The status model and text, `/x-status`, and the status RPC method |
 | `src/redact.ts` | Redaction for everything status shows: URL credentials, queries and token shapes removed, one line, controls and bidi characters stripped, cut by whole characters |
 | `src/skills.ts` | Loading and registering the skills |
-| `src/billing.ts` | The read cap (`execute.before`) and the actual cost line (`execute.after`), on the model path and in Code Mode |
+| `src/prices.ts` | X's pay-per-usage table, one row per known method, with its source and date; an unpriced method is refused |
+| `src/billing.ts` | The model path's read cap and cost line, and the script path's estimates, both caps, the rolling daily ledger in plugin storage, and the structured `cost` |
 | `src/host/tools-rpc.ts` | The tools RPC for scripts, `x.posts.tools`; a copy of a module shared by several plugins, with X's part in one marked block |
 | `src/tui.ts` | The terminal UI part: the plugin `x.posts.tui` and the `/x` dialog |
 | `src/constants.ts` | IDs, the server name and URL, the pinned callback and scopes, the Code Mode namespace description, the supported host range, the tested releases (`TESTED_HOSTS`, the one list the checks and status use) and the error shape. No imports, so `scripts/check.mjs` can load it |
@@ -60,7 +61,7 @@ adds, and ships no declaration files.
 7. `ctx.agent.transform` inserts the default rules after each agent's base `* * allow`.
 8. `watchListing` notes when the `x` server's status last changes. The plugin adds no tool hook.
 9. `ctx.skill.transform`, `ctx.command.transform` (`/x-status`) and `ctx.rpc.register` (`x.posts/status`).
-10. `registerToolsRpc` registers the tools RPC, `x.posts.tools`, and its `evaluate` hook.
+10. `registerToolsRpc` registers the tools RPC, `x.posts.tools`, and its `evaluate` hook. `configureBilling` loads the rolling ledger from `ctx.storage` before the RPC starts.
 11. `watchIntegration` starts, and a listener re-resolves the client on credential and integration events; a client
     saved or removed in `/connect` reloads the MCP config, and the server transform reads the new client on its
     replay. Setup returns one cleanup that stops all of them.

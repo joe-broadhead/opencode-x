@@ -18,17 +18,32 @@ never sees the OAuth token.
 ## Every call costs money
 
 X bills every call to the X developer account that owns the app. A post read is about $0.005, a user read about
-$0.010, a read of the user's own posts, mentions or bookmarks about $0.001, and a bookmark change about $0.005.
+$0.010, a read of the user's own posts, mentions or bookmarks about $0.001, a bookmark change about $0.005, and a
+recent count about $0.005. Lists, Spaces, Communities, news and DM resources have their own rates in the plugin's price
+table, from [X's pay-per-usage pricing](https://docs.x.com/x-api/getting-started/pricing) read on 2026-11-08.
 
-- A script is not capped. The model path keeps one small page per read; a script, whose code you approved, gets
-  `max_results` up to X's own maximum of 100, and any next-page token it asks for.
-- Every result carries the actual-cost line, computed from what X returned: `Cost: 10 posts ($0.05) + 10 authors
-  ($0.10) = $0.15.`
-- Each script session has a spend budget, `scriptBudgetUsd` in the plugin's options, **$1.00** by default. The spend is
-  counted from the billed resources in the results. At the budget the next call is refused with `X_BUDGET` and no X
-  call is made. Raise the option, or use another session, to spend more.
-- A loop is still a loop: 500 posts cost about $2.50 for one run. Paging is allowed, so bound it yourself.
-- The same resource read twice in a 24-hour window is charged once; a new page is not.
+- **Every billable method is priced.** A method with no published price is refused with `X_PRICE_UNKNOWN` before any X
+  call, never run for free. Writes are priced at their request rate, including a Post at $0.015, or $0.200 with a URL.
+- **The estimate comes first.** Before dispatch the tools RPC multiplies the page size (`max_results`, or 1) by the
+  resource rate and adds any per-request price. If that estimate does not fit the session or the rolling daily budget,
+  the call is refused with `X_BUDGET_EXCEEDED`, the remaining amounts, and a next step; no X call is made.
+- **Two caps.** `scriptBudgetUsd` caps one session, **$1.00** by default. `scriptDailyBudgetUsd` caps all script
+  spending in a rolling 24 hours, **$1.00** by default, across sessions, scheduled jobs and reloads. `X_BUDGET` is the
+  old single code; it is now `X_BUDGET_EXCEEDED`. Raise either option, or wait for the window to roll.
+- **The ledger persists.** It is kept in the plugin's storage as amounts and timestamps only, with no content, so a
+  reload does not forget the spend.
+- **The script sees its cost.** Every result carries the actual cost line, computed from what X returned, and a
+  structured `cost: { estimateUsd, actualUsd, sessionSpentUsd, dailySpentUsd }` beside the output. Where X reports no
+  usage the actual is the estimate. Example: `Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15.`
+- **A script's page is not the model's page.** The model path keeps one page of ten; a script, whose code you approved,
+  may ask for up to X's maximum of 100 and for a next-page token. A loop is still a loop: 500 posts cost about $2.50,
+  and the budget, not the page size, bounds it; the estimate refuses the call that would cross a cap.
+- **Bookmarks need a daily cadence.** `get_users_bookmarks` has no `since_id`; every poll re-reads the newest page, and
+  X charges a resource once in a 24-hour UTC window. Poll once a day, not every few minutes; a 15-minute schedule buys
+  the same page many times and gains nothing.
+- A script goes through the tools RPC, which calls the tool executor directly: no `execute.before` or `execute.after`
+  hook runs, so it is not capped by the model's ten and gets no hook cost line. The tools RPC's own estimate and
+  `shapeResult` cost line replace them.
 
 ## Rate limits
 
@@ -110,7 +125,8 @@ opencode api post /api/rpc/x.posts.tools/describe -H "x-opencode-directory:$PWD"
 resolved `permission` (`allow`, `ask` or `deny`). That is how a script self-checks before it writes a call.
 
 A result is `{"output": {"output": <the tool's structured content, or its text when it has none>, "text": <the tool's
-text, with the cost line>}}`, as plain JSON. X content in it, such as posts, bios and Article text, is untrusted data
+text, with the cost line>, "cost": {"estimateUsd": <number>, "actualUsd": <number>, "sessionSpentUsd": <number>,
+"dailySpentUsd": <number>}}}`, as plain JSON. X content in it, such as posts, bios and Article text, is untrusted data
 written by other people: keep what a script writes where the people it is about would expect it, and only as long as
 you need it.
 
@@ -125,7 +141,8 @@ standard output.
 | `SESSION_UNKNOWN` | OpenCode says the session does not exist in this location. Any other failure to look the session up is OpenCode's own error. |
 | `SESSION_AGENT_REQUIRED` | The session names no agent, or an agent that does not exist. |
 | `PERMISSION_DENIED` | The rules resolve to `ask` (a script cannot answer) or to `deny`. The message names the action; the next step names the rule to add or remove. |
-| `X_BUDGET` | The script session reached its `scriptBudgetUsd` spend. The next step says to raise the option or use another session. |
+| `X_BUDGET_EXCEEDED` | The call's estimate does not fit the session's `scriptBudgetUsd` or the rolling `scriptDailyBudgetUsd`. No X call is made; the error gives the remaining amounts and the option to raise. |
+| `X_PRICE_UNKNOWN` | The method has no published price in the plugin's table. It is refused before any X call, never run for free. |
 | `SERVER_CONFLICT` | Your `opencode.json` defines its own `x` server at a URL other than X's. `/x-status` names both. |
 | `AUTH_REQUIRED`, `CONNECTING`, `CONNECTION_FAILED`, `DISABLED`, `NOT_REGISTERED` | The `x` server needs a sign-in, is still connecting, could not connect, is disabled, or is missing. `/x-status` gives the details. |
 | `CLIENT_ID_MISSING`, `CLIENT_ID_INVALID` | No X app client ID is set, or the saved one is unusable. The next step is the `/connect` X app entry. |

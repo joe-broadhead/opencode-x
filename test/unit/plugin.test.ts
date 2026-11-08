@@ -218,8 +218,8 @@ describe("setup", () => {
   })
 
   test.each([
-    ["registers its own server", {}, { value: { text: "ok" } }],
-    ["adopts the user's server at X's URL", { x: { type: "remote", url: ENDPOINT, oauth: false, headers: { Authorization: `Bearer ${KEY}` } } }, { value: { text: "ok" } }],
+    ["registers its own server", {}, { value: { text: expect.stringContaining("ok") } }],
+    ["adopts the user's server at X's URL", { x: { type: "remote", url: ENDPOINT, oauth: false, headers: { Authorization: `Bearer ${KEY}` } } }, { value: { text: expect.stringContaining("ok") } }],
     ["finds a user server at another URL", { x: { type: "remote", url: "https://x-mcp.example.com/mcp" } }, { code: "SERVER_CONFLICT" }],
   ] as const)("the tools RPC runs a read when the plugin %s, or refuses with its code", async (_, initial, expected) => {
     const { ctx, mcp, handlers } = context({ oauth: { client_id: "client-1" } })
@@ -227,7 +227,7 @@ describe("setup", () => {
     mcp.run(mcpEditor(initial as Parameters<typeof mcpEditor>[0]).editor)
     const rpcContext = { signal: new AbortController().signal, error: (_type: string, _message: string, data: { code: string }) => ({ code: data.code }) }
     const result = await handlers.get("x.posts.tools")!.search_posts_all!({ sessionID: "ses_test", input: { query: "Example topic" } }, rpcContext)
-    expect("code" in (result as object) ? result : { value: result }).toEqual(expected)
+    expect("code" in (result as object) ? result : { value: result }).toMatchObject(expected)
     expect(JSON.stringify(result)).not.toContain(KEY)
     await cleanup!()
   })

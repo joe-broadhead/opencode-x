@@ -11,9 +11,11 @@ All notable changes to this project are documented in this file. It follows
 - The tools RPC is v2: every known tool is a method with its class (`read`, `write`, `send` or `destructive`), and a
   write, the public Post or an off-by-default tool is scriptable under a prior explicit `allow` in the agent's or the
   session's rules. A rule that resolves to `ask` is refused before the tool runs, so no prompt waits, and a saved
-  "Always allow" does not authorize an ad-hoc script. A script session has a `scriptBudgetUsd` budget, $1.00 by
-  default, counted from the billed resources in the results; at the budget the next call is refused with `X_BUDGET`.
-  The model path is unchanged: ten results, no pagination, the cost line.
+  "Always allow" does not authorize an ad-hoc script. Every billable method has a published price; a call is
+  estimated before dispatch and refused with `X_BUDGET_EXCEEDED` when it does not fit the session's
+  `scriptBudgetUsd` or the rolling `scriptDailyBudgetUsd` (both $1.00 by default). The daily ledger persists in plugin
+  storage across sessions and reloads. An unpriced method is refused with `X_PRICE_UNKNOWN`. Every result carries the
+  actual cost line and a structured `cost`. The model path is unchanged: ten results, no pagination, the cost line.
 - `get_posts_by_ids` with `post.fields=article` returns an X Article's full text in `article.plain_text`; the `x`
   skill and the scripting guide say so.
 

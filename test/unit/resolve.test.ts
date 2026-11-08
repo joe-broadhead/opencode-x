@@ -127,7 +127,7 @@ async function setup(input: { agent: readonly Rule[]; session: readonly Rule[]; 
     mcp: { list: async () => ({ data: [{ name: SERVER, status: { status: "connected" } }] }) },
   }
   const serverOptions: ToolsRpcOptions["mcp"] = { server: SERVER, managed: () => true }
-  await registerToolsRpc(ctx as never, { methods, mcp: serverOptions })
+  await registerToolsRpc(ctx as never, { methods, shapers: { input: (_method, input) => input, result: (_method, result) => result }, mcp: serverOptions })
   return { handlers, executions }
 }
 

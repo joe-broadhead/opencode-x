@@ -358,7 +358,8 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
   test("runs a known read as the session's agent, with no model turn", async () => {
     const from = fake.called.length
     const result = await call("build", READ_A, { query: "hello" })
-    expect(result).toEqual({ value: { output: { tool: READ_A, path: "/mcp", arguments: { query: "hello" } }, text: `called ${READ_A}` } })
+    expect(result).toMatchObject({ value: { output: { tool: READ_A, path: "/mcp", arguments: { query: "hello" } }, text: expect.stringContaining(`called ${READ_A}`) } })
+    expect(result.value.cost).toMatchObject({ estimateUsd: 0.005, actualUsd: 0.005 })
     expect(fake.called.slice(from)).toEqual([{ tool: READ_A, path: "/mcp" }])
     const { data: info } = await host.api<{ data: Record<string, any> }>("GET", `/api/session/${sessions.build}`)
     expect(info.tokens).toMatchObject({ input: 0, output: 0 })
@@ -366,7 +367,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
   })
 
   test("gives a result with only text that text as its output too, as docs/scripting.md says", async () => {
-    expect(await call("build", READ_B, { query: "text" })).toEqual({ value: { output: `text from ${READ_B}`, text: `text from ${READ_B}` } })
+    expect(await call("build", READ_B, { query: "text" })).toMatchObject({ value: { output: `text from ${READ_B}`, text: expect.stringContaining(`text from ${READ_B}`) } })
   })
 
   test("never makes an unknown tool a method, though OpenCode lists it", async () => {
@@ -439,7 +440,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(toolCalls(from)).toEqual([])
   })
 
-  test("stops a session at its spend budget with X_BUDGET, before the next X call", async () => {
+  test("stops a session at its spend budget with X_BUDGET_EXCEEDED, before the next X call", async () => {
     const budgeted = await (async () => {
       const created = await host.api<Record<string, any>>("POST", "/api/session", { agent: "build" })
       return (created.id ?? created.data?.id) as string
@@ -448,7 +449,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     for (let read = 0; read < 7; read++) expect((await call(budgeted, READ_A, { query: "cost" })).value).toBeDefined()
     const from = fake.calls.length
     const refused = await call(budgeted, READ_A, { query: "cost" })
-    expect(refused.code).toBe("X_BUDGET")
+    expect(refused.code).toBe("X_BUDGET_EXCEEDED")
     expect(refused.message).toMatch(/scriptBudgetUsd/)
     expect(fake.calls.length).toBe(from)
   })
@@ -534,7 +535,7 @@ async function serve(version: string, installed: string, options: { readonly nam
   const providers = { lmstudio: { settings: { baseURL: "" } }, ollama: { settings: { baseURL: "" } }, vllm: { settings: { baseURL: "" } } }
   mkdirSync(directory, { recursive: true })
   const agents = options.agents ?? { reviewer: { description: "Reviews changes", mode: "subagent" } }
-  writeFileSync(join(directory, "opencode.json"), JSON.stringify({ plugins: [{ package: installed, options: { oauth: { client_id: "client-1", client_secret: "secret-1" } } }], agents, providers }))
+  writeFileSync(join(directory, "opencode.json"), JSON.stringify({ plugins: [{ package: installed, options: { oauth: { client_id: "client-1", client_secret: "secret-1" }, scriptDailyBudgetUsd: 100 } }], agents, providers }))
   const password = randomUUID()
   const env = { ...isolated(base), ...OFFLINE, PATH: "/usr/bin:/bin", LANG: "en_US.UTF-8", OPENCODE_PASSWORD: password }
 

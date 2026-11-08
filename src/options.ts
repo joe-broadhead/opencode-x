@@ -1,5 +1,5 @@
 import { REDIRECT_URI, SCOPES } from "./constants.js"
-import { DEFAULT_SCRIPT_BUDGET_USD } from "./billing.js"
+import { DEFAULT_SCRIPT_BUDGET_USD, DEFAULT_SCRIPT_DAILY_BUDGET_USD } from "./billing.js"
 
 export interface Options {
   /** Pins the X app, for example in an organisation's managed config. Otherwise the /connect X app entry sets it. */
@@ -12,6 +12,8 @@ export interface Options {
   readonly allowUntestedHost: boolean
   /** The per-session spend budget a script gets, in USD. Every X call a script makes counts against it. */
   readonly scriptBudgetUsd: number
+  /** The rolling 24-hour cap on all script spending, in USD, across sessions, jobs and reloads. */
+  readonly scriptDailyBudgetUsd: number
 }
 
 /** A rejected option. Messages name the field and never echo its value. */
@@ -26,7 +28,7 @@ export type ParsedOptions =
   | { readonly ok: true; readonly options: Options }
   | { readonly ok: false; readonly error: OptionsError }
 
-const TOP_KEYS = ["oauth", "allowUntestedHost", "scriptBudgetUsd"]
+const TOP_KEYS = ["oauth", "allowUntestedHost", "scriptBudgetUsd", "scriptDailyBudgetUsd"]
 const OAUTH_KEYS = ["client_id", "redirect_uri", "callback_port", "scopes", "client_secret"]
 const NO_SPACES = /^\S+$/
 
@@ -124,6 +126,11 @@ export function parseOptions(input: unknown): ParsedOptions {
     return fail("scriptBudgetUsd", "Must be a number greater than 0 and at most 1000.", "Set the per-session spend budget in US dollars, for example 1.00.")
   }
 
+  const scriptDailyBudgetUsd = raw.scriptDailyBudgetUsd ?? DEFAULT_SCRIPT_DAILY_BUDGET_USD
+  if (typeof scriptDailyBudgetUsd !== "number" || !Number.isFinite(scriptDailyBudgetUsd) || scriptDailyBudgetUsd <= 0 || scriptDailyBudgetUsd > 1_000) {
+    return fail("scriptDailyBudgetUsd", "Must be a number greater than 0 and at most 1000.", "Set the rolling 24-hour spend cap in US dollars, for example 1.00.")
+  }
+
   return {
     ok: true,
     options: {
@@ -134,6 +141,7 @@ export function parseOptions(input: unknown): ParsedOptions {
       ...(clientSecret === undefined ? {} : { clientSecret }),
       allowUntestedHost,
       scriptBudgetUsd,
+      scriptDailyBudgetUsd,
     },
   }
 }

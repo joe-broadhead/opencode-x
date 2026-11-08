@@ -32,7 +32,7 @@ import type { Plugin } from "@opencode/plugin"
 import { Rpc } from "@opencode/plugin/rpc"
 
 // >>> PLUGIN-SPECIFIC >>>
-import { costLine, DEFAULT_SCRIPT_BUDGET_USD, scriptCostOf, widenRead } from "../billing.js"
+import { assertBudget, BudgetExceededError, estimateCall, PriceUnknownError, recordCall, rememberEstimate, resetBilling, scriptCostOfCall, spentOf, takeEstimate, widenRead } from "../billing.js"
 import { PLUGIN_ID as X_PLUGIN_ID, SERVER_NAME } from "../constants.js"
 import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../x-tools.js"
 
@@ -52,56 +52,42 @@ export const METHODS: readonly MethodSpec[] = [
   ...DENY_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "destructive" })),
 ]
 
-/** The per-session spend budget, in USD, which the plugin's `scriptBudgetUsd` option sets at setup. */
-let budgetUsd = DEFAULT_SCRIPT_BUDGET_USD
-/** What each script session has spent on billed resources, in USD, for this process. */
-const spent = new Map<string, number>()
-
-/** Sets the script budget from the plugin's option. Called once, at setup, before any call. */
-export function configureScriptBudget(usd: number): void {
-  budgetUsd = usd
-}
-
-/** Forgets every session's recorded spend. Called at setup, and by the tests. */
+/** Forgets every session's recorded spend and the daily ledger. The tests use it. */
 export function resetScriptSpend(): void {
-  spent.clear()
-}
-
-/** A script's X call stopped by the session's spend budget. `pluginError` turns it into `X_BUDGET`. */
-export class BudgetError extends Error {
-  readonly spent: number
-  readonly budgetUsd: number
-  constructor(sessionSpent: number) {
-    super(`this script session has spent $${sessionSpent.toFixed(2)} of its $${budgetUsd.toFixed(2)} X budget`)
-    this.spent = sessionSpent
-    this.budgetUsd = budgetUsd
-  }
+  resetBilling()
 }
 
 /**
  * What the model path's `execute.before` hook does to an MCP call's arguments, which the executor skips: the model
  * path caps a read at ten results and drops the next-page token, while a script, whose code the user approved, gets
- * X's own maximum page and the pagination it asks for. It also stops a session at its spend budget before dispatch.
+ * X's own maximum page and the pagination it asks for. It also prices the call and refuses it before dispatch when the
+ * estimate does not fit the session or the rolling daily cap.
  */
 export function shapeInput(method: string, input: unknown, call: ShapeCall): unknown {
-  const sessionSpent = spent.get(call.sessionID) ?? 0
-  if (sessionSpent >= budgetUsd) throw new BudgetError(sessionSpent)
+  // Widen first: the budget prices the page the script actually asks for, up to X's maximum.
   widenRead(method, input)
+  const estimate = estimateCall(method, input)
+  assertBudget(call.sessionID, estimate.estimateUsd)
+  rememberEstimate(call.sessionID, estimate)
   return input
 }
 
 /**
- * What the model path's `execute.after` hook does to a result, which the executor skips: the actual-cost line, always,
- * and the session's spend counted from the billed resources X returned. The model path's one line per Code Mode
- * program is a Code Mode aggregate; a script has no program, so each call gets its own line, as a direct call does.
+ * What the model path's `execute.after` hook does to a result, which the executor skips: the actual cost from what X
+ * returned (the estimate when it reports no usage), recorded against the session and the rolling daily ledger, the
+ * cost line, and the structured `cost` beside the output. The model path's one line per Code Mode program is a Code
+ * Mode aggregate; a script has no program, so each call gets its own line, as a direct call does.
  */
 export function shapeResult(method: string, result: McpResult, call: ShapeCall): McpResult {
-  const cost = scriptCostOf(method, result)
-  if (cost === undefined) return result
-  spent.set(call.sessionID, (spent.get(call.sessionID) ?? 0) + cost.total)
-  const line = costLine(cost)
-  if (line === undefined) return result
-  return { ...result, text: result.text === "" ? line : `${result.text}\n${line}` }
+  const estimate = takeEstimate(call.sessionID) ?? estimateCall(method, {})
+  const cost = scriptCostOfCall(method, {}, result, estimate)
+  recordCall(call.sessionID, cost.actualUsd)
+  const spent = spentOf(call.sessionID)
+  return {
+    ...result,
+    text: result.text === "" ? cost.line : `${result.text}\n${cost.line}`,
+    cost: { estimateUsd: estimate.estimateUsd, actualUsd: cost.actualUsd, sessionSpentUsd: spent.sessionSpentUsd, dailySpentUsd: spent.dailySpentUsd },
+  }
 }
 
 /** The next step for each code. Each is one sentence that ends with a full stop. */
@@ -120,14 +106,23 @@ export const NEXT_STEPS: NextSteps = {
   CANCELLED: "Call the method again if you still need the result.",
 }
 
-/** The plugin's own errors: a session that reached its script budget is `X_BUDGET`, with the way past it. */
+/** The plugin's own errors: an unpriced method, or a call that does not fit the budget, each with its next step. */
 export function pluginError(error: unknown): Failure | undefined {
-  if (!(error instanceof BudgetError)) return undefined
-  return {
-    code: "X_BUDGET",
-    what: `this script session has spent $${error.spent.toFixed(2)} of its $${error.budgetUsd.toFixed(2)} X budget`,
-    next: `Raise "scriptBudgetUsd" in this plugin's options, or use another session, to spend more; each call is billed.`,
+  if (error instanceof PriceUnknownError) {
+    return {
+      code: "X_PRICE_UNKNOWN",
+      what: `${error.method} has no published X price, so it is refused rather than run for free`,
+      next: "Use a method whose price is in X's pay-per-usage table, or add its price to this plugin's table before a script calls it.",
+    }
   }
+  if (error instanceof BudgetExceededError) {
+    return {
+      code: "X_BUDGET_EXCEEDED",
+      what: `this call is estimated at $${error.estimateUsd.toFixed(2)}; the session has $${Math.max(0, error.sessionBudgetUsd - error.sessionSpentUsd).toFixed(2)} of $${error.sessionBudgetUsd.toFixed(2)} left and the last 24 hours have $${Math.max(0, error.dailyBudgetUsd - error.dailySpentUsd).toFixed(2)} of $${error.dailyBudgetUsd.toFixed(2)} left`,
+      next: `Raise "scriptBudgetUsd" or "scriptDailyBudgetUsd" in this plugin's options, or wait for the 24-hour window to roll; each call is billed.`,
+    }
+  }
+  return undefined
 }
 
 // <<< PLUGIN-SPECIFIC <<<
@@ -140,6 +135,8 @@ export type JsonSchema = Readonly<Record<string, unknown>>
 export interface McpResult {
   readonly output?: unknown
   readonly text: string
+  /** A plugin's own cost for the call, beside the output; optional, so a plugin without billing keeps the shape. */
+  readonly cost?: { readonly estimateUsd: number; readonly actualUsd: number; readonly sessionSpentUsd: number; readonly dailySpentUsd: number }
 }
 
 /** What a method can do. It never decides whether a call runs; the rules do. */
@@ -310,7 +307,16 @@ const object = (properties: Record<string, JsonSchema>, required: readonly strin
 const STRING = { type: "string" } as const
 const ANY_OBJECT = { type: "object" } as const
 const FAILED = object({ code: STRING, next: STRING }, ["code", "next"])
-const mcpOutput = (output: JsonSchema = {}) => object({ output, text: STRING }, ["text"])
+const COST = object(
+  {
+    estimateUsd: { type: "number" },
+    actualUsd: { type: "number" },
+    sessionSpentUsd: { type: "number" },
+    dailySpentUsd: { type: "number" },
+  },
+  ["estimateUsd", "actualUsd", "sessionSpentUsd", "dailySpentUsd"],
+)
+const mcpOutput = (output: JsonSchema = {}) => object({ output, text: STRING, cost: COST }, ["text"])
 const DESCRIBED = object(
   {
     name: STRING,

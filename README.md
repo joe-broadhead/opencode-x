@@ -133,7 +133,8 @@ opencode api post /api/rpc/x.posts.tools/search_posts_all -H "x-opencode-directo
   -d '{"input":{"sessionID":"ses_…","input":{"query":"from:example","max_results":10}}}'
 ```
 
-Every call is billed, and each script session has a `scriptBudgetUsd` budget, $1.00 by default. See
+Every call is billed, and each script session has a `scriptBudgetUsd` budget, $1.00 by default, with a rolling
+`scriptDailyBudgetUsd` cap of $1.00 per 24 hours across all scripts. See
 [Scripting](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md).
 
 ## Permissions
@@ -263,7 +264,8 @@ Run `/x-status` first. Its last line is the next step.
 | `SKILLS_INVALID` | A skill file in the package is missing or broken. Reinstall the plugin. |
 | `SERVER_NOT_REGISTERED` | The plugin could not register the `x` server. Restart OpenCode. |
 | `RULES_NOT_ADDED` | The default permission rules could not be added, so X tools may run without asking. Restart OpenCode. |
-| `X_BUDGET` | A script session reached its `scriptBudgetUsd` spend. Raise the option or use another session. |
+| `X_BUDGET_EXCEEDED` | The next script call's estimate does not fit its `scriptBudgetUsd` or the rolling `scriptDailyBudgetUsd`. Raise an option or wait for the window to roll. |
+| `X_PRICE_UNKNOWN` | The script called a method with no published price, so it was refused. Use a priced method. |
 
 A script's errors from the tools RPC have their own codes, listed in
 [Scripting](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md#errors).

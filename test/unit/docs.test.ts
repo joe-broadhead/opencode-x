@@ -20,9 +20,9 @@ const FILES = [
 const KNOWN = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
 const text = (file: string) => readFileSync(join(ROOT, file), "utf8").replace(/\s+/g, " ")
 // Every code the plugin raises, whether through an error helper or a status field.
-const CODES = ["OPTIONS_INVALID", "HOST_UNTESTED", "CLIENT_ID_MISSING", "CLIENT_ID_INVALID", "STATUS_UNAVAILABLE", "SKILLS_INVALID", "SERVER_NOT_REGISTERED", "RULES_NOT_ADDED", "X_BUDGET"]
+const CODES = ["OPTIONS_INVALID", "HOST_UNTESTED", "CLIENT_ID_MISSING", "CLIENT_ID_INVALID", "STATUS_UNAVAILABLE", "SKILLS_INVALID", "SERVER_NOT_REGISTERED", "RULES_NOT_ADDED", "X_BUDGET_EXCEEDED", "X_PRICE_UNKNOWN"]
 // The tools RPC's budget code names the vendor on purpose: it is the plugin's own, not a shared host code.
-const PREFIXED = ["X_BUDGET"]
+const PREFIXED = ["X_BUDGET_EXCEEDED", "X_PRICE_UNKNOWN"]
 
 describe("docs", () => {
   test.each(FILES)("%s states no count of read, write or declared tools that could go stale", (file) => {
@@ -229,7 +229,7 @@ describe("docs", () => {
     const guide = text("docs/scripting.md")
     expect(guide).toContain("(`METHODS` in `src/host/tools-rpc.ts`)")
     expect(guide).toContain("`scriptBudgetUsd`")
-    expect(guide).toContain("`X_BUDGET`")
+    expect(guide).toContain("`X_BUDGET_EXCEEDED`")
     expect(guide).toContain("x-opencode-directory")
     expect(guide).toContain("Every call costs money")
     expect(guide).toContain("x-rate-limit-reset")

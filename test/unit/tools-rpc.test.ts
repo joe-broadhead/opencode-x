@@ -28,7 +28,8 @@ import {
   // @ts-expect-error Failure is not exported
   type Failure as _Failure,
 } from "../../src/host/tools-rpc.js"
-import { configureScriptBudget, resetScriptSpend } from "../../src/host/tools-rpc.js"
+import { resetScriptSpend } from "../../src/host/tools-rpc.js"
+import { configureBilling } from "../../src/billing.js"
 import { DEFAULT_SCRIPT_BUDGET_USD } from "../../src/billing.js"
 
 type Effect = "allow" | "deny" | "ask"
@@ -211,7 +212,7 @@ async function setup(options: Setup = {}): Promise<Harness> {
   const { shapers, mcp: withMcp = true, server = SERVER, managed = true, unavailableDetail, notRegistered } = options
   const stop = await registerToolsRpc(ctx as never, {
     methods,
-    ...(shapers === undefined ? {} : { shapers }),
+    ...(shapers === undefined ? { shapers: { input: (_method, input) => input, result: (_method, result) => result } } : { shapers }),
     ...(withMcp === false
       ? {}
       : {
@@ -361,7 +362,21 @@ describe("describe", () => {
       description: `${ID} (test)`,
       available: true,
       input: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
-      output: { type: "object", properties: { output: {}, text: { type: "string" } }, required: ["text"], additionalProperties: false },
+      output: {
+        type: "object",
+        properties: {
+          output: {},
+          text: { type: "string" },
+          cost: {
+            type: "object",
+            properties: { estimateUsd: { type: "number" }, actualUsd: { type: "number" }, sessionSpentUsd: { type: "number" }, dailySpentUsd: { type: "number" } },
+            required: ["estimateUsd", "actualUsd", "sessionSpentUsd", "dailySpentUsd"],
+            additionalProperties: false,
+          },
+        },
+        required: ["text"],
+        additionalProperties: false,
+      },
     })
     expect(description.methods[1]).toMatchObject({ name: WRITE, class: "write", available: false, reason: "TOOL_UNAVAILABLE" })
     expect(description.methods[3]).toMatchObject({ name: "owned_write", kind: "plugin", class: "write", action: "plugin_owned_write", available: true })
@@ -422,8 +437,7 @@ describe("a script's call", () => {
   test("runs the host executor as the session's agent, with a call id of its own, and returns {output, text}", async () => {
     const h = await setup()
     const output = await call(h, READ, { query: "hello" })
-    const shaped = shapeResult(READ, { output: { echoed: { query: "hello" } }, text: "line one\nline two" }, { sessionID: "ses_1", agent: "build", action: ID })
-    expect(output).toEqual(JSON.parse(JSON.stringify(shaped)))
+    expect(output).toEqual({ output: { echoed: { query: "hello" } }, text: "line one\nline two" })
     expect(h.calls).toHaveLength(1)
     expect(h.calls[0]).toMatchObject({ tool: ID, input: { query: "hello" }, call: { sessionID: "ses_1", agent: "build", messageID: expect.any(String), id: expect.stringMatching(/^script:/) } })
     expect(h.evaluations).toEqual([expect.objectContaining({ action: ID, effect: "allow" })])
@@ -707,20 +721,25 @@ describe("X's block", () => {
     expect(shapeInput("create_users_bookmark", { id: "1" }, sc)).toEqual({ id: "1" })
   })
 
-  test("a script's result always gets the actual-cost line, and its spend counts against the session's budget", () => {
+  test("a script's result gets the actual-cost line and structured cost, and its spend counts against the session", async () => {
     resetScriptSpend()
-    configureScriptBudget(DEFAULT_SCRIPT_BUDGET_USD)
+    await configureBilling({ sessionBudgetUsd: DEFAULT_SCRIPT_BUDGET_USD, dailyBudgetUsd: 1 })
+    shapeInput("search_posts_all", { query: "q" }, sc)
     const costly = shapeResult("search_posts_all", { output: { data: posts(10), includes: { users: users(10) } }, text: "x" }, sc)
     expect(costly.text).toBe("x\nCost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15.")
+    expect(costly.cost).toMatchObject({ estimateUsd: 0.005, actualUsd: 0.15, sessionSpentUsd: 0.15, dailySpentUsd: 0.15 })
     // An empty page still gets its line, as a direct call does.
     expect(shapeResult("search_posts_all", { output: { data: [] }, text: "x" }, sc).text).toBe("x\nCost: 0 posts + 0 authors = $0.00.")
-    // A result with no billed resource, and a write, get no line.
-    expect(shapeResult("article_create_draft", { text: "draft" }, sc)).toEqual({ text: "draft" })
+    // A write is priced too, at its published request rate.
+    const draft = shapeResult("article_create_draft", { text: "draft" }, sc)
+    expect(draft.text).toBe("draft\nCost: 1 request ($0.005) = $0.005.")
+    expect(draft.cost?.actualUsd).toBe(0.005)
   })
 
-  test("at the budget, the next call is refused with X_BUDGET before dispatch, with the way past it", () => {
+  test("an estimate above the remaining session or daily budget is refused with X_BUDGET_EXCEEDED before dispatch", async () => {
     resetScriptSpend()
-    configureScriptBudget(0.1)
+    await configureBilling({ sessionBudgetUsd: 0.1, dailyBudgetUsd: 1 })
+    shapeInput("search_posts_all", { query: "q" }, sc)
     shapeResult("search_posts_all", { output: { data: posts(10), includes: { users: users(10) } }, text: "x" }, sc)
     const refusal = (() => {
       try {
@@ -730,13 +749,13 @@ describe("X's block", () => {
         return pluginError(error)
       }
     })()
-    expect(refusal).toMatchObject({ code: "X_BUDGET" })
-    expect(refusal?.what).toContain("$0.15")
-    expect(refusal?.next).toContain("scriptBudgetUsd")
-    // Another session starts with its own budget.
+    expect(refusal).toMatchObject({ code: "X_BUDGET_EXCEEDED" })
+    expect(refusal?.what).toContain("$0.01")
+    expect(refusal?.next).toContain("scriptDailyBudgetUsd")
+    // Another session has its own session budget, but the daily ledger is shared.
     expect(shapeInput("search_posts_all", { query: "q" }, { ...sc, sessionID: "ses_other" })).toEqual({ query: "q" })
     resetScriptSpend()
-    configureScriptBudget(DEFAULT_SCRIPT_BUDGET_USD)
+    await configureBilling({ sessionBudgetUsd: DEFAULT_SCRIPT_BUDGET_USD, dailyBudgetUsd: 1 })
   })
 })
 
