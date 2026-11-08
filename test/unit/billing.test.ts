@@ -45,19 +45,19 @@ describe("the read cap", () => {
 describe("the cost line", () => {
   test("counts the posts and authors X actually returned", () => {
     const cost = costOf("x_search_posts_all", { output: search(10) })!
-    expect(costLine(cost)).toBe("Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15.")
+    expect(costLine(cost)).toBe("Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15.")
     const one = costOf("x_search_posts_all", { output: search(1) })!
-    expect(costLine(one)).toBe("Cost: 1 post ($0.005) + 1 author ($0.01) = $0.015.")
+    expect(costLine(one)).toBe("Cost: at most 1 post ($0.005) + 1 author ($0.01) = $0.015.")
   })
 
   test("uses the owned-read rate for mentions and the user rate for a profile", () => {
     const mentions = costOf("x_get_users_mentions", { content: content(search(3, 0)) })!
-    expect(costLine(mentions)).toBe("Cost: 3 owned posts ($0.003) = $0.003.")
+    expect(costLine(mentions)).toBe("Cost: at most 3 owned posts ($0.015) = $0.015.")
     const user = costOf("x_get_users_by_username", { output: { data: { id: "1" } } })!
-    expect(costLine(user)).toBe("Cost: 1 user ($0.01) = $0.01.")
+    expect(costLine(user)).toBe("Cost: at most 1 user ($0.01) = $0.01.")
     const post = costOf("x_get_posts_by_id", { output: { data: { id: "1" }, includes: { users: [{ id: "1" }] } } })!
-    expect(costLine(post)).toBe("Cost: 1 post ($0.005) + 1 author ($0.01) = $0.015.")
-    expect(costLine(costOf("x_get_posts_counts_recent", {})!)).toBe("Cost: 1 count read ($0.01) = $0.01.")
+    expect(costLine(post)).toBe("Cost: at most 1 post ($0.005) + 1 author ($0.01) = $0.015.")
+    expect(costLine(costOf("x_get_posts_counts_recent", {})!)).toBe("Cost: at most 1 count read ($0.01) = $0.01.")
   })
 
   test("states a zero cost for a completed read that returned nothing", () => {
@@ -78,7 +78,7 @@ describe("the cost line", () => {
     expect(direct).toMatchObject({ max_results: 10 })
     const result = { content: [{ type: "text", text: "called" }], output: search(10) } as Record<string, unknown>
     after({ sessionID: "s1", messageID: "m1", tool: "x_search_posts_all", status: "completed", result })
-    expect(result.content).toEqual([{ type: "text", text: "called" }, { type: "text", text: "Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15." }])
+    expect(result.content).toEqual([{ type: "text", text: "called" }, { type: "text", text: "Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15." }])
 
     // Code Mode: the inner read is summed, and the line goes on the execute result the model reads.
     before({ sessionID: "s2", messageID: "m2", tool: "execute", input: { code: "code" } })
@@ -87,7 +87,7 @@ describe("the cost line", () => {
     expect(inner.content).toEqual([{ type: "text", text: "inner" }])
     const outer = { content: [{ type: "text", text: "program output" }] } as Record<string, unknown>
     after({ sessionID: "s2", messageID: "m2", tool: "execute", status: "completed", result: outer })
-    expect(outer.content).toEqual([{ type: "text", text: "program output" }, { type: "text", text: "Cost: 2 posts ($0.01) + 2 authors ($0.02) = $0.03." }])
+    expect(outer.content).toEqual([{ type: "text", text: "program output" }, { type: "text", text: "Cost: at most 2 posts ($0.01) + 2 authors ($0.02) = $0.03." }])
     await stop()
     expect(editor.registrations).toEqual([])
   })

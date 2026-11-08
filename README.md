@@ -30,7 +30,8 @@ Unofficial; not affiliated with X Corp.
   sets these). Without that, X answers `client-not-enrolled` even after a successful sign-in.
 - **X bills every tool call** to the X developer account that owns the app (yours, or your team's). Current rates, from
   [X's pricing page](https://docs.x.com/x-api/getting-started/pricing) on 5 November 2026, are about $0.005 per post
-  read, $0.010 per user read, $0.001 per read of your own posts, mentions or bookmarks, $0.005 per bookmark change,
+  read, $0.010 per user read, $0.001 per read of your own posts, mentions or bookmarks **only when the account owns the
+  app**, $0.005 per bookmark change,
   and $0.015 per post created ($0.200 when it contains a URL). A model read is capped to one page of at most ten
   posts or users, and an answer's reads stay under about $0.20, including one widening; every answer that read ends
   with its actual cost, such as "Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15." A 100-post search costs about
@@ -210,6 +211,7 @@ Set options with the object form of the plugin entry:
 | `oauth.callback_port` | `1`–`65535` | none | Only with an `https:` redirect: the local port a proxy forwards to. |
 | `oauth.scopes` | X OAuth 2.0 scopes | `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write offline.access` | Dropping a group's scope makes those tools fail with `403` or removes them; dropping `offline.access` means no refresh token. |
 | `access` | `all`, `ask-changes` or `read-only` | `all` | The generated permission block: everything, reads with changes asking, or reads only. |
+| `ownsXApp` | `true` or `false` | `false` | Use the $0.001 Owned Read price for the account's own posts, mentions, bookmarks, followers and lists. Set it only if that account owns the developer app. |
 | `allowUntestedHost` | `true` or `false` | `false` | Starts on an OpenCode version outside `>=2.2.3 <2.3.0`, with a warning in status. |
 
 `{env:NAME}` is substituted when OpenCode loads the config, so the secret can stay in your environment instead of the

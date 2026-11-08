@@ -6,10 +6,10 @@
 export const PRICE_SOURCE = "https://docs.x.com/x-api/getting-started/pricing"
 export const PRICE_AS_OF = "2026-11-08"
 
-export type ResourceKind = "post" | "user" | "owned" | "list" | "space" | "community" | "news" | "dm"
+export type ResourceKind = "post" | "user" | "list" | "space" | "community" | "news" | "dm"
 
 export type MethodPrice =
-  | { readonly kind: ResourceKind; readonly perResourceUsd: number }
+  | { readonly kind: ResourceKind; readonly perResourceUsd: number; readonly ownedUsd?: number }
   | { readonly kind: "request"; readonly perRequestUsd: number }
   | { readonly kind: "postCreate"; readonly perRequestUsd: number; readonly withUrlUsd: number }
 
@@ -18,7 +18,9 @@ const request = (perRequestUsd: number): MethodPrice => ({ kind: "request", perR
 
 const POST = resource("post", 0.005)
 const USER = resource("user", 0.01)
-const OWNED = resource("owned", 0.001)
+// Owned Reads are $0.001 only when the caller owns the app; the standard rate is the safe default.
+const OWNED: MethodPrice = { kind: "post", perResourceUsd: 0.005, ownedUsd: 0.001 }
+const OWNED_USER = { kind: "user" as const, perResourceUsd: 0.01, ownedUsd: 0.001 }
 const LIST = resource("list", 0.005)
 const SPACE = resource("space", 0.005)
 const COMMUNITY = resource("community", 0.005)
@@ -46,19 +48,19 @@ export const PRICES: Readonly<Record<string, MethodPrice>> = {
   get_posts_reposted_by: USER,
   get_chat_moderators: USER,
   // Owned Reads: the 12 endpoints X discounts when the caller owns the data.
-  get_users_mentions: OWNED,
-  get_users_posts: OWNED,
-  get_users_liked_posts: OWNED,
-  get_users_bookmarks: OWNED,
-  get_users_bookmarks_by_folder_id: OWNED,
-  get_users_bookmark_folders: OWNED,
-  get_users_me_followers: OWNED,
-  get_users_me_following: OWNED,
-  get_users_blocking: OWNED,
-  get_users_owned_lists: OWNED,
-  get_users_followed_lists: OWNED,
-  get_users_list_memberships: OWNED,
-  get_users_pinned_lists: OWNED,
+  get_users_mentions: { ...OWNED, ownedUsd: 0.001 },
+  get_users_posts: { ...OWNED, ownedUsd: 0.001 },
+  get_users_liked_posts: { ...OWNED, ownedUsd: 0.001 },
+  get_users_bookmarks: { ...OWNED, ownedUsd: 0.001 },
+  get_users_bookmarks_by_folder_id: { ...OWNED, ownedUsd: 0.001 },
+  get_users_bookmark_folders: { ...OWNED, ownedUsd: 0.001 },
+  get_users_me_followers: OWNED_USER,
+  get_users_me_following: OWNED_USER,
+  get_users_blocking: OWNED_USER,
+  get_users_owned_lists: { ...OWNED, ownedUsd: 0.001 },
+  get_users_followed_lists: { ...OWNED, ownedUsd: 0.001 },
+  get_users_list_memberships: { ...OWNED, ownedUsd: 0.001 },
+  get_users_pinned_lists: { ...OWNED, ownedUsd: 0.001 },
   // Lists, Spaces, Communities, News and DM resources.
   get_lists_by_id: LIST,
   get_broadcast: SPACE,

@@ -16,8 +16,8 @@ Reads are automatic and capped: one small page per read, `max_results` at most 1
 needs, and no next-page token unless the user asks. An answer's billed reads total about $0.20 at most, including one
 widening. Never ask whether to spend: make the call.
 
-Every answer that made a billed read ends with one line computed from what X returned: "Cost: 10 posts ($0.05) +
-10 authors ($0.10) = $0.15." An Owned Read uses its own rate. Never mention an estimate.
+Every answer that made a billed read ends with one line: "Cost: at most 10 posts ($0.05) + 10 authors ($0.10) =
+$0.15." An Owned Read is $0.001 only with `ownsXApp`; otherwise standard. Never mention an estimate.
 
 ## The billed reads
 

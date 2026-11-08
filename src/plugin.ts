@@ -177,7 +177,7 @@ export function createXPlugin(seam: XSeam) {
         // A user's own server under the name is not this plugin's. Without a client and without a user entry there is
         // no server: a call gets the status's code and next step, read at each call, so a client saved in /connect
         // applies at once. The budget bounds what one script session may spend.
-        await configureBilling({ storage: ctx.storage, sessionBudgetUsd: options.scriptBudgetUsd, dailyBudgetUsd: options.scriptDailyBudgetUsd })
+        await configureBilling({ storage: ctx.storage, sessionBudgetUsd: options.scriptBudgetUsd, dailyBudgetUsd: options.scriptDailyBudgetUsd, ownsXApp: options.ownsXApp })
         stopTools = await registerToolsRpc(ctx, {
           methods: METHODS,
           mcp: {

@@ -83,7 +83,7 @@ export function shapeResult(method: string, result: McpResult, call: ShapeCall):
   const cost = scriptCostOfCall(method, {}, result, estimate)
   recordCall(call.sessionID, cost.actualUsd)
   const spent = spentOf(call.sessionID)
-  const costValue = { estimateUsd: estimate.estimateUsd, actualUsd: cost.actualUsd, sessionSpentUsd: spent.sessionSpentUsd, dailySpentUsd: spent.dailySpentUsd }
+  const costValue = { estimateUsd: estimate.estimateUsd, actualUsd: cost.actualUsd, sessionSpentUsd: spent.sessionSpentUsd, dailySpentUsd: spent.dailySpentUsd, basis: cost.basis }
   const output = result.output && typeof result.output === "object" && !Array.isArray(result.output) ? { ...(result.output as Record<string, unknown>), cost: costValue } : { cost: costValue }
   return { ...result, output, text: result.text === "" ? cost.line : `${result.text}\n${cost.line}` }
 }

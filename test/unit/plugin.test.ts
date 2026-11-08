@@ -188,7 +188,7 @@ describe("setup", () => {
       "Reads are automatic and capped: one page of at most ten",
       "an answer's reads total about $0.20 at most, one widening included",
       "Never ask whether to spend: make the call",
-      'such as "Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15."',
+      'such as "Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15."',
       "never an estimate",
       "Bookmark, list, Article-draft and other changes follow the access option",
       "load x-write and say in your reply what it does and whom it reaches",

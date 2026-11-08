@@ -8,10 +8,10 @@ const storage = () => {
   return { data, get: async (key: string) => data.get(key), set: async (key: string, value: unknown) => void data.set(key, value) }
 }
 const call = (sessionID = "ses_test") => ({ sessionID, agent: "build", action: "x_search_posts_all" })
-const fresh = async (input: { sessionBudgetUsd?: number; dailyBudgetUsd?: number; store?: ReturnType<typeof storage> } = {}) => {
+const fresh = async (input: { sessionBudgetUsd?: number; dailyBudgetUsd?: number; ownsXApp?: boolean; store?: ReturnType<typeof storage> } = {}) => {
   resetScriptSpend()
   const store = input.store ?? storage()
-  await configureBilling({ storage: store, sessionBudgetUsd: input.sessionBudgetUsd ?? 1, dailyBudgetUsd: input.dailyBudgetUsd ?? 1 })
+  await configureBilling({ storage: store, sessionBudgetUsd: input.sessionBudgetUsd ?? 1, dailyBudgetUsd: input.dailyBudgetUsd ?? 1, ownsXApp: input.ownsXApp })
   return store
 }
 
@@ -26,7 +26,7 @@ describe("the price table", () => {
   test("prices the published categories: a page of posts, a user, an owned read and a write", () => {
     expect(estimateCall("search_posts_all", { query: "q", max_results: 10 }).estimateUsd).toBe(0.05)
     expect(estimateCall("get_users_by_username", { username: "x" }).estimateUsd).toBe(0.01)
-    expect(estimateCall("get_users_mentions", { id: "1", max_results: 10 }).estimateUsd).toBe(0.01)
+    expect(estimateCall("get_users_mentions", { id: "1", max_results: 10 }).estimateUsd).toBe(0.05)
     expect(estimateCall("create_users_bookmark", { id: "1" }).estimateUsd).toBe(0.005)
     expect(estimateCall("create_posts", { text: "hello" }).estimateUsd).toBe(0.015)
     expect(estimateCall("create_posts", { text: "see https://example.com" }).estimateUsd).toBe(0.2)
@@ -56,12 +56,33 @@ describe("the budget", () => {
     expect(code).toBe("X_BUDGET_EXCEEDED")
   })
 
+  test("an Owned-Read-eligible estimate is refused at the conservative price", async () => {
+    await fresh({ sessionBudgetUsd: 0.04 })
+    let code: string | undefined
+    try {
+      shapeInput("get_users_mentions", { id: "1", max_results: 10 }, call())
+    } catch (error) {
+      code = pluginError(error)?.code
+    }
+    expect(code).toBe("X_BUDGET_EXCEEDED")
+  })
+
   test("counts a write, and the structured result carries the cost", async () => {
     await fresh()
     shapeInput("create_users_bookmark", { id: "1" }, call())
     const result = shapeResult("create_users_bookmark", { text: "ok" }, call())
-    expect(result.text).toBe("ok\nCost: 1 request ($0.005) = $0.005.")
-    expect((result.output as Record<string, unknown>).cost).toMatchObject({ estimateUsd: 0.005, actualUsd: 0.005, sessionSpentUsd: 0.005 })
+    expect(result.text).toBe("ok\nCost: at most 1 request ($0.005) = $0.005.")
+    expect((result.output as Record<string, unknown>).cost).toMatchObject({ estimateUsd: 0.005, actualUsd: 0.005, sessionSpentUsd: 0.005, basis: "conservative" })
+  })
+
+  test("ownsXApp true uses the Owned Read price and labels the basis owned", async () => {
+    await fresh({ ownsXApp: true, sessionBudgetUsd: 1 })
+    expect(estimateCall("get_users_mentions", { id: "1", max_results: 10 }).estimateUsd).toBe(0.01)
+    shapeInput("get_users_mentions", { id: "1", max_results: 10 }, call())
+    const result = shapeResult("get_users_mentions", { output: { data: [{ id: "1" }, { id: "2" }, { id: "3" }] }, text: "" }, call())
+    expect(result.text).toBe("Cost: 3 posts ($0.003) = $0.003.")
+    expect((result.output as Record<string, unknown>).cost).toMatchObject({ actualUsd: 0.003, basis: "owned" })
+    resetBilling()
   })
 
   test("persists across a reload and shares the daily ledger across sessions", async () => {

@@ -17,6 +17,8 @@ export interface Options {
   readonly scriptDailyBudgetUsd: number
   /** The generated permission block: every tool, reads with changes asking, or reads only. */
   readonly access: Access
+  /** True only when the signed-in account owns the developer app, so Owned Read pricing applies. */
+  readonly ownsXApp: boolean
 }
 
 /** A rejected option. Messages name the field and never echo its value. */
@@ -31,7 +33,7 @@ export type ParsedOptions =
   | { readonly ok: true; readonly options: Options }
   | { readonly ok: false; readonly error: OptionsError }
 
-const TOP_KEYS = ["oauth", "allowUntestedHost", "scriptBudgetUsd", "scriptDailyBudgetUsd", "access"]
+const TOP_KEYS = ["oauth", "allowUntestedHost", "scriptBudgetUsd", "scriptDailyBudgetUsd", "access", "ownsXApp"]
 const OAUTH_KEYS = ["client_id", "redirect_uri", "callback_port", "scopes", "client_secret"]
 const NO_SPACES = /^\S+$/
 
@@ -139,6 +141,8 @@ export function parseOptions(input: unknown): ParsedOptions {
     return fail("access", "Must be \"all\", \"ask-changes\" or \"read-only\".", "Use \"ask-changes\" to keep reads and ask for every other tool, or \"read-only\" to deny them.")
   }
   const access = accessValue as Access
+  const ownsXApp = raw.ownsXApp ?? false
+  if (typeof ownsXApp !== "boolean") return fail("ownsXApp", "Must be true or false.", 'Set it to true only if the signed-in X account owns the developer app.')
 
   return {
     ok: true,
@@ -152,6 +156,7 @@ export function parseOptions(input: unknown): ParsedOptions {
       scriptBudgetUsd,
       scriptDailyBudgetUsd,
       access,
+      ownsXApp,
     },
   }
 }

@@ -68,6 +68,21 @@ reads and denies every other tool. A user's later rules still win. This is the o
 { "access": "read-only" }
 ```
 
+### `ownsXApp`
+
+- Type: `true` or `false`.
+- Default: `false`.
+
+Set this only if the signed-in X account owns the developer app. When true, the Owned-Read-eligible endpoints (your
+posts, mentions, likes, bookmarks, followers, following, blocking and lists) use X's $0.001 Owned Read price, and the
+cost `basis` is `"owned"`. When false, estimates and actuals use the standard price ($0.005 a post or list, $0.010 a
+user or follow), so the budget is never exceeded; the line says "at most" and `basis` is `"conservative"`. X
+deduplicates a resource within a 24-hour UTC window, so a repeated read can cost less than shown.
+
+```json
+{ "ownsXApp": true }
+```
+
 ### `scriptBudgetUsd`
 
 - Type: a number greater than 0 and at most 1000.

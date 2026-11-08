@@ -177,7 +177,7 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     const sessionID = await scriptSession(host)
     const read = await rpcCall(host, "search_posts_all", { query: "cost", max_results: 10 }, sessionID)
     expect(read.ok).toBe(true)
-    expect((read as unknown as { output: { text: string } }).output.text).toContain("Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15.")
+    expect((read as unknown as { output: { text: string } }).output.text).toContain("Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15.")
     // The model path caps a read at ten and drops the token; a script, whose code the user approved, gets as it asked.
     const wide = await rpcCall(host, "search_posts_all", { query: "q", max_results: 25, pagination_token: "p1" }, sessionID)
     expect(wide.ok).toBe(true)
@@ -754,7 +754,7 @@ describe("the read cap and the cost line on the model path", () => {
     await scripted(direct).prompt({ sessionID, text: "Count the posts." })
     await until("the direct read call", async () => direct.fake.calls.includes("search_posts_all"))
     expect(direct.fake.callArguments.at(-1)).toEqual({ query: "cost", max_results: 10 })
-    await until("the cost line in the model's tool result", async () => toolText(direct.fake.model.requests.slice(before)).includes("Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15."))
+    await until("the cost line in the model's tool result", async () => toolText(direct.fake.model.requests.slice(before)).includes("Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15."))
   })
 
   test("a completed read that returned nothing still ends with the zero line", async () => {
@@ -776,7 +776,7 @@ describe("the read cap and the cost line on the model path", () => {
     await scripted(codeMode).prompt({ sessionID, text: "Count the posts." })
     await until("the Code Mode read call", async () => codeMode.fake.calls.includes("search_posts_all"))
     expect(codeMode.fake.callArguments.at(-1)).toEqual({ query: "cost", max_results: 10 })
-    await until("the cost line in the execute result", async () => toolText(codeMode.fake.model.requests.slice(before)).includes("Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15."))
+    await until("the cost line in the execute result", async () => toolText(codeMode.fake.model.requests.slice(before)).includes("Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15."))
   })
 })
 

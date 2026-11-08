@@ -18,14 +18,16 @@ never sees the OAuth token.
 ## Every call costs money
 
 X bills every call to the X developer account that owns the app. A post read is about $0.005, a user read about
-$0.010, a read of the user's own posts, mentions or bookmarks about $0.001, a bookmark change about $0.005, and a
-recent count about $0.005. Lists, Spaces, Communities, news and DM resources have their own rates in the plugin's price
+$0.010, a read of the user's own posts, mentions or bookmarks about $0.001 **only when the signed-in account owns
+the developer app**, a bookmark change about $0.005, and a recent count about $0.005. Otherwise those Owned-Read-eligible
+endpoints bill at the standard $0.005 a post or list and $0.010 a user or follow. Lists, Spaces, Communities, news and DM resources have their own rates in the plugin's price
 table, from [X's pay-per-usage pricing](https://docs.x.com/x-api/getting-started/pricing) read on 2026-11-08.
 
 - **Every billable method is priced.** A method with no published price is refused with `X_PRICE_UNKNOWN` before any X
   call, never run for free. Writes are priced at their request rate, including a Post at $0.015, or $0.200 with a URL.
-- **The estimate comes first.** Before dispatch the tools RPC multiplies the page size (`max_results`, or 1) by the
-  resource rate and adds any per-request price. If that estimate does not fit the session or the rolling daily budget,
+- **The estimate is conservative.** Before dispatch the tools RPC multiplies the page size (`max_results`, or 1) by the
+  standard resource rate and adds any per-request price. The Owned Read rate is used only with `ownsXApp: true`; set
+  that only if the signed-in X account owns the developer app. If that estimate does not fit the session or the rolling daily budget,
   the call is refused with `X_BUDGET_EXCEEDED`, the remaining amounts, and a next step; no X call is made.
 - **Two caps.** `scriptBudgetUsd` caps one session, **$1.00** by default. `scriptDailyBudgetUsd` caps all script
   spending in a rolling 24 hours, **$1.00** by default, across sessions, scheduled jobs and reloads. `X_BUDGET` is the

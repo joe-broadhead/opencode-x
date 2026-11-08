@@ -18,6 +18,7 @@ const OWNED_TOOLS = new Set([
   "get_users_liked_posts",
 ])
 /** Reads that return users, billed per user. */
+const OWNED_USER_TOOLS = new Set(["get_users_me_followers", "get_users_me_following", "get_users_blocking"])
 const USER_TOOLS = new Set([
   "search_users",
   "get_users_by_id",
@@ -31,12 +32,17 @@ const USER_TOOLS = new Set([
 /** Reads that return posts, billed per post plus any users X includes. */
 const POST_TOOLS = new Set(["search_posts_all", "get_posts_by_id", "get_posts_by_ids"])
 
+export type CostBasis = "conservative" | "owned"
+
 export interface ReadCost {
   readonly posts: number
   readonly owned: number
   readonly users: number
   readonly counts: number
   readonly total: number
+  readonly basis: CostBasis
+  readonly ownedRate: number
+  readonly userRate: number
 }
 
 type Result = { content?: string | readonly { type: string; text?: string }[]; output?: unknown }
@@ -117,20 +123,22 @@ const countOf = (value: unknown) => (Array.isArray(value) ? value.length : value
 /** The cost of one completed read, from what X actually returned. Missing data means no line, never a guess. */
 export function costOf(tool: string, result: Result): ReadCost | undefined {
   const name = nameOf(tool)
-  if (name === "get_posts_counts_recent") return { posts: 0, owned: 0, users: 0, counts: 1, total: COUNT }
+  if (name === "get_posts_counts_recent") return { posts: 0, owned: 0, users: 0, counts: 1, total: COUNT, basis: "conservative", ownedRate: OWNED, userRate: USER }
   const value = payload(result)
   if (!value) return undefined
   if (USER_TOOLS.has(name)) {
     const users = countOf(value.data)
-    return { posts: 0, owned: 0, users, counts: 0, total: users * USER }
+    const owned = OWNED_USER_TOOLS.has(name) && ownsXApp
+    const userRate = owned ? OWNED : USER
+    return { posts: 0, owned: 0, users, counts: 0, total: users * userRate, basis: owned ? "owned" : "conservative", ownedRate: OWNED, userRate }
   }
   if (POST_TOOLS.has(name) || OWNED_TOOLS.has(name)) {
     const posts = countOf(value.data)
     const includes = value.includes && typeof value.includes === "object" ? (value.includes as Record<string, unknown>) : {}
     const users = countOf(includes.users)
-    const rate = OWNED_TOOLS.has(name) ? OWNED : POST
-    const owned = OWNED_TOOLS.has(name) ? posts : 0
-    return { posts: OWNED_TOOLS.has(name) ? 0 : posts, owned, users, counts: 0, total: posts * rate + users * USER }
+    const owned = OWNED_TOOLS.has(name) && ownsXApp
+    const rate = owned ? OWNED : POST
+    return { posts: OWNED_TOOLS.has(name) ? 0 : posts, owned: OWNED_TOOLS.has(name) ? posts : 0, users, counts: 0, total: posts * rate + users * USER, basis: owned ? "owned" : "conservative", ownedRate: rate, userRate: USER }
   }
   return undefined
 }
@@ -146,17 +154,21 @@ export const mergeCosts = (costs: readonly ReadCost[]): ReadCost => ({
   users: costs.reduce((sum, cost) => sum + cost.users, 0),
   counts: costs.reduce((sum, cost) => sum + cost.counts, 0),
   total: costs.reduce((sum, cost) => sum + cost.total, 0),
+  basis: costs.length > 0 && costs.every((cost) => cost.basis === "owned") ? "owned" : "conservative",
+  ownedRate: costs.length > 0 && costs.every((cost) => cost.basis === "owned") ? OWNED : POST,
+  userRate: USER,
 })
 
 /** One line the model can repeat: what was returned, at its rate, and the actual total. */
 export function costLine(cost: ReadCost): string {
+  const atMost = cost.basis === "conservative" ? "at most " : ""
   const parts: string[] = []
   if (cost.posts > 0) parts.push(`${cost.posts} ${cost.posts === 1 ? "post" : "posts"} (${money(cost.posts * POST)})`)
-  if (cost.owned > 0) parts.push(`${cost.owned} owned ${cost.owned === 1 ? "post" : "posts"} (${money(cost.owned * OWNED)})`)
+  if (cost.owned > 0) parts.push(`${cost.owned} owned ${cost.owned === 1 ? "post" : "posts"} (${money(cost.owned * cost.ownedRate)})`)
   const noun = parts.length > 0 ? (cost.users === 1 ? "author" : "authors") : cost.users === 1 ? "user" : "users"
-  if (cost.users > 0) parts.push(`${cost.users} ${noun} (${money(cost.users * USER)})`)
+  if (cost.users > 0) parts.push(`${cost.users} ${noun} (${money(cost.users * cost.userRate)})`)
   if (cost.counts > 0) parts.push(`${cost.counts} count ${cost.counts === 1 ? "read" : "reads"} (${money(cost.counts * COUNT)})`)
-  return parts.length === 0 ? "Cost: 0 posts + 0 authors = $0.00." : `Cost: ${parts.join(" + ")} = ${money(cost.total)}.`
+  return parts.length === 0 ? "Cost: 0 posts + 0 authors = $0.00." : `Cost: ${atMost}${parts.join(" + ")} = ${money(cost.total)}.`
 }
 
 const append = (result: Result, line: string) => {
@@ -223,14 +235,17 @@ let ledger: LedgerEntry[] = []
 let writing = Promise.resolve()
 const scriptSpent = new Map<string, number>()
 const estimates = new Map<string, CallEstimate>()
+/** Set only when the signed-in account owns the developer app; otherwise the standard price is used. */
+let ownsXApp = false
 
 const prune = (entries: LedgerEntry[], now = Date.now()) => entries.filter((entry) => entry.at > now - DAY_MS && entry.usd > 0)
 
 /** Loads the persisted ledger and sets both caps. Called once at setup, before any call. */
-export async function configureBilling(input: { readonly storage?: LedgerStorage; readonly sessionBudgetUsd: number; readonly dailyBudgetUsd: number }) {
+export async function configureBilling(input: { readonly storage?: LedgerStorage; readonly sessionBudgetUsd: number; readonly dailyBudgetUsd: number; readonly ownsXApp?: boolean }) {
   storage = input.storage
   sessionBudgetUsd = input.sessionBudgetUsd
   dailyBudgetUsd = input.dailyBudgetUsd
+  ownsXApp = input.ownsXApp === true
   const saved = await storage?.get(LEDGER_KEY).catch(() => undefined)
   const entries = saved && typeof saved === "object" && Array.isArray((saved as { entries?: unknown }).entries) ? ((saved as { entries: unknown[] }).entries ?? []) : []
   ledger = prune(entries.flatMap((entry) => (entry && typeof entry === "object" && typeof (entry as LedgerEntry).at === "number" && typeof (entry as LedgerEntry).usd === "number" ? [entry as LedgerEntry] : [])))
@@ -296,6 +311,10 @@ export class BudgetExceededError extends Error {
   }
 }
 
+/** The rate actually used: the Owned Read price only when the option says the account owns the app. */
+const rateFor = (price: { readonly perResourceUsd: number; readonly ownedUsd?: number }) => (ownsXApp && price.ownedUsd !== undefined ? price.ownedUsd : price.perResourceUsd)
+const basisFor = (price: { readonly ownedUsd?: number }): CostBasis => (ownsXApp && price.ownedUsd !== undefined ? "owned" : "conservative")
+
 const pageSizeOf = (method: string, input: unknown) => {
   if (!input || typeof input !== "object") return 1
   const call = input as Record<string, unknown>
@@ -317,7 +336,7 @@ export function estimateCall(method: string, input: unknown): CallEstimate {
   if (price.kind === "request") return { method, pageSize: 1, estimateUsd: exact(price.perRequestUsd), price }
   if (price.kind === "postCreate") return { method, pageSize: 1, estimateUsd: exact(hasUrl(input) ? price.withUrlUsd : price.perRequestUsd), price }
   const pageSize = pageSizeOf(method, input)
-  return { method, pageSize, estimateUsd: exact(pageSize * price.perResourceUsd), price }
+  return { method, pageSize, estimateUsd: exact(pageSize * rateFor(price)), price }
 }
 
 /** Refuses before dispatch when the estimate does not fit the session or daily cap. */
@@ -335,7 +354,6 @@ const resourceLine = (kind: ResourceKind, count: number, usd: number) => {
   const names: Record<ResourceKind, [string, string]> = {
     post: ["post", "posts"],
     user: ["user", "users"],
-    owned: ["own post", "own posts"],
     list: ["list", "lists"],
     space: ["Space", "Spaces"],
     community: ["Community", "Communities"],
@@ -351,23 +369,26 @@ const requestLine = (method: string, count: number, usd: number) => {
 }
 
 /** The actual cost of one completed script call, from what X returned; the estimate when it reports no usage. */
-export function scriptCostOfCall(method: string, _input: unknown, result: { readonly output?: unknown; readonly text: string }, estimate: CallEstimate): { actualUsd: number; line: string; resourceCount: number } {
+export function scriptCostOfCall(method: string, _input: unknown, result: { readonly output?: unknown; readonly text: string }, estimate: CallEstimate): { actualUsd: number; line: string; resourceCount: number; basis: CostBasis } {
   const price = estimate.price
-  if (price.kind === "request") return { actualUsd: exact(price.perRequestUsd), line: `Cost: ${requestLine(method, 1, price.perRequestUsd)} = ${money(price.perRequestUsd)}.`, resourceCount: 1 }
+  const basis = price.kind === "request" || price.kind === "postCreate" ? "conservative" : basisFor(price)
+  const atMost = basis === "conservative" ? "at most " : ""
+  if (price.kind === "request") return { actualUsd: exact(price.perRequestUsd), line: `Cost: ${atMost}${requestLine(method, 1, price.perRequestUsd)} = ${money(price.perRequestUsd)}.`, resourceCount: 1, basis }
   if (price.kind === "postCreate") {
     const usd = estimate.estimateUsd
-    return { actualUsd: usd, line: `Cost: 1 post (${money(usd)}) = ${money(usd)}.`, resourceCount: 1 }
+    return { actualUsd: usd, line: `Cost: ${atMost}1 post (${money(usd)}) = ${money(usd)}.`, resourceCount: 1, basis }
   }
+  const rate = rateFor(price)
   const value = payload(result)
-  if (!value) return { actualUsd: estimate.estimateUsd, line: `Cost: ${resourceLine(price.kind, estimate.pageSize, estimate.estimateUsd)} = ${money(estimate.estimateUsd)}.`, resourceCount: estimate.pageSize }
+  if (!value) return { actualUsd: estimate.estimateUsd, line: `Cost: ${atMost}${resourceLine(price.kind, estimate.pageSize, estimate.estimateUsd)} = ${money(estimate.estimateUsd)}.`, resourceCount: estimate.pageSize, basis }
   const count = countResources(value.data)
   const includes = value.includes && typeof value.includes === "object" ? (value.includes as Record<string, unknown>) : {}
   const users = price.kind === "post" && typeof includes.users !== "undefined" ? countResources(includes.users) : 0
-  const usd = exact(count * price.perResourceUsd + (price.kind === "post" ? users * 0.01 : 0))
-  const parts = [resourceLine(price.kind, count, count * price.perResourceUsd)]
+  const usd = exact(count * rate + (price.kind === "post" ? users * 0.01 : 0))
+  const parts = [resourceLine(price.kind, count, count * rate)]
   if (users > 0) parts.push(`${users} ${users === 1 ? "author" : "authors"} (${money(users * 0.01)})`)
-  const line = count === 0 && users === 0 ? "Cost: 0 posts + 0 authors = $0.00." : `Cost: ${parts.join(" + ")} = ${money(usd)}.`
-  return { actualUsd: usd, line, resourceCount: count + users }
+  const line = count === 0 && users === 0 ? "Cost: 0 posts + 0 authors = $0.00." : `Cost: ${atMost}${parts.join(" + ")} = ${money(usd)}.`
+  return { actualUsd: usd, line, resourceCount: count + users, basis }
 }
 
 /** Remembers the estimate for the call whose result follows, so the actual can fall back to it. */
@@ -386,6 +407,7 @@ export function takeEstimate(sessionID: string): CallEstimate | undefined {
 export function resetBilling() {
   scriptSpent.clear()
   ledger = []
+  ownsXApp = false
   void save()
 }
 

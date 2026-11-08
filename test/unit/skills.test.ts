@@ -209,9 +209,9 @@ describe("skills", () => {
 
   test("x ends an answer that read with the actual cost, and never an estimate", () => {
     const text = flat("x")
-    expect(text).toContain("Every answer that made a billed read ends with one line computed from what X returned")
-    expect(text).toContain('"Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15."')
-    expect(text).toContain("An Owned Read uses its own rate. Never mention an estimate.")
+    expect(text).toContain("Every answer that made a billed read ends with one line")
+    expect(text).toContain('"Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15."')
+    expect(text).toContain("An Owned Read is $0.001 only with `ownsXApp`; otherwise standard. Never mention an estimate.")
     for (const gone of ["This read costs about", "price sentence", "as estimated", "my estimate"]) expect({ gone, found: text.includes(gone) }).toEqual({ gone, found: false })
   })
 

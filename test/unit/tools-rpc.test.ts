@@ -712,13 +712,13 @@ describe("X's block", () => {
     await configureBilling({ sessionBudgetUsd: DEFAULT_SCRIPT_BUDGET_USD, dailyBudgetUsd: 1 })
     shapeInput("search_posts_all", { query: "q" }, sc)
     const costly = shapeResult("search_posts_all", { output: { data: posts(10), includes: { users: users(10) } }, text: "x" }, sc)
-    expect(costly.text).toBe("x\nCost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15.")
+    expect(costly.text).toBe("x\nCost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15.")
     expect((costly.output as Record<string, unknown>).cost).toMatchObject({ estimateUsd: 0.005, actualUsd: 0.15, sessionSpentUsd: 0.15, dailySpentUsd: 0.15 })
     // An empty page still gets its line, as a direct call does.
     expect(shapeResult("search_posts_all", { output: { data: [] }, text: "x" }, sc).text).toBe("x\nCost: 0 posts + 0 authors = $0.00.")
     // A write is priced too, at its published request rate.
     const draft = shapeResult("article_create_draft", { text: "draft" }, sc)
-    expect(draft.text).toBe("draft\nCost: 1 request ($0.005) = $0.005.")
+    expect(draft.text).toBe("draft\nCost: at most 1 request ($0.005) = $0.005.")
     expect((draft.output as Record<string, unknown>).cost).toMatchObject({ actualUsd: 0.005 })
   })
 
