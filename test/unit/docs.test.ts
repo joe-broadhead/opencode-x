@@ -6,7 +6,7 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules } from "../../src/permissions.js"
-import { TESTED_HOSTS } from "../../src/constants.js"
+import { PLUGIN_CODES, RPC_CODES, TESTED_HOSTS } from "../../src/constants.js"
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url))
 // Everything a user or the model reads about the current release.
@@ -21,8 +21,8 @@ const FILES = [
 ]
 const KNOWN = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
 const text = (file: string) => readFileSync(join(ROOT, file), "utf8").replace(/\s+/g, " ")
-// Every code the plugin raises, whether through an error helper or a status field.
-const CODES = ["OPTIONS_INVALID", "HOST_UNTESTED", "CLIENT_ID_MISSING", "CLIENT_ID_INVALID", "STATUS_UNAVAILABLE", "SKILLS_INVALID", "SERVER_NOT_REGISTERED", "RULES_NOT_ADDED", "X_BUDGET_EXCEEDED", "X_PRICE_UNKNOWN"]
+// Every code the plugin raises, from the one typed table in src/constants.ts.
+const CODES: readonly string[] = PLUGIN_CODES
 // The tools RPC's budget code names the vendor on purpose: it is the plugin's own, not a shared host code.
 const PREFIXED = ["X_BUDGET_EXCEEDED", "X_PRICE_UNKNOWN"]
 
@@ -229,7 +229,8 @@ describe("docs", () => {
   // R6: a code raised anywhere is in a table, and every table entry is raised. The shared tools RPC's codes are the
   // family's, documented in the scripting guide's refusal table; this plugin's own are CODES above.
   test("every code raised in src is in one of the two tables, and every plugin code is raised", () => {
-    const RPC_CODES = ["SESSION_UNKNOWN", "SESSION_AGENT_REQUIRED", "PERMISSION_DENIED", "SERVER_CONFLICT", "AUTH_REQUIRED", "CONNECTING", "CONNECTION_FAILED", "DISABLED", "NOT_REGISTERED", "TOOL_UNAVAILABLE", "UPSTREAM_ERROR", "CANCELLED", "ACCOUNT_UNKNOWN"]
+    // The shared RPC's table, plus ACCOUNT_UNKNOWN, which only a per-account server raises and this plugin has none of.
+    const rpcCodes: readonly string[] = [...RPC_CODES, "ACCOUNT_UNKNOWN"]
     // Not codes: Node's errno names, which a `code ===` comparison reads.
     const PLAIN = ["ENOENT", "EACCES", "EEXIST", "ENOTDIR", "EISDIR", "EPERM", "ENOSPC"]
     const files = readdirSync(join(ROOT, "src"), { recursive: true, withFileTypes: true })
@@ -246,12 +247,12 @@ describe("docs", () => {
         ].map((match) => match[1]!)
       }),
     )
-    const known = new Set([...CODES, ...RPC_CODES, ...PLAIN])
+    const known = new Set([...CODES, ...rpcCodes, ...PLAIN])
     expect([...found].filter((code) => !known.has(code))).toEqual([])
     expect(CODES.filter((code) => !found.has(code))).toEqual([])
     // The scripting guide's refusal table lists the shared codes, and no other.
     const guide = /## Errors([\s\S]*?)OpenCode itself/.exec(text("docs/scripting.md"))?.[1] ?? ""
-    const missing = RPC_CODES.filter((code) => code !== "ACCOUNT_UNKNOWN" && !guide.includes(`\`${code}\``))
+    const missing = RPC_CODES.filter((code) => !guide.includes(`\`${code}\``))
     expect({ missing, tableFound: guide.length > 0 }).toEqual({ missing: [], tableFound: true })
   })
 

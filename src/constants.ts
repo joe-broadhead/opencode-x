@@ -39,9 +39,72 @@ export const SUPPORTED_HOST = ">=2.2.3 <2.3.0"
 /** The OpenCode releases every check runs on: the one list. Status calls only these "tested". */
 export const TESTED_HOSTS: readonly string[] = ["2.2.3", "2.2.4", "2.2.5", "2.2.6"]
 
-/** The one error shape: `CODE: What happened. Next step: What to do.` Both parts are sentences. */
-export const errorText = (code: string, message: string, nextStep: string) => `${code}: ${message} Next step: ${nextStep}`
+/**
+ * Every code this plugin's own code raises, as one typed table. The README's Troubleshooting table and
+ * `docs/configuration.md` name each one, and a test fails when a code raised in `src` is in neither table, or when a
+ * table entry nothing raises is left behind. `errorText` and `xError` take only these, so a typo fails `tsc`.
+ */
+export type PluginCode =
+  | "CLIENT_ID_INVALID"
+  | "CLIENT_ID_MISSING"
+  | "HOST_UNTESTED"
+  | "OPTIONS_INVALID"
+  | "RULES_NOT_ADDED"
+  | "SERVER_NOT_REGISTERED"
+  | "SKILLS_INVALID"
+  | "STATUS_UNAVAILABLE"
+  | "X_BUDGET_EXCEEDED"
+  | "X_PRICE_UNKNOWN"
 
-export function xError(code: string, message: string, nextStep: string) {
+export const PLUGIN_CODES: readonly PluginCode[] = [
+  "CLIENT_ID_INVALID",
+  "CLIENT_ID_MISSING",
+  "HOST_UNTESTED",
+  "OPTIONS_INVALID",
+  "RULES_NOT_ADDED",
+  "SERVER_NOT_REGISTERED",
+  "SKILLS_INVALID",
+  "STATUS_UNAVAILABLE",
+  "X_BUDGET_EXCEEDED",
+  "X_PRICE_UNKNOWN",
+]
+
+/**
+ * The codes the tools RPC shares with every plugin of this family, which `docs/scripting.md` documents beside its own.
+ * They come from the shared tools RPC module and from OpenCode, not from this plugin's code.
+ */
+export type RpcCode =
+  | "AUTH_REQUIRED"
+  | "CANCELLED"
+  | "CONNECTING"
+  | "CONNECTION_FAILED"
+  | "DISABLED"
+  | "NOT_REGISTERED"
+  | "PERMISSION_DENIED"
+  | "SERVER_CONFLICT"
+  | "SESSION_AGENT_REQUIRED"
+  | "SESSION_UNKNOWN"
+  | "TOOL_UNAVAILABLE"
+  | "UPSTREAM_ERROR"
+
+export const RPC_CODES: readonly RpcCode[] = [
+  "AUTH_REQUIRED",
+  "CANCELLED",
+  "CONNECTING",
+  "CONNECTION_FAILED",
+  "DISABLED",
+  "NOT_REGISTERED",
+  "PERMISSION_DENIED",
+  "SERVER_CONFLICT",
+  "SESSION_AGENT_REQUIRED",
+  "SESSION_UNKNOWN",
+  "TOOL_UNAVAILABLE",
+  "UPSTREAM_ERROR",
+]
+
+/** The one error shape: `CODE: What happened. Next step: What to do.` Both parts are sentences. */
+export const errorText = (code: PluginCode, message: string, nextStep: string) => `${code}: ${message} Next step: ${nextStep}`
+
+export function xError(code: PluginCode, message: string, nextStep: string) {
   return Object.assign(new Error(errorText(code, message, nextStep)), { code, nextStep })
 }
