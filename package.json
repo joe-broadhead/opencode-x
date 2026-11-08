@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-x",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Unofficial OpenCode plugin for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, post, and draft long-form Articles, through X's official MCP server",
   "keywords": [
     "opencode",
