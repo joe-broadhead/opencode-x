@@ -6,6 +6,7 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules } from "../../src/permissions.js"
+import { TESTED_HOSTS } from "../../src/constants.js"
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url))
 // Everything a user or the model reads about the current release.
@@ -179,11 +180,30 @@ describe("docs", () => {
     expect(guide.slice(start, end)).not.toMatch(/…|\.\.\.|the rest/)
   })
 
-  test("every tested-hosts mention that lists 2.2.3 and 2.2.5 includes 2.2.6", () => {
-    for (const file of ["README.md", "AGENTS.md", "SECURITY.md", "docs/configuration.md", "CHANGELOG.md"]) {
-      const body = text(file)
-      if (body.includes("2.2.3") && body.includes("2.2.5")) expect({ file, has206: body.includes("2.2.6") }).toEqual({ file, has206: true })
-    }
+  // R8: a release added to the list cannot leave a stale "tested on …" sentence behind.
+  test.each([
+    ["README.md", "README.md"],
+    ["AGENTS.md", "AGENTS.md"],
+    ["SECURITY.md", "SECURITY.md"],
+    ["docs/configuration.md", "docs/configuration.md"],
+    ["CHANGELOG.md (Unreleased)", "CHANGELOG.md"],
+  ])("%s names exactly TESTED_HOSTS wherever it says what is tested", (_label, file) => {
+    const body = readFileSync(join(ROOT, file), "utf8")
+    const mentions = body
+      .split("\n")
+      .flatMap((line) => line.split(/\.\s+/))
+      .filter((sentence) => /\btested\b/i.test(sentence))
+      // The supported range is not a tested release: drop a backticked `>=a.b.c <d.e.f` span before reading versions.
+      .map((sentence) => sentence.replace(/`[^`]*>=[^`]*`/g, ""))
+      .map((sentence) => [...sentence.matchAll(/\b\d+\.\d+\.\d+\b/g)].map((version) => version[0]!))
+      .filter((versions) => versions.length > 0)
+    for (const versions of mentions) expect({ file, versions: [...new Set(versions)].sort() }).toEqual({ file, versions: [...TESTED_HOSTS].sort() })
+  })
+
+  test("the untested example is 2.2.99, and no doc names a later 2.2 release as tested", () => {
+    const all = ["README.md", "AGENTS.md", "SECURITY.md", "docs/configuration.md", "CHANGELOG.md"].map((file) => readFileSync(join(ROOT, file), "utf8")).join("\n")
+    expect(all).toContain("2.2.99")
+    expect(all).not.toMatch(/\b2\.2\.(?:7|8|9[0-8])\b(?!\d)/)
   })
 
   test("every call is billed, in the README, the skills, the namespace and status", () => {
