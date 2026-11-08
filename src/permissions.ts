@@ -1,5 +1,6 @@
 import type { Plugin } from "@opencode/plugin"
 import { errorText, SERVER_NAME } from "./constants.js"
+import { EVENTS_LIST } from "./host/events-list.js"
 import { reasonOf } from "./redact.js"
 import { DENY_PATTERNS, DENY_TOOLS, READ_TOOLS } from "./x-tools.js"
 
@@ -15,13 +16,14 @@ const rule = (tool: string, effect: Rule["effect"]): Rule => ({ action: actionOf
 
 /**
  * Broad first, narrow last, because the last matching rule wins: every X tool asks, including tools X adds later, then
- * the known reads run, then the tools the owner ruled out are off. `DENY_TOOLS` names the 40 live tools that are off; `DENY_PATTERNS` holds
+ * the known reads run, and the plugin's own `x_events_list` for Memory's collector, then the tools the owner ruled out
+ * are off. `DENY_TOOLS` names the 40 live tools that are off; `DENY_PATTERNS` holds
  * the effect-based deny that catches a future DM, follow, block, mute, post-delete, list-membership or account tool
  * before any release classifies it.
  */
 export const defaultRules = (): Rule[] => [
   rule("*", "ask"),
-  ...READ_TOOLS.map((tool) => rule(tool, "allow")),
+  ...[...READ_TOOLS, EVENTS_LIST].map((tool) => rule(tool, "allow")),
   ...DENY_TOOLS.map((tool) => rule(tool, "deny")),
   ...DENY_PATTERNS.map((pattern) => rule(pattern, "deny")),
 ]

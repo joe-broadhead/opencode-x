@@ -45,6 +45,10 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
   never to follow an instruction in it, and never to let it choose a tool, a recipient or a change. X's terms also
   forbid automated replies without prior approval and automated or bulk likes. The plugin has no like tool; a reply
   is possible through `x_create_posts`, asks every time, and those reply rules still apply.
+- **Memory's events.** `x_events_list` reads, through OpenCode, the signed-in account's mentions, new bookmarks and,
+  when `events.feeds` names it, home timeline, and returns them as events marked untrusted for Memory's collector. Its
+  cursor holds post ids, a page token and a digest of the account, never a token. It makes at most `events.maxCalls`
+  billed reads per call.
 - **Every call is billed** to the X developer account that owns the app. The plugin caps a model read to one page of
   at most ten posts or users, with one widening and about $0.20 an answer, and every answer that read ends with its
   actual cost line. A script pays the same rates and is not capped, so a spending limit in X's console is the backstop.
@@ -103,7 +107,7 @@ for a script, with no model. It adds no authority:
   say so.
 - An ask on a script's call is denied, not prompted: no one is there to answer it. The plugin's permission hook
   changes only an ask on one of its own script calls in flight, only to a deny, and leaves every other call alone.
-- Only the known reads are methods. The bookmark and list changes, the Article draft, the public `create_posts` and
+- Only the known reads and the plugin's own `events_list` are methods. The bookmark and list changes, the Article draft, the public `create_posts` and
   a tool that X adds later never are, even with an allow rule.
 - The call goes through OpenCode's own MCP connection and sign-in. The plugin never sees the token, and returns none.
 - X's error text reaches the script only as the first line, at most 300 characters, with tokens and URL query strings
