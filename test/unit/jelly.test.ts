@@ -31,7 +31,7 @@ describe("the jelly declaration", () => {
     expect(declarationProblems(ROOT, { effectOf: (permission) => evaluate([BASE_ALLOW, ...defaultRules()], permission), registered: known })).toEqual([])
   })
 
-  test("declares every live tool once: reads that run, reads and writes that ask, the public Post, and the off tools", () => {
+  test("declares every live tool once, with the all-allow effect the default rules give it", () => {
     for (const tool of READ_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
     for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: false })
     for (const tool of DENY_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow" })

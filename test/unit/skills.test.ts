@@ -254,7 +254,7 @@ describe("skills", () => {
     expect(text).not.toContain("`create_posts` posts publicly, and asks first.")
   })
 
-  test("x says DMs, calls, follows, blocks, mutes, list membership, moderators and live video are off here", () => {
+  test("x says DMs, calls, follows, blocks, mutes, list membership, moderators and live video run only when the user asks", () => {
     const text = flat("x")
     expect(text).toContain("DMs and private chat conversations (reads included), calls, follows, blocks, mutes, list membership, chat moderator roles, and live video")
     expect(text).toContain("Your own broadcast's chat and moderators are readable.")
@@ -320,7 +320,7 @@ describe("skills", () => {
     expect(text).toContain("Likes are not a tool here.")
   })
 
-  test("x-write says DMs, calls, follows, blocks, list membership, moderators and live video are off", () => {
+  test("x-write says DMs, calls, follows, blocks, list membership, moderators and live video run only when the user asks", () => {
     const text = flat("x-write")
     expect(text).toContain("X's MCP exposes these, and with `access: all` (the default) they run when the user asks")
     expect(text).toContain("only when the user asks")
@@ -339,7 +339,7 @@ describe("skills", () => {
 
   test("x-write leaves a refused change to the user, never advises allow, and never advises Always allow", () => {
     const text = flat("x-write")
-    expect(text).toContain("set it to ask, or keep it off")
+    expect(text).toContain('set `access` to `"ask-changes"`')
     expect(text).toContain("don't edit their configuration")
     expect(text).not.toMatch(/allow it in that agent/i)
     expect(text).toContain('Never answer "Always allow" for posting')

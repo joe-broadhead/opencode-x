@@ -23,7 +23,7 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
   whether a secret is set and where it came from; it never shows the secret.
 - **Stream sources.** `get_source` and `list_sources` are allowed reads. X's descriptions say the stream key is not
   included in either response, and the plugin exposes no tool that reads it; the plugin still treats a source as
-  sensitive, and never asks for a denied broadcast or source write.
+  sensitive, and treats every source change as a change like any other, under `access`.
 - **A public client ID is not a secret.** A Native App's client ID only identifies the app, so it is safe to distribute
   in managed config for a team app. A client secret authenticates the app and must never be distributed: anyone with
   it can act as the app. If one leaks, rotate it in X's console.
@@ -104,8 +104,9 @@ refused before dispatch. A method is not a grant:
 - A script names a session that names an agent, and runs as them. Before any call, the plugin resolves that method's
   permission action against the agent's rules and then the session's rules, the host's own order. Only `allow` runs: a
   rule that resolves to `ask` is refused because no one can answer it, and a `deny` is refused. Neither makes an X
-  call. The default rules allow the reads and ask for the writes, so a script reaches a write, the public
-  `create_posts` or an off-by-default tool only with a prior explicit `allow` in the agent's or the session's rules.
+  call. A script gets the default above: with `access: all` the generated `x_*` allow resolves every method to
+  `allow`, so a write or the public `create_posts` runs too; with `ask-changes` or `read-only` it is refused unless
+  the agent's or the session's rules allow it.
 - A saved "Always allow" is **not** consulted: it lives outside the agent's and session's rules, so an old click does
   not authorize a new script. A grant is reviewable in config, or in a Jobs one-off's approval.
 - After the resolve, the call runs through OpenCode's own executor, which checks `<server>_<tool>` again against the
@@ -118,7 +119,7 @@ refused before dispatch. A method is not a grant:
   removed.
 - A script's calls are billed like any other. A script may page and ask for up to X's 100 results, because the user
   approved its code; each session has a `scriptBudgetUsd` budget ($1.00 by default), counted from the billed resources
-  in the results, and at the budget the next call is refused with `X_BUDGET` before X is contacted.
+  in the results, and at the budget the next call is refused with `X_BUDGET_EXCEEDED` before X is contacted.
 - A session in another location is `SESSION_UNKNOWN`, and a call that names no location reaches the service's default
   location: send `x-opencode-directory` with each call.
 - OpenCode's `execute.before` and `execute.after` tool hooks, from any plugin, do not run for a script's call, so

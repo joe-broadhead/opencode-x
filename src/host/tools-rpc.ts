@@ -41,9 +41,9 @@ export const PLUGIN_ID = X_PLUGIN_ID
 
 /**
  * Every known X tool, by its upstream name, with its class: the 51 reads, the 8 private writes, the public
- * `create_posts` (a send, because it reaches everyone), and the 40 tools that are off by default (destructive: they
- * delete, or they reach another person). The class is what `describe` reports and what an approval shows; the rules,
- * not the class, decide whether a call runs. A tool X adds later is not a method.
+ * `create_posts` (a send, because it reaches everyone), and the 40 tools for DMs, follows, mutes and live video
+ * (destructive: they delete, or they reach another person). The class is what `describe` reports and what an approval
+ * shows; the rules, not the class, decide whether a call runs. A tool X adds later is not a method.
  */
 export const METHODS: readonly MethodSpec[] = [
   ...READ_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "read" })),

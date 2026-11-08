@@ -28,24 +28,27 @@ carries no vendor marks, colours or letterforms: only our own Neutral slate tile
 
 ## Tools and permissions
 
-100 tools are declared (58 read-only): 51 reads run, 8 private writes and the public `x_create_posts` ask, and 40 are off, 7 of them reads of DMs and keys — every tool in `src/x-tools.ts`. Jelly's agents have no base "allow
-everything" rule, so this plugin's own default rules, which it puts after that rule, never reach them. Jelly writes
-each declared `ask` or `deny` as that tool's default instead (the person's own choice replaces it), and denies a
-read-only helper every tool not marked `readOnly`. A declared `allow` changes nothing in Jelly.
+100 tools are declared (58 read-only), and every declared effect is `allow`: the 51 reads and the 7 DM and public-key
+reads, the 8 private writes, the public `x_create_posts`, and the 33 other changes that were once off. `jelly.tools`
+follows `src/x-tools.ts`, so each declared tool has the effect the plugin's own `access: all` block gives it. Jelly's
+agents have no base "allow everything" rule, so this plugin's own default rules, which it puts after that rule, never
+reach them; the declaration is what Jelly applies instead. A declared `allow` changes nothing in Jelly, and a person's
+own choice replaces it.
 
-- Ask: `x_create_users_bookmark`, `x_delete_users_bookmark` and `x_create_users_bookmark_folder` (the user's
-  bookmarks); `x_article_create_draft` (a private draft, with no publish tool here); `x_create_lists`,
-  `x_update_lists`, `x_pin_list` and `x_unpin_list` (the user's lists; public unless `private` is true).
-  `x_create_posts` is **public**: anyone
-  can read the Post, and it can reply or quote only when the user asks for that one.
-- Off: the 40 tools for DMs and private chat conversations (reads included), scheduled calls, follows, blocks, mutes, list membership, chat
-  moderators, and live video with its sources. Your own broadcast's chat messages and moderators run, as reads.
-- Everything else runs, as the plugin's own rules let it.
+- Reads: 51 of the tools return data and run without asking: posts, profiles, timelines, mentions, bookmarks, lists,
+  Spaces, Communities, news, trends, your own broadcast's chat and moderators, and the usage balance.
+- The other 7 `readOnly` tools are X's DM conversation and public-key reads. They reach private messages, and they run
+  like the rest.
+- Changes: bookmarks, lists, an Article draft and the public `x_create_posts`, plus X's DM, follow, block, mute,
+  list-membership, moderator and live-video tools. All of them run without asking under the default, on the user's real
+  X account; `x_create_posts` is **public**: anyone can read the Post, and it can reply or quote only when the user asks
+  for that one.
+- No like and no repost tool: X's MCP exposes neither.
 
 A tool X adds later, a write included, is not declared, so in Jelly it is not asked about: it runs without asking,
-even if it changes something, until a new version of this plugin declares it. The plugin itself denies a future tool
-of a denied effect, but Jelly does not, so set it to deny there. Keep `jelly.tools` in step with `src/x-tools.ts`;
-`test/unit/jelly.test.ts` checks the list against it, and each declared effect against the plugin's own default rules.
+even if it changes something, until a new version of this plugin declares it. Keep `jelly.tools` in step with
+`src/x-tools.ts`; `test/unit/jelly.test.ts` checks the list against it, and each declared effect against the plugin's
+own default rules.
 
 The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page
 against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit, and the shared part of the tools

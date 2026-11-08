@@ -321,9 +321,10 @@ Make every X tool ask in one agent, reads included. The last match wins, so this
 }
 ```
 
-A write is approved per call, through the permission prompt. This plugin documents no `allow` for a write, the public
-Post included: an "Always allow" saves an allow for every agent in the project, and a top-level `allow` would reach
-Explore.
+With `access: "ask-changes"` a write is approved per call, through the permission prompt. The docs give no `allow` for a
+write, the public Post included: an "Always allow" saves an allow for every agent in the project, and a top-level
+`allow` would reach Explore. To let one script write, grant it in that session's own rules, as the scripting guide
+shows.
 
 ### Agents that miss the rules
 
@@ -495,10 +496,11 @@ meanings:
 | `problems` | Setup problems, each `CODE: What happened. Next step: What to do.` |
 | `nextStep` | Exactly one next step: the `Next step` row, `Nothing to do.` when nothing is needed |
 
-The `Access` row states the posture the default rules fix: "reads run without asking; 9 tools ask first (bookmarks,
-lists, an Article draft and a public Post); 40 are off (DMs and private chat conversations, calls, follows, blocks,
-mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the
-app". Then it says whether those rules are in place: "no agent runs new X tools unasked", "default rules missing in the agents listed below", or "default rules
+The `Access` row states the posture the default rules fix, from the tool table and the `access` value: with `all` (the
+default) "every X tool is allowed by default, writes included"; with `ask-changes` "reads run without asking; every
+other X tool asks (49 tools)"; with `read-only` "reads run without asking; every other X tool is denied (49 tools)";
+each ends "X bills every tool call to the X developer account that owns the app". Then it says whether those rules are
+in place: "no agent runs new X tools unasked", "default rules missing in the agents listed below", or "default rules
 not added (see the OpenCode row)".
 
 When the status cannot be read, the method answers with its error `unavailable`: the message

@@ -359,9 +359,9 @@ function callbackRow(callback: string, port: number | undefined): string {
 export function formatStatus(status: Status, options: { readonly compactRules?: boolean } = {}) {
   const lines = rows(status).map((row) => {
     if (!options.compactRules || row.label !== "Agents without default rules" || row.value === "none") return `- ${row.label}: ${row.value}`
-    // The dialog shows a count and points at /x-status; the full block is 130+ rules.
+    // The dialog shows a count and points at /x-status; the full block for the value in force is printed there.
     const [names] = row.value.split("\n")
-    return `- ${row.label}: ${names}\n  ${defaultRules().length} rules; run /x-status to copy the block.`
+    return `- ${row.label}: ${names}\n  ${defaultRules(status.access ?? "all").length} rules; run /x-status to copy the block.`
   })
   return ["X status", ...lines].join("\n")
 }

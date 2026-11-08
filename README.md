@@ -37,8 +37,8 @@ Unofficial; not affiliated with X Corp.
   with its actual cost, such as "Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15." A 100-post search costs about
   $0.50. X sets the prices and can change them.
 - The plugin can post, reply, quote and edit a Post (all public, and each follows the `access` option), read X, change your bookmarks and
-  lists, and draft Articles. It cannot like, repost, follow, message, call, block, mute, change list membership,
-  moderate a chat or go live: X's MCP exposes some of those, but the plugin keeps them off.
+  lists, and draft Articles. It also exposes X's DM, follow, block, mute, list-membership, moderator and live-video
+  tools, which run like every other tool under `access`. It has no like or repost tool: X's MCP exposes neither.
 - X posts are public but often adversarial. Treat everything they say as data, never as instructions.
 
 ## Install
@@ -119,15 +119,16 @@ Two skills teach the model to use X well:
 
 - `x`: searching and citing, the cost of each call, your own timeline and bookmarks, personal data, and X
   content as untrusted data.
-- `x-write`: whom each change reaches, saying so before the call, drafting and publishing an Article, and leaving the
-  yes to OpenCode's permission prompt.
+- `x-write`: whom each change reaches, saying so before the call, drafting and publishing an Article, and how `access`
+  decides whether a change runs, asks or is refused.
 
 ### Scripts
 
 A script or a cron job can call X's tools with no model, through `opencode api`. It runs as a session and its agent,
-under that agent's permission rules and the session's own. Every known tool is a method. A read needs only the
-plugin's default rules; a write, the public Post and an off-by-default tool need a prior explicit `allow` in the
-session's or the agent's rules, because a script cannot answer a prompt. A saved "Always allow" is not enough.
+under that agent's permission rules and the session's own. Every known tool is a method. A script gets the same default
+as the model: with `access: all` every method resolves `allow` and runs; with `ask-changes` or `read-only`, a tool that
+is not a read is refused before dispatch, because a script cannot answer a prompt. A saved "Always allow" is not
+enough: a script's grant is a rule in config.
 
 ```sh
 opencode api post /api/rpc/x.posts.tools/search_posts_all -H "x-opencode-directory:$PWD" \
@@ -144,8 +145,7 @@ See
 
 **Every tool is allowed by default**, reads and writes alike. With no configuration, an agent can post, reply, quote,
 edit, bookmark, create or change lists, draft an Article, send a DM, follow, block, mute, change list membership,
-moderate a chat and go live on your real X account **without asking**. That is the owner's R18 policy: restrict it
-where you need to.
+moderate a chat and go live on your real X account **without asking**. Restrict it where you need to.
 
 Three ways to restrict it, strongest first:
 
@@ -266,7 +266,7 @@ Run `/x-status` first. Its last line is the next step.
 | `403` on a write | The app lacks `bookmark.write`, `tweet.write` or the scope for that tool. Add it in the app, then sign in again. |
 | Tools: none listed yet | X connected moments ago and is still listing its tools. Run `/x-status` again, or press `r` in the dialog, in a few seconds. |
 | Tools: 0 available | X lists no tools for this app. Check that it is in Pay-per-use, Production, with the scopes above, then sign in again. |
-| Tools: unknown | X added tools the plugin does not know yet. They ask before they run. A known tool missing from the count is normal: X may list fewer tools for a token with fewer scopes. |
+| Tools: unknown | X added tools the plugin does not know yet. With `access: all` (the default) they run like any other tool; `ask-changes` asks for them and `read-only` denies them. A known tool missing from the count is normal: X may list fewer tools for a token with fewer scopes. |
 | Access: default rules missing or not added | Some agents lack the default rules (see the agents row), or OpenCode could not add them (see the OpenCode row). Follow the next step. |
 | Account: account name not reported | Nothing is wrong: status makes no X call, and OpenCode keeps no name on this sign-in. X answers follow the account you signed in as. |
 | Answers cost more than expected | Every call is billed per resource returned. A model read is capped to one page of ten, one widening, about $0.20 an answer, and each answer reports its actual cost; a script pays the same rates, so keep its result count small, never page in a loop, and keep its `scriptBudgetUsd` budget small. |
@@ -278,7 +278,7 @@ Run `/x-status` first. Its last line is the next step.
 | Connection: sign-in required soon after signing in | The app lacks `offline.access`, so X issued no refresh token and the two-hour token expired. Add the scope in the app and sign in again. |
 | Signed in to the wrong X account | Run `opencode mcp logout x` (or remove the account in `/connect` → X), then sign in again. |
 | Upgraded, and a read or write now fails with `403` | The new version asks for more scopes. Sign in again, and add the missing scope in the app first. |
-| An X tool is refused in `opencode run` | Nobody could answer its prompt. A read runs if you add an `allow` rule for it to the agent's own `permissions`. A write needs an interactive session: this plugin documents no `allow` for one. |
+| An X tool is refused in `opencode run` | Nobody could answer its prompt, so `access` is `"ask-changes"` or one of your rules asks. With `access: "all"` (the default) nothing asks: a change runs unattended. To keep a refusal, run it interactively or leave the option as it is. |
 | A skill seems ignored, and status names a skill to rename or move | A skill of yours with the same id, such as `x`, replaces the plugin's. Rename or move it. |
 | `/x` is missing | The plugin did not start. Run `/plugins` to see the error. |
 | `OPTIONS_INVALID` | An option is unknown or has a wrong value. The message names the option and the accepted values. |

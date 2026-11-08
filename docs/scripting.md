@@ -67,8 +67,10 @@ order the host uses, and the last matching rule wins. Only `allow` runs.
 - No one answers a prompt for a script, so a rule that resolves to `ask` is refused with `PERMISSION_DENIED` before
   the tool runs, and no prompt is left waiting.
 - A rule that resolves to `deny` is refused too, and names the rule to change.
-- The plugin's default rules allow the reads and ask for every write, so a **read** needs nothing more. A **write**,
-  the public `create_posts` and an off-by-default tool need an explicit `allow` in the session's or the agent's rules.
+- With `access: all` (the default) the generated block allows `x_*`, so every method runs, writes included, and a read
+  needs nothing more. With `ask-changes` the block allows the reads and asks for everything else, and an ask is a
+  refusal; with `read-only` it denies everything else. A tool a later X release adds is not a method until this plugin
+  classifies it, so a script never reaches one.
 - A saved "Always allow" from an earlier prompt does **not** authorize an ad-hoc script: it is not part of the
   agent's and session's rules, and a script's grant must be reviewable in config or in a job's approval. This is the
   one deliberate break from the earlier reads-only RPC.
@@ -184,8 +186,8 @@ OpenCode itself answers `rpc.method_not_found` for a method that does not exist,
 ## What scripts cannot do
 
 - Call a tool this plugin does not classify, even with an allow rule.
-- Run a write, the public Post or an off-by-default tool without a prior explicit `allow` in the agent's or the
-  session's rules. A saved "Always allow" is not enough.
+- Run a write, the public Post or any other non-read while `access` is `ask-changes` or `read-only`, or under a rule
+  that asks or denies. A saved "Always allow" does not authorize a script either.
 - Answer an approval prompt: an `ask` is refused.
 - Use a token or key: the plugin has none to give.
 - Read X without a bill, or past the session's budget.

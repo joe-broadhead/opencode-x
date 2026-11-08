@@ -11,9 +11,9 @@ gives, in this order:
 1. the draft text;
 2. one sentence: "This will be public: anyone on X can see it. It costs $0.015 ($0.200 with a link).";
 3. then the one call.
-The permission rules decide whether it asks: with `access: all` (the default) it runs with no prompt; with
-`ask-changes` the prompt is the user's yes; with `read-only` it is refused. After a decline, nothing was posted: say so,
-and offer the draft.
+The permission rules decide whether it asks: with `access: all` (the default) it runs with no prompt, on the user's own
+real X account; with `ask-changes` the prompt is the user's yes; with `read-only` it is refused. After a decline,
+nothing was posted: say so, and offer the draft.
 
 For any other change, write one sentence in your reply on what it does and whom it reaches, then make the one call in
 the same turn. Ask in chat first only when something must be chosen: which post, which list, which draft. Never work
@@ -72,6 +72,7 @@ and never republish a post's full text as the user's own.
 
 ## If a change is refused
 
-A change may ask, and a denied one never runs. If posting or a list change is off in this agent, say it is off, and
-that the user can set it to ask, or keep it off, in that agent's own `permissions`; don't edit their configuration.
-Never answer "Always allow" for posting: that saves an allow for every agent in the project.
+A change asks only under `access: "ask-changes"`, and a denied one never runs. If posting or a list change is denied in
+this agent, say it is denied, and that the user can set `access` to `"ask-changes"`, remove their deny rule, or keep it
+denied; don't edit their configuration. Never answer "Always allow" for posting: that saves an allow for every agent in
+the project.

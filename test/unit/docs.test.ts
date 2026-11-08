@@ -84,7 +84,7 @@ describe("docs", () => {
       const body = text(file)
       expect(body).toContain('{ "action": "x_create_posts", "resource": "*", "effect": "deny" }')
     }
-    expect(text("docs/configuration.md")).toContain("This plugin documents no `allow` for a write")
+    expect(text("docs/configuration.md")).toContain("The docs give no `allow` for a write")
     // No document may teach an allow for a private write or the public write, except the scripting guide's own session
     // grant: v2 requires a write to be granted by a prior rule, and that rule must be reviewable and scoped to the
     // script's session.
@@ -95,7 +95,7 @@ describe("docs", () => {
         expect({ file, action, allowed: new RegExp(`"action":\\s*"${action}"[^}]*"effect":\\s*"allow"`).test(raw) }).toEqual({ file, action, allowed: false })
       }
     }
-    expect(text("README.md")).toContain("this plugin documents no `allow` for one")
+    expect(text("README.md")).toContain("nothing asks: a change runs unattended")
     // The scripting guide's one grant for a write is a session's own permissions, after a blanket deny, never an
     // agent's rules or the top-level config.
     const scripting = readFileSync(join(ROOT, "docs/scripting.md"), "utf8")

@@ -62,7 +62,7 @@ export const READ_TOOLS: readonly string[] = [
   "search_users",
 ]
 
-/** Private writes that ask: bookmarks, a private Article draft, and the user's own lists. */
+/** Private writes: bookmarks, a private Article draft, and the user's own lists. Under `access: all` they run unasked. */
 export const WRITE_TOOLS: readonly string[] = [
   "article_create_draft",
   "create_lists",
@@ -74,15 +74,15 @@ export const WRITE_TOOLS: readonly string[] = [
   "update_lists",
 ]
 
-/** Writes that reach other people: `create_posts` posts or edits a Post publicly. It asks, every time. */
+/** Writes that reach other people: `create_posts` posts or edits a Post publicly. */
 export const PUBLIC_TOOLS: readonly string[] = [
   "create_posts",
 ]
 
 /**
- * Off by default, from the live list: DMs and private chat conversations (reads included), follows, blocks, mutes, list membership,
- * moderator roles, scheduled calls, and live video with its ingest sources. A user turns one on with a later `ask`
- * rule in an agent's own permissions.
+ * From the live list: DMs and private chat conversations (reads included), follows, blocks, mutes, list membership,
+ * moderator roles, scheduled calls, and live video with its ingest sources. They are allowed with the rest under
+ * `access: all`; `ask-changes` makes them ask and `read-only` denies them.
  */
 export const DENY_TOOLS: readonly string[] = [
   "accept_chat_message_request",
