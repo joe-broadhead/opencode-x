@@ -226,6 +226,35 @@ describe("docs", () => {
     expect(remove).toBeGreaterThan(list)
   })
 
+  // R6: a code raised anywhere is in a table, and every table entry is raised. The shared tools RPC's codes are the
+  // family's, documented in the scripting guide's refusal table; this plugin's own are CODES above.
+  test("every code raised in src is in one of the two tables, and every plugin code is raised", () => {
+    const RPC_CODES = ["SESSION_UNKNOWN", "SESSION_AGENT_REQUIRED", "PERMISSION_DENIED", "SERVER_CONFLICT", "AUTH_REQUIRED", "CONNECTING", "CONNECTION_FAILED", "DISABLED", "NOT_REGISTERED", "TOOL_UNAVAILABLE", "UPSTREAM_ERROR", "CANCELLED", "ACCOUNT_UNKNOWN"]
+    // Not codes: Node's errno names, which a `code ===` comparison reads.
+    const PLAIN = ["ENOENT", "EACCES", "EEXIST", "ENOTDIR", "EISDIR", "EPERM", "ENOSPC"]
+    const files = readdirSync(join(ROOT, "src"), { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".ts"))
+      .map((entry) => join(entry.parentPath, entry.name))
+    const found = new Set(
+      files.flatMap((file) => {
+        const body = readFileSync(file, "utf8")
+        return [
+          ...body.matchAll(/\b(?:errorText|xError)\(\s*"([A-Z][A-Z0-9_]+)"/g),
+          ...body.matchAll(/["'`]([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+):\s/g),
+          ...body.matchAll(/\bcode:\s*"([A-Z][A-Z0-9_]+)"/g),
+          ...body.matchAll(/\bcode\s*===\s*"([A-Z][A-Z0-9_]+)"/g),
+        ].map((match) => match[1]!)
+      }),
+    )
+    const known = new Set([...CODES, ...RPC_CODES, ...PLAIN])
+    expect([...found].filter((code) => !known.has(code))).toEqual([])
+    expect(CODES.filter((code) => !found.has(code))).toEqual([])
+    // The scripting guide's refusal table lists the shared codes, and no other.
+    const guide = /## Errors([\s\S]*?)OpenCode itself/.exec(text("docs/scripting.md"))?.[1] ?? ""
+    const missing = RPC_CODES.filter((code) => code !== "ACCOUNT_UNKNOWN" && !guide.includes(`\`${code}\``))
+    expect({ missing, tableFound: guide.length > 0 }).toEqual({ missing: [], tableFound: true })
+  })
+
   // Every code the plugin raises has a row in the configuration guide and in the README's Troubleshooting.
   test("the configuration guide and the README document every error code the plugin raises, none with a service prefix", () => {
     const errors = /## Errors(.*?)## /.exec(text("docs/configuration.md"))?.[1] ?? ""
