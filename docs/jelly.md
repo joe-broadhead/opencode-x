@@ -28,7 +28,7 @@ carries no vendor marks, colours or letterforms: only our own Neutral slate tile
 
 ## Tools and permissions
 
-100 tools are declared (58 read-only): 51 reads run, 8 private writes and the public `x_create_posts` ask, and 40 are off, 7 of them reads of DMs and keys — every tool in `src/x-tools.ts`. Jelly's agents have no base "allow
+101 tools are declared (59 read-only): 51 reads run, 8 private writes and the public `x_create_posts` ask, and 40 are off, 7 of them reads of DMs and keys — every tool in `src/x-tools.ts` — and the plugin's own `x_events_list` runs too: Memory's collector runs it unattended, so it never asks. Jelly's agents have no base "allow
 everything" rule, so this plugin's own default rules, which it puts after that rule, never reach them. Jelly writes
 each declared `ask` or `deny` as that tool's default instead (the person's own choice replaces it), and denies a
 read-only helper every tool not marked `readOnly`. A declared `allow` changes nothing in Jelly.

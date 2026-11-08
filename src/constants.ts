@@ -42,6 +42,7 @@ export const TESTED_HOSTS: readonly string[] = ["2.2.3", "2.2.4", "2.2.5"]
 /** The one error shape: `CODE: What happened. Next step: What to do.` Both parts are sentences. */
 export const errorText = (code: string, message: string, nextStep: string) => `${code}: ${message} Next step: ${nextStep}`
 
+/** An error with its code, what happened (`detail`) and the next step, as the tools RPC reports a plugin error. */
 export function xError(code: string, message: string, nextStep: string) {
-  return Object.assign(new Error(errorText(code, message, nextStep)), { code, nextStep })
+  return Object.assign(new Error(errorText(code, message, nextStep)), { code, detail: message, nextStep })
 }

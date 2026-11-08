@@ -24,6 +24,8 @@ runtime dependencies.
 | `src/redact.ts` | Redaction for everything status shows: URL credentials, queries and token shapes removed, one line, controls and bidi characters stripped, cut by whole characters |
 | `src/skills.ts` | Loading and registering the skills |
 | `src/billing.ts` | The read cap (`execute.before`) and the actual cost line (`execute.after`), on the model path and in Code Mode |
+| `src/events.ts` | `x_events_list` and its tools RPC method: mentions, bookmarks and the timeline as Memory's events, within a call cap of its own, read through the host's executors |
+| `src/host/events-list.ts` | The `events_list` source contract: the event type and limits, input, cursors, `makeEvent`, `fitPage`, the checks and the conformance test. A copy every source plugin carries unchanged |
 | `src/host/tools-rpc.ts` | The tools RPC for scripts, `x.posts.tools`; a copy of a module shared by several plugins, with X's part in one marked block |
 | `src/tui.ts` | The terminal UI part: the plugin `x.posts.tui` and the `/x` dialog |
 | `src/constants.ts` | IDs, the server name and URL, the pinned callback and scopes, the Code Mode namespace description, the supported host range, the tested releases (`TESTED_HOSTS`, the one list the checks and status use) and the error shape. No imports, so `scripts/check.mjs` can load it |
@@ -56,11 +58,13 @@ adds, and ships no declaration files.
    there is one, the pinned `redirect_uri` and the pinned scopes. It adopts the user's own entry at that URL, reading
    only its type, URL and whether `oauth` is `false`. Any other URL, or a local command, is a conflict. With no client
    and no user entry, it registers nothing and status asks for the app.
-6. `ctx.tool.transform` gives the `x` namespace its Code Mode description, unless the name belongs to another server.
+6. `ctx.tool.transform` gives the `x` namespace its Code Mode description, unless the name belongs to another server,
+   and adds `x_events_list`, a Code Mode tool that never calls a server at another URL.
 7. `ctx.agent.transform` inserts the default rules after each agent's base `* * allow`.
 8. `watchListing` notes when the `x` server's status last changes. The plugin adds no tool hook.
 9. `ctx.skill.transform`, `ctx.command.transform` (`/x-status`) and `ctx.rpc.register` (`x.posts/status`).
-10. `registerToolsRpc` registers the tools RPC, `x.posts.tools`, and its `evaluate` hook.
+10. `registerToolsRpc` registers the tools RPC, `x.posts.tools`, with `events_list` as its owned method, and its
+    `evaluate` hook.
 11. `watchIntegration` starts, and a listener re-resolves the client on credential and integration events; a client
     saved or removed in `/connect` reloads the MCP config, and the server transform reads the new client on its
     replay. Setup returns one cleanup that stops all of them.
@@ -114,7 +118,10 @@ Status makes no X call, because every call costs money.
 `x.posts.tools` lets a script call the known reads with no model; [Scripting](scripting.md) is the user's view. Its
 methods are `describe` and one per name in `READ_TOOLS`, named after the upstream tool. It is an allowlist:
 `WRITE_TOOLS`, `PUBLIC_TOOLS`, `DENY_TOOLS` and a tool that X adds later are never methods. `describe` reports each
-method as available or not from what OpenCode lists now.
+method as available or not from what OpenCode lists now. One method is the plugin's own: `events_list` runs
+`x_events_list`'s spec, which asserts `x_events_list` with the call's source id and reads through the same executors.
+The executors skip the model path's `execute.before` read cap, so `x_events_list` keeps its own cap on the number of
+reads.
 
 A call is `{ sessionID, input }`. The module:
 

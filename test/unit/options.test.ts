@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import { REDIRECT_URI, SCOPES } from "../../src/constants.js"
+import type { Feed } from "../../src/events.js"
 import { parseOptions } from "../../src/options.js"
 
-const defaults = { redirectUri: REDIRECT_URI, scopes: [...SCOPES], allowUntestedHost: false }
+const defaults = { redirectUri: REDIRECT_URI, scopes: [...SCOPES], allowUntestedHost: false, feeds: ["mentions", "bookmarks"] as Feed[], maxCalls: 4 }
 
 describe("parseOptions", () => {
   test("defaults to the pinned callback and scopes, a tested host, and no client", () => {
@@ -19,8 +20,10 @@ describe("parseOptions", () => {
     })
     expect(parseOptions({ oauth: { redirect_uri: "http://localhost:8766/callback", scopes: ["tweet.read"] }, allowUntestedHost: true })).toEqual({
       ok: true,
-      options: { redirectUri: "http://localhost:8766/callback", scopes: ["tweet.read"], allowUntestedHost: true },
+      options: { ...defaults, redirectUri: "http://localhost:8766/callback", scopes: ["tweet.read"], allowUntestedHost: true },
     })
+    // The home timeline is collected only when the person names it; the call cap is theirs to raise.
+    expect(parseOptions({ events: { feeds: ["timeline", "mentions"], maxCalls: 10 } })).toEqual({ ok: true, options: { ...defaults, feeds: ["timeline", "mentions"], maxCalls: 10 } })
     expect(parseOptions({ oauth: { redirect_uri: "https://example.com/callback", callback_port: 8767 } })).toMatchObject({ ok: true, options: { callbackPort: 8767 } })
   })
 
@@ -43,6 +46,13 @@ describe("parseOptions", () => {
     [{ oauth: { client_secret: "" } }, "oauth.client_secret", "Must be a non-empty string."],
     [{ oauth: { client_secret: "secret-1" } }, "oauth.client_secret", "Needs oauth.client_id."],
     [{ allowUntestedHost: "yes" }, "allowUntestedHost", "Must be true or false."],
+    [{ events: [] }, "events", "Must be an object."],
+    [{ events: { since: "x" } }, "events.since", "This option is not supported."],
+    [{ events: { feeds: [] } }, "events.feeds", "Must be a non-empty list of mentions, bookmarks, timeline."],
+    [{ events: { feeds: ["likes"] } }, "events.feeds", "Must be a non-empty list of mentions, bookmarks, timeline."],
+    [{ events: { feeds: ["mentions", "mentions"] } }, "events.feeds", "Lists a feed more than once."],
+    [{ events: { maxCalls: 1 } }, "events.maxCalls", "Must be a whole number from 2 to 50."],
+    [{ events: { maxCalls: 2.5 } }, "events.maxCalls", "Must be a whole number from 2 to 50."],
   ])("rejects %j with the field, the message and a next step", (input, field, message) => {
     const parsed = parseOptions(input)
     expect(parsed.ok).toBe(false)

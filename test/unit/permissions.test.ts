@@ -9,11 +9,11 @@ const ACTIONS = ["x_search_posts_all", "x_get_users_me", "x_create_users_bookmar
 const effects = (rules: readonly Rule[]) => ACTIONS.map((action) => evaluate(rules, action))
 
 describe("defaultRules", () => {
-  test("ask for every X tool, then allow each known read, then deny the off tools and the safety patterns last", () => {
+  test("ask for every X tool, then allow each known read and the plugin's own events_list, then deny the off tools and the safety patterns last", () => {
     const rules = defaultRules()
     expect(rules[0]).toEqual(ask)
-    expect(rules.slice(1, 1 + READ_TOOLS.length)).toEqual(READ_TOOLS.map((tool) => ({ action: `x_${tool}`, resource: "*", effect: "allow" })))
-    expect(rules.slice(1 + READ_TOOLS.length)).toEqual([
+    expect(rules.slice(1, 2 + READ_TOOLS.length)).toEqual([...READ_TOOLS, "events_list"].map((tool) => ({ action: `x_${tool}`, resource: "*", effect: "allow" })))
+    expect(rules.slice(2 + READ_TOOLS.length)).toEqual([
       ...DENY_TOOLS.map((tool) => deny(`x_${tool}`)),
       ...DENY_PATTERNS.map((pattern) => deny(`x_${pattern}`)),
     ])
