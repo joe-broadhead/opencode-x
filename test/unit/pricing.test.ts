@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { billingStatus, configureBilling, estimateCall, flushBilling, recordModelCost, resetBilling, scriptCostOfCall } from "../../src/billing.js"
+import { billingStatus, configureBilling, costOf, estimateCall, flushBilling, recordModelCost, resetBilling, scriptCostOfCall } from "../../src/billing.js"
 import { PRICES, PRICE_AS_OF, PRICE_SOURCE, priceOf } from "../../src/prices.js"
 import { METHODS, pluginError, resetScriptSpend, shapeInput, shapeResult } from "../../src/host/tools-rpc.js"
 
@@ -83,6 +83,16 @@ describe("the budget", () => {
     expect(result.text).toBe("Cost: 3 posts ($0.003) = $0.003.")
     expect((result.output as Record<string, unknown>).cost).toMatchObject({ actualUsd: 0.003, basis: "owned" })
     resetBilling()
+  })
+
+  // One basis on every path: the model path's own line and the script path's structured cost read the same flag.
+  test("the model path and the script path report the same basis for the same ownsXApp", () => {
+    const mentions = { output: { data: [{ id: "1" }, { id: "2" }] }, content: [{ type: "text", text: "" }] }
+    const scripted = { output: { data: [{ id: "1" }, { id: "2" }] }, text: "" }
+    expect(costOf("x_get_users_mentions", mentions, true)).toMatchObject({ basis: "owned", total: 0.002 })
+    expect(scriptCostOfCall("get_users_mentions", { id: "1", max_results: 2 }, scripted, estimateCall("get_users_mentions", { id: "1", max_results: 2 }, true), true)).toMatchObject({ basis: "owned", actualUsd: 0.002 })
+    expect(costOf("x_get_users_mentions", mentions, false)).toMatchObject({ basis: "conservative", total: 0.01 })
+    expect(scriptCostOfCall("get_users_mentions", { id: "1", max_results: 2 }, scripted, estimateCall("get_users_mentions", { id: "1", max_results: 2 }, false), false)).toMatchObject({ basis: "conservative", actualUsd: 0.01 })
   })
 
   test("an explicit per-call owns flag prices owned even when the configured snapshot is conservative", async () => {

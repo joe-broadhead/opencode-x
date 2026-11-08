@@ -884,7 +884,7 @@ describe("ownsXApp prices every path as owned", () => {
   })
   afterAll(() => host?.close())
 
-  test("the direct RPC and the model path both report basis owned", async () => {
+  test("the direct RPC reports basis owned", async () => {
     await until("X's mentions tool is listed", async () => (await host.probe().tool.list()).some((tool) => tool.id === "x_get_users_mentions"))
     const sessionID = await scriptSession(host)
     const read = await rpcCall(host, "get_users_mentions", { id: "1", max_results: 2 }, sessionID)
