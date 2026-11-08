@@ -38,6 +38,7 @@ export const PLUGIN_ID = X_PLUGIN_ID
  * The MCP tools that become methods, by their upstream name (the tool id without the `<server>_` prefix). Only known
  * reads belong here: an allowlist, so a tool the server adds later is never a method. X's are its known reads, the
  * tools that the default rules allow; its bookmark and list changes, its Article draft and create_posts never are.
+ * The plugin's own `x_events_list` is the owned method `events_list`, registered in setup.
  */
 export const KNOWN_READS: readonly string[] = READ_TOOLS
 
@@ -62,9 +63,14 @@ export const NEXT_STEPS: NextSteps = {
   CANCELLED: "Call the method again if you still need the result.",
 }
 
-/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step. X has none. */
-export function pluginError(_error: unknown): Failure | undefined {
-  return undefined
+/**
+ * The plugin's own errors, thrown by the `events_list` method's spec (`xError`), as a code, what happened and the next
+ * step.
+ */
+export function pluginError(error: unknown): Failure | undefined {
+  if (!(error instanceof Error)) return undefined
+  const { code, detail, nextStep } = error as Error & { code?: unknown; detail?: unknown; nextStep?: unknown }
+  return typeof code === "string" && typeof detail === "string" && typeof nextStep === "string" ? { code, what: detail, next: nextStep } : undefined
 }
 
 // <<< PLUGIN-SPECIFIC <<<

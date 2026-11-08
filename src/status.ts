@@ -1,5 +1,6 @@
 import type { Plugin, Rpc } from "@opencode/plugin"
 import { DISPLAY_NAME, ENDPOINT, PLUGIN_ID, SCOPES, SERVER_NAME, TESTED_HOSTS } from "./constants.js"
+import { EVENTS_LIST } from "./host/events-list.js"
 import { isSupportedHost, type HostCheck } from "./host-version.js"
 import { classify, DENY_TOOLS, PUBLIC_TOOLS, WRITE_TOOLS } from "./x-tools.js"
 import { defaultRules, unguardedAgents, type Rule } from "./permissions.js"
@@ -155,7 +156,8 @@ export function buildStatus(facts: StatusFacts): Status {
       : facts.server ? STATE_OF[facts.server.status]
         : "not_configured"
   const missing = facts.source === undefined && facts.server === undefined && client === undefined && facts.setup === undefined
-  const listed = facts.tools ?? []
+  // x_events_list is the plugin's own tool in the server's namespace, not one X lists.
+  const listed = (facts.tools ?? []).filter((tool) => tool !== EVENTS_LIST)
   const unknown = listed.filter((tool) => classify(tool) === "unknown")
   const denied = listed.filter((tool) => classify(tool) === "denied")
   // OpenCode's text for a needed sign-in can hold an authorization URL, so only a failure's reason is kept.

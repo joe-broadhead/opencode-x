@@ -1,8 +1,8 @@
 # Repository rules
 
 This repository builds `@joe-broadhead/opencode-x`, an OpenCode plugin that registers X's official MCP server and
-adds default permission rules, a status command, a status dialog, two skills and a tools RPC for scripts. It has no
-tool of its own. Read [docs/architecture.md](docs/architecture.md) before you change code, and
+adds default permission rules, a status command, a status dialog, two skills, a tools RPC for scripts, and one tool of
+its own, `x_events_list`, Memory's source of X events. Read [docs/architecture.md](docs/architecture.md) before you change code, and
 [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and the release steps.
 
 ## Rules
@@ -77,7 +77,12 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
   `scripts/check-copies.mjs` holds it, and the declaration kit `test/support/jelly-kit.ts`, equal to the copy every
   plugin carries. Its methods are `READ_TOOLS`
   and nothing else: never a write, the public Post, a denied tool or an unknown tool. Keep the RPC id
-  `x.posts.tools` and its method names stable: scripts call them by name.
+  `x.posts.tools` and its method names stable: scripts call them by name. The one exception to `READ_TOOLS` is the owned
+  method `events_list`.
+- **`x_events_list`** (`src/events.ts`) keeps the shared `events_list` contract in `src/host/events-list.ts`, a copy
+  every source plugin carries unchanged (`scripts/check-copies.mjs` pins its hash). It reads only through the host's
+  executors, which skip the model path's `execute.before` cap, so it keeps its own cap on billed reads per call
+  (`events.maxCalls`); never move that cap into a hook. Its tests run the contract's conformance check on a synthetic X.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
   `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`.
   Every temp root of the host and pack tests is a git repository under the system's `/tmp`, never under `TMPDIR` or

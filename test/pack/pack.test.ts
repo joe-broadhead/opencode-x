@@ -325,11 +325,12 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(fake.calls.slice(from)).toEqual([])
   })
 
-  test("describes exactly the known reads, each available with its live schema", async () => {
+  test("describes exactly the known reads, each available with its live schema, and events_list", async () => {
     const { value } = await script("describe", {})
     expect(value.id).toBe(TOOLS_RPC_ID)
-    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...READ_TOOLS])
-    for (const method of value.methods) {
+    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...READ_TOOLS, "events_list"])
+    expect(value.methods.at(-1)).toMatchObject({ name: "events_list", kind: "plugin", action: "x_events_list", available: true })
+    for (const method of value.methods.filter((item: { kind: string }) => item.kind === "mcp")) {
       expect({ name: method.name, kind: method.kind, action: method.action, available: method.available }).toEqual({
         name: method.name,
         kind: "mcp",
@@ -338,6 +339,15 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
       })
       expect(method.input).toEqual({ type: "object", properties: { query: { type: "string" } } })
     }
+  })
+
+  test("events_list runs the packed plugin's own spec, reads through OpenCode, and reports an answer it cannot read with its own code", async () => {
+    const from = fake.calls.length
+    // The fake answers get_users_me with its call, not a user, so the call stops after that one billed read.
+    const result = await call("build", "events_list", {})
+    expect(result).toMatchObject({ type: "failed", code: "UPSTREAM_UNREADABLE" })
+    expect(String(result.message)).toContain("UPSTREAM_UNREADABLE: X's get_users_me answered in a shape events_list does not read.")
+    expect(toolCalls(from)).toEqual(["get_users_me"])
   })
 
   test("runs a known read as the session's agent, with no model turn", async () => {

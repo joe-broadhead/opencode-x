@@ -24,7 +24,8 @@ const jelly = pkg.jelly as Declaration & {
   contributes: unknown
 }
 const byPermission = new Map(jelly.tools.map((tool) => [tool.permission, tool]))
-const known = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS].map((tool) => `${SERVER_NAME}_${tool}`)
+// Every live tool, and the plugin's own x_events_list.
+const known = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS, "events_list"].map((tool) => `${SERVER_NAME}_${tool}`)
 
 describe("the jelly declaration", () => {
   test("follows the plugin authors' standard, with the effects the plugin's own default rules give", () => {
@@ -35,6 +36,8 @@ describe("the jelly declaration", () => {
     for (const tool of READ_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
     for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "ask", readOnly: false })
     for (const tool of DENY_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "deny" })
+    // Memory's collector runs x_events_list unattended, so it never asks.
+    expect(byPermission.get("x_events_list")).toEqual({ name: "x.events_list", permission: "x_events_list", effect: "allow", readOnly: true })
     expect(jelly.tools).toHaveLength(known.length)
     for (const tool of jelly.tools) expect(Object.keys(tool).sort()).toEqual(["effect", "name", "permission", "readOnly"])
   })

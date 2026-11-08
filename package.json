@@ -400,6 +400,12 @@
         "readOnly": true
       },
       {
+        "name": "x.events_list",
+        "permission": "x_events_list",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
         "name": "x.article_create_draft",
         "permission": "x_article_create_draft",
         "effect": "ask",
