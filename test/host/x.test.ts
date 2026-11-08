@@ -15,7 +15,7 @@ import { defaultRules, type Rule } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { StatusRpc } from "../../src/status.js"
 import { TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
-import { DENIED_SAMPLE, MODEL_ID, X_SCOPES } from "./fake-mcp.js"
+import { DENIED_SAMPLE, MODEL_ID, startFakeMcp, X_SCOPES } from "./fake-mcp.js"
 import { agentRules, appOptions, attempt, cleanup, effect, HOST_VERSION, session, startHost, until, type Host } from "./harness.js"
 
 const AGENT_RULES = defaultRules().map((rule, index, rules) => `  ${JSON.stringify(rule)}${index < rules.length - 1 ? "," : ""}`).join("\n")
@@ -108,7 +108,7 @@ const statusRpc = (host: Host) => (host.client.rpc as unknown as (definition: ty
 describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
   let host: Host
   beforeAll(async () => {
-    host = await startHost({ options: appOptions(), config: () => ({ agents: { reviewer: { description: "Reviews changes", mode: "subagent" } } }) })
+    host = await startHost({ options: { ...appOptions(), scriptDailyBudgetUsd: 100 }, config: () => ({ agents: { reviewer: { description: "Reviews changes", mode: "subagent" } } }) })
   })
   afterAll(() => host?.close())
 
@@ -250,13 +250,13 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     expect((refused as unknown as { error: string }).error).toContain("x-opencode-directory")
   })
 
-  test("the tools RPC: a session that spends its budget is refused with X_BUDGET before the next call", async () => {
+  test("the tools RPC: a session that spends its budget is refused with X_BUDGET_EXCEEDED before the next call", async () => {
     await xTools(host)
     const sessionID = await scriptSession(host)
     for (let call = 0; call < 7; call++) expect((await rpcCall(host, "search_posts_all", { query: "cost" }, sessionID)).ok).toBe(true)
     const before = host.fake.calls.length
     const refused = await rpcCall(host, "search_posts_all", { query: "cost" }, sessionID)
-    expect((refused as unknown as { error: string }).error).toContain("X_BUDGET")
+    expect((refused as unknown as { error: string }).error).toContain("X_BUDGET_EXCEEDED")
     expect((refused as unknown as { error: string }).error).toContain("scriptBudgetUsd")
     expect(host.fake.calls.length).toBe(before)
   })
@@ -774,5 +774,56 @@ describe("the read cap and the cost line on the model path", () => {
     await until("the Code Mode read call", async () => codeMode.fake.calls.includes("search_posts_all"))
     expect(codeMode.fake.callArguments.at(-1)).toEqual({ query: "cost", max_results: 10 })
     await until("the cost line in the execute result", async () => toolText(codeMode.fake.model.requests.slice(before)).includes("Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15."))
+  })
+})
+
+describe("the daily script cap, across two sessions", () => {
+  let host: Host
+  beforeAll(async () => {
+    host = await startHost({ options: { ...appOptions(), scriptBudgetUsd: 1, scriptDailyBudgetUsd: 0.15 } })
+  })
+  afterAll(() => host?.close())
+
+  test("the first session spends the day, and the second is refused with no server call", async () => {
+    await xTools(host)
+    const first = await scriptSession(host)
+    expect((await rpcCall(host, "search_posts_all", { query: "cost", max_results: 10 }, first)).ok).toBe(true)
+    const before = host.fake.calls.length
+    const second = await scriptSession(host)
+    const refused = await rpcCall(host, "search_posts_all", { query: "cost", max_results: 10 }, second)
+    expect(refused.ok).toBe(false)
+    expect((refused as unknown as { error: string }).error).toContain("X_BUDGET_EXCEEDED")
+    expect((refused as unknown as { error: string }).error).toContain("scriptDailyBudgetUsd")
+    expect(host.fake.calls.length).toBe(before)
+  })
+})
+
+describe("a boot with an existing X sign-in", () => {
+  test("registers the x server and its tools without a config reload", async () => {
+    const fake = await startFakeMcp({ refreshTokens: true })
+    const base = join(tmpdir(), `x-boot-${Date.now()}`)
+    let first: Host | undefined
+    let second: Host | undefined
+    try {
+      first = await startHost({ base, fakeServer: fake, keepFake: true, oauth: true, options: {}, noServer: true })
+      await first.client.integration.connect.key({ integrationID: "x-app", key: "CONNECT_CLIENT_ID", answer: { client_secret: "secret-2" }, location: first.location })
+      await until("the client registers the server", async () => (await first!.client.mcp.list({ location: first!.location })).data.some((server) => server.name === "x"))
+      await signIn(first)
+      await until("the sign-in connects", async () => (await first!.client.mcp.list({ location: first!.location })).data.find((server) => server.name === "x")?.status.status === "connected")
+      expect(await xTools(first)).toHaveLength(15)
+      await first.close()
+      first = undefined
+
+      // The same store, now with the client and credential already present at boot: no /connect, no reload.
+      second = await startHost({ base, fakeServer: fake, keepFake: true, oauth: true, options: {}, noServer: true })
+      await Bun.sleep(2000)
+      const servers = (await second.client.mcp.list({ location: second.location })).data
+      expect(servers.some((server) => server.name === "x")).toBe(true)
+      expect((await second.probe().tool.list()).filter((tool) => tool.id.startsWith("x_")).length).toBe(15)
+    } finally {
+      await second?.close().catch(() => undefined)
+      await first?.close().catch(() => undefined)
+      await fake.close()
+    }
   })
 })

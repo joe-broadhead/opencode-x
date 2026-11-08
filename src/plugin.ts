@@ -143,6 +143,23 @@ export function createXPlugin(seam: XSeam) {
         const handle = (work: () => Promise<unknown>) => {
           queue = queue.then(() => (stopped.signal.aborted ? undefined : work())).then(() => undefined, () => undefined)
         }
+        // A client and credential that already exist at boot are read once here: the host can load the /connect
+        // store after this setup runs, so retry briefly instead of waiting for an unrelated config reload.
+        if (fromConnect) {
+          void (async () => {
+            for (let attempt = 0; attempt < 10 && !stopped.signal.aborted; attempt++) {
+              const next = await resolveClient(ctx.integration, options).catch(() => client)
+              if (next.client !== undefined) {
+                if (!sameClient(next, client)) {
+                  client = next
+                  await ctx.mcp.reload()
+                }
+                return
+              }
+              await delay(200, stopped.signal)
+            }
+          })()
+        }
         // One handler at a time, in event order.
         listening = (async () => {
           if (!fromConnect) return

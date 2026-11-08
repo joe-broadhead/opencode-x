@@ -10,7 +10,7 @@ import type { OpenCodeClient } from "@opencode/client"
 import { Plugin } from "@opencode/plugin"
 import { createXPlugin } from "../../src/plugin.js"
 import { SKILL_NAMES } from "../../src/skills.js"
-import { startFakeMcp, type FakeMcpOptions } from "./fake-mcp.js"
+import { startFakeMcp, type FakeMcp, type FakeMcpOptions } from "./fake-mcp.js"
 
 export type Rule = { action: string; resource: string; effect: "allow" | "ask" | "deny" }
 
@@ -47,6 +47,12 @@ for (const name of SKILL_NAMES) {
 }
 
 export interface HostInput {
+  /** A base directory to reuse, as a signed-in boot does: the same database and config, a fresh server. */
+  readonly base?: string
+  /** A fake server to reuse, so a second host's stored credential still names it. */
+  readonly fakeServer?: FakeMcp
+  /** Leave the fake open when this host closes, for the next host in the same boot test. */
+  readonly keepFake?: boolean
   /** Plugin options, as a user writes them in opencode.json. */
   readonly options?: Record<string, unknown>
   /** Extra user config: permissions, agents, mcp. `(url) => config` receives the fake server's URL. */
@@ -67,10 +73,10 @@ export const appOptions = (secret = true): Record<string, unknown> => ({
 let hosts = 0
 
 export async function startHost(input: HostInput = {}) {
-  const base = join(root, `host-${++hosts}`)
+  const base = input.base ?? join(root, `host-${++hosts}`)
   const work = join(base, "work")
   mkdirSync(work, { recursive: true })
-  const fake = await startFakeMcp(input.fake)
+  const fake = input.fakeServer ?? await startFakeMcp(input.fake)
   const x = createXPlugin({ endpoint: fake.url, ...(input.oauth ? {} : { oauth: false as const }), skillsDir })
   const withOptions = Plugin.define({ id: x.id, setup: (ctx) => x.setup({ ...ctx, options: input.options ?? {} }) })
   const probes = new Map<string, Plugin.Context>()
@@ -103,7 +109,7 @@ export async function startHost(input: HostInput = {}) {
     },
     async close() {
       await client.close()
-      await fake.close()
+      if (!input.keepFake) await fake.close()
       if (offLoopback.length) throw new Error(`the host tried to leave loopback: ${[...new Set(offLoopback)].join(", ")}`)
     },
   }
