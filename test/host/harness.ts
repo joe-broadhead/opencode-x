@@ -68,6 +68,8 @@ export interface HostInput {
 /** The plugin options an X app needs: its client ID, and its secret for a confidential app. */
 export const appOptions = (secret = true): Record<string, unknown> => ({
   oauth: { client_id: "client-1", ...(secret ? { client_secret: "secret-1" } : {}) },
+  // The tests that predate R18 exercise the restriction path; the default-all path has its own host tests.
+  access: "ask-changes",
 })
 
 let hosts = 0

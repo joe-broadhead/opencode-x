@@ -11,14 +11,13 @@ import { join, sep } from "node:path"
 import { Plugin } from "@opencode/plugin"
 import { REDIRECT_URI, SUPPORTED_HOST, TESTED_HOSTS, SCOPES } from "../../src/constants.js"
 import { PUBLIC_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
-import { defaultRules, type Rule } from "../../src/permissions.js"
+import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { StatusRpc } from "../../src/status.js"
 import { TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { DENIED_SAMPLE, MODEL_ID, startFakeMcp, X_SCOPES } from "./fake-mcp.js"
 import { agentRules, appOptions, attempt, cleanup, effect, HOST_VERSION, session, startHost, until, type Host } from "./harness.js"
 
-const AGENT_RULES = defaultRules().map((rule, index, rules) => `  ${JSON.stringify(rule)}${index < rules.length - 1 ? "," : ""}`).join("\n")
 const AGENTS_NEXT_STEP = "Put the default rules shown by /x-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for X tools."
 const KEY = "sk-fake-host-test-0123456789"
 const SIGN_IN = "Run `/connect` and choose X, then press `o` or Enter to open the link (in a terminal, `opencode mcp auth x` opens it automatically)."
@@ -138,7 +137,8 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
       const permissions = rules.get(id)!
       const base = permissions.findIndex((rule) => rule.action === "*" && rule.resource === "*" && rule.effect === "allow")
       expect(base).toBe(0)
-      expect(permissions.slice(base + 1, base + 1 + defaultRules().length)).toEqual(defaultRules())
+      const block = defaultRules("ask-changes")
+      expect(permissions.slice(base + 1, base + 1 + block.length)).toEqual(block)
       expect(permissions.filter((rule) => rule.action === "x_*")).toHaveLength(1)
     }
   })
@@ -160,16 +160,16 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) {
       expect({ tool, result: await attempt(host, build, "build", tool, "reject", { query: "q" }) }).toEqual({ tool, result: { asked: `x_${tool}`, ok: false, error: "Permission.DeclinedError: " } })
     }
-    // The off tools are hidden and refused with no prompt, even when "always" would be the answer.
+    // The off tools are no longer denied by default: with ask-changes they ask, and a decline stops them.
     for (const tool of DENIED_SAMPLE) {
-      expect({ tool, result: await attempt(host, build, "build", tool, "always", { query: "q" }) }).toEqual({ tool, result: { asked: undefined, ok: false, error: `Tool.Error: Permission denied: x_${tool}` } })
+      expect({ tool, result: await attempt(host, build, "build", tool, "reject", { query: "q" }) }).toEqual({ tool, result: { asked: `x_${tool}`, ok: false, error: "Permission.DeclinedError: " } })
       expect(host.fake.calls).not.toContain(tool)
     }
     // Only the read reached X.
     expect(host.fake.calls.slice(before)).toEqual(["search_posts_all"])
     const rules = (await agentRules(host)).get("build")!
     expect(["x_search_posts_all", "x_create_users_bookmark", "x_create_posts", "x_shiny_new_tool"].filter((action) => hidden(rules, action))).toEqual([])
-    for (const tool of DENIED_SAMPLE) expect(hidden(rules, `x_${tool}`)).toBe(true)
+    for (const tool of DENIED_SAMPLE) expect(hidden(rules, `x_${tool}`)).toBe(false)
   })
 
   test("the tools RPC: a read runs with the cost line, a script's page keeps X's maximum and its token", async () => {
@@ -214,7 +214,7 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     expect((refused as unknown as { error: string }).error).toContain("PERMISSION_DENIED")
     expect((refused as unknown as { error: string }).error).toContain("hidden from this session's agent by a deny rule")
     const off = await rpcCall(host, "users_id_block", { id: "1", target_user_id: "2" }, await scriptSession(host))
-    expect((off as unknown as { error: string }).error).toContain("hidden from this session's agent by a deny rule")
+    expect((off as unknown as { error: string }).error).toContain("would ask")
     expect(host.fake.calls.length).toBe(before)
   })
 
@@ -230,7 +230,7 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     const permission = Object.fromEntries(methods.map((method) => [method.name, method.permission]))
     expect(permission.search_posts_all).toBe("allow")
     expect(permission.create_users_bookmark).toBe("ask")
-    expect(permission.users_id_block).toBe("deny")
+    expect(permission.users_id_block).toBe("ask")
     expect(described.location).toBe(host.location.directory)
     expect(described.locationHint).toContain("x-opencode-directory")
     // Without a session there is no permission field.
@@ -283,12 +283,13 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     const text = await status(host, await session(host))
     expect(text).toContain(`- Connection: connected (${host.fake.url}, registered by this plugin)`)
     expect(text).toContain("- Account: account name not reported by X's MCP\n")
-    expect(text).toContain("- Access: reads run without asking; 9 tools ask first (bookmarks, lists, an Article draft and a public Post); 40 are off (DMs and private chat conversations, calls, follows, blocks, mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the app; default rules missing in the agents listed below\n")
-    expect(text).toContain("- Tools: 12 available, 1 unknown: shiny_new_tool (unknown tools ask before running); off by default: add_lists_member, send_chat_message and users_id_block\n")
+    expect(text).toContain("- Access: reads run without asking; every other X tool asks (49 tools); X bills every tool call to the X developer account that owns the app; default rules missing in the agents listed below\n")
+    expect(text).toContain("- Tools: 15 available, 1 unknown: shiny_new_tool (unknown tools ask before running)\n")
     expect(text).toContain(`- Client: client-1 (configured app, confidential; set in plugin options)\n`)
     expect(text).toContain(`- Callback: ${REDIRECT_URI} (register exactly this URL in the app's User authentication settings)\n`)
     expect(text).toContain(`- Scopes: ${SCOPES.join(" ")}\n`)
-    expect(text).toContain(`- Agents without default rules: reviewer\n${AGENT_RULES}\n`)
+    expect(text).toContain("- Agents without default rules: reviewer\n")
+    expect(text).toContain('{"action":"x_*","resource":"*","effect":"ask"}')
     expect(text).toContain(`- Next step: ${AGENTS_NEXT_STEP}`)
     expect(text).toContain(`- OpenCode: ${HOST_VERSION} (${TESTED_HOSTS.includes(HOST_VERSION) ? "tested" : "untested"}; supported range ${SUPPORTED_HOST})`)
     expect(text).not.toContain("secret-1")
@@ -296,7 +297,7 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     expect(host.fake.calls.length).toBe(before)
     const output = await statusRpc(host)
     expect(host.fake.calls.length).toBe(before)
-    expect(output).toMatchObject({ state: "connected", tools: 12, deniedTools: [...DENIED_SAMPLE], deniedCount: 3, unknownCount: 1, listing: false, unguardedAgents: ["reviewer"], client: { id: "client-1", mode: "confidential", source: "options" } })
+    expect(output).toMatchObject({ state: "connected", tools: 15, deniedTools: [], deniedCount: 0, unknownCount: 1, listing: false, access: "ask-changes", unguardedAgents: ["reviewer"], client: { id: "client-1", mode: "confidential", source: "options" } })
     expect(JSON.stringify(output)).not.toContain("secret-1")
     expect(output).not.toHaveProperty("account")
   })
@@ -326,7 +327,8 @@ describe("the user's own x server, with a secret in its headers", () => {
 
   test("H4: is adopted unchanged: the host sends its headers, and the plugin's rules still apply", async () => {
     expect(await attempt(host, await session(host), "build", "search_posts_all", "reject", { query: "@example" })).toMatchObject({ asked: undefined, ok: true })
-    expect(await attempt(host, await session(host), "build", "create_users_bookmark", "reject", { query: "q" })).toMatchObject({ asked: "x_create_users_bookmark", ok: false })
+    // With no options this host takes the default access all: a write runs without a prompt.
+    expect(await attempt(host, await session(host), "build", "create_users_bookmark", "reject", { query: "q" })).toMatchObject({ asked: undefined, ok: true })
     expect(host.fake.markers.length).toBeGreaterThan(0)
     expect(new Set(host.fake.markers)).toEqual(new Set(["user"]))
     expect(new Set(host.fake.authorizations)).toEqual(new Set([`Bearer ${KEY}`]))
@@ -390,6 +392,7 @@ async function rejectPrompts(host: Host, sessionID: string) {
 /** A host whose own `x` entry points at the fake, whose model is the fake's scripted model, with Code Mode on or off. */
 async function modelHost(codemode: boolean) {
   const host = await startHost({
+    options: appOptions(),
     config: (url) => ({
       mcp: { servers: { x: { type: "remote", url, oauth: false, ...(codemode ? {} : { codemode: false }) } } },
       // No model leaves the machine: LM Studio's local API is the fake; the other local providers are off.
@@ -488,7 +491,7 @@ describe("user permissions", () => {
       config: () => ({
         permissions: userRules,
         // The documented fix for a config-only agent: the plugin's block first, then the user's rules again.
-        agents: { reviewer: { description: "Reviews changes", mode: "subagent", permissions: [...defaultRules(), ...userRules] } },
+        agents: { reviewer: { description: "Reviews changes", mode: "subagent", permissions: [...defaultRules("ask-changes"), ...userRules] } },
       }),
     })
   })
@@ -825,5 +828,51 @@ describe("a boot with an existing X sign-in", () => {
       await first?.close().catch(() => undefined)
       await fake.close()
     }
+  })
+})
+
+describe("the access option", () => {
+  let all: Host
+  let asking: Host
+  let readOnly: Host
+  beforeAll(async () => {
+    all = await startHost({ options: { ...appOptions(), access: "all" } })
+    asking = await startHost({ options: { ...appOptions(), access: "ask-changes" } })
+    readOnly = await startHost({ options: { ...appOptions(), access: "read-only" } })
+  })
+  afterAll(async () => {
+    await all?.close()
+    await asking?.close()
+    await readOnly?.close()
+  })
+
+  test("all runs a write on the RPC path without a prompt, and allows a tool not in the table", async () => {
+    await xTools(all)
+    const sessionID = await scriptSession(all)
+    expect((await rpcCall(all, "create_users_bookmark", { id: "1" }, sessionID)).ok).toBe(true)
+    expect(all.fake.calls).toContain("create_users_bookmark")
+    expect(await attempt(all, await session(all), "build", "shiny_new_tool", "reject", { query: "q" })).toMatchObject({ asked: undefined, ok: true })
+  })
+
+  test("ask-changes refuses a write on the RPC path with no server call", async () => {
+    await xTools(asking)
+    const sessionID = await scriptSession(asking)
+    const before = asking.fake.calls.length
+    const refused = await rpcCall(asking, "create_users_bookmark", { id: "1" }, sessionID)
+    expect(refused.ok).toBe(false)
+    expect((refused as unknown as { error: string }).error).toContain("PERMISSION_DENIED")
+    expect(asking.fake.calls.length).toBe(before)
+  })
+
+  test("read-only denies the write, and the namespace pattern does not save it", async () => {
+    await xTools(readOnly)
+    const sessionID = await scriptSession(readOnly)
+    const before = readOnly.fake.calls.length
+    const refused = await rpcCall(readOnly, "create_users_bookmark", { id: "1" }, sessionID)
+    expect(refused.ok).toBe(false)
+    expect((refused as unknown as { error: string }).error).toContain("hidden from this session's agent by a deny rule")
+    expect(readOnly.fake.calls.length).toBe(before)
+    const rules = await agentRules(readOnly)
+    expect(evaluate(rules.get("build")!, "x_create_users_bookmark")).toBe("deny")
   })
 })

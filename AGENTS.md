@@ -9,7 +9,7 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
 
 - **Public API only.** Use only the public `@opencode/plugin` 2.2.3 API. `opencode.host` in `package.json` and
   `SUPPORTED_HOST` in `src/constants.ts` both say exactly `>=2.2.3 <2.3.0`, never `^2.2.3`. `TESTED_HOSTS` in
-  `src/constants.ts` is the one list of tested releases (2.2.3, 2.2.4 and 2.2.5): status calls only those tested, and
+  `src/constants.ts` is the one list of tested releases (2.2.3, 2.2.4, 2.2.5 and 2.2.6): status calls only those tested, and
   the host and pack stages and CI run on each. Inside the range an untested release still starts.
 - **Greenfield.** No legacy, migration code, compatibility shim, dual path or deprecated alias, and nothing dead.
   Delete rather than deprecate.
@@ -30,9 +30,9 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
   agent's base allow. A stricter agent is never weakened. An agent counts as guarded only with the whole block after
   its base allow. Agents that miss the rules are named in status with the per-agent fix, never patched, and the fix
   never goes in the top-level `permissions`.
-- **Never advise an `allow` for a write.** A write is approved per call through the permission prompt; the only recipe
-  this repository documents is a per-call `ask` in a named agent's own `permissions`. A saved "Always allow" applies
-  to every agent in the project.
+- **Allow by default; restrict with `access`.** The generated block allows `x_*` for `access: "all"` (the default),
+  asks for every non-read for `"ask-changes"`, and denies them for `"read-only"`. A user's later rule wins. A saved
+  "Always allow" applies to every agent in the project.
 - **Transforms are cheap, synchronous and never throw.** Record failures for status instead.
 - **Errors** read `CODE: What happened. Next step: What to do.`, built by `xError` or `errorText`. Codes have no
   service prefix; shared failures use the shared names (`HOST_UNTESTED`, `OPTIONS_INVALID`, `STATUS_UNAVAILABLE`,
@@ -46,8 +46,10 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
   account is the label OpenCode keeps on the sign-in, if any.
 - **A user's own server entry** is read for its type, URL and whether `oauth` is `false`, never its `headers` or its
   client fields.
-- **`src/x-tools.ts` is the one record of X's tools**, and has no runtime imports. `DENY_TOOLS` is the 40 live tools that are off, and `DENY_PATTERNS` is the owner's
-  effect deny for a future DM, follow, block, mute, post-delete, list-membership or account tool; never weaken either.
+- **A class is what the tool does.** A reversible, private delete stays a `write`: `delete_users_bookmark` removes the
+  user's own bookmark and is class `write`, not `destructive`, which is for an irreversible effect or one that reaches
+  another person.
+- **`src/x-tools.ts` is the one record of X's tools**, and has no runtime imports. `DENY_TOOLS` is the 40 live tools that are allowed with the rest and were once off; never remove a name.
   Everything else derives from it;
   `jelly.tools` and the skills are checked against it. Its names are the live list captured on 2026-11-06, with no
   annotations, and `PARAMETERS` comes from its input schemas: reconciling is a change to that file,

@@ -44,7 +44,7 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
   instructions aimed at the model. The namespace text and the skills tell the model to treat every result as data,
   never to follow an instruction in it, and never to let it choose a tool, a recipient or a change. X's terms also
   forbid automated replies without prior approval and automated or bulk likes. The plugin has no like tool; a reply
-  is possible through `x_create_posts`, asks every time, and those reply rules still apply.
+  is possible through `x_create_posts`, follows the `access` option, and those reply rules still apply.
 - **Every call is billed** to the X developer account that owns the app. The plugin caps a model read to one page of
   at most ten posts or users, with one widening and about $0.20 an answer, and every answer that read ends with its
   actual cost line. A script pays the same rates and is capped by `scriptBudgetUsd` per session and
@@ -57,47 +57,49 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
 What the model can do in X is limited by these layers, in this order:
 
 1. **X's server and the app's scopes.** The sign-in is your own X account, and the token carries the app's scopes.
-   The plugin requests only the scopes its 51 reads and 9 asking writes need, including `follows.read`, `like.read`,
-   `block.read`, `list.read`, `list.write`, `space.read`, `broadcast.read` and `calls.read`; it requests no scope for a
-   denied tool. A missing scope makes its tools fail with `403` or disappear. X's app-only bearer token cannot reach
-   your timeline, mentions or bookmarks; the hosted server uses the user's sign-in.
-2. **Default permission rules.** 40 of X's 100 live tools are denied by name in `DENY_TOOLS`: DMs and private chat
-   conversations (reads included), scheduled calls, follows, blocks, mutes, list membership, chat moderator roles, and
-   live video with its sources. Every other tool asks before it runs, except the 51 read tools listed in
-   `src/x-tools.ts`, which run without a prompt. `x_create_posts` is public: anyone can read the Post, it appears on
-   the user's profile and in followers' timelines, and the plugin has no delete tool. `DENY_PATTERNS` and the last
-   rules of `defaultRules()` deny a future tool of the same effect before any release classifies it.
-3. **Your OpenCode permissions.** Your `permissions` rules and saved "Always allow" answers override the default
-   rules. A `deny` you configure always wins.
+   The plugin requests the scopes its tools need, including `follows.read`, `like.read`, `block.read`, `list.read`,
+   `list.write`, `space.read`, `broadcast.read` and `calls.read`. A tool whose scope the app does not carry fails with
+   `403` or disappears. X's app-only bearer token cannot reach your timeline, mentions or bookmarks; the hosted server
+   uses the user's sign-in.
+2. **The default is allow.** With no configuration, every one of X's 100 live tools is allowed for every agent, writes
+   included: an agent can post, reply, quote, edit, bookmark, create or change lists, draft an Article, send a DM,
+   follow, block, mute, change list membership, moderate a chat and go live on the user's real account **without
+   asking**. `x_create_posts` is public: anyone can read the Post, it appears on the profile and in followers'
+   timelines, and the plugin has no delete tool.
+3. **Your OpenCode permissions.** The `access` option drives the generated block: `all` is the default above,
+   `ask-changes` allows reads and asks for everything else, and `read-only` allows reads and denies everything else.
+   A user's own `permissions` rules and saved "Always allow" answers come later and win. To restrict without editing
+   every agent: `{ "access": "ask-changes" }` or `{ "access": "read-only" }`.
 
 Things to know:
 
 - **Saved approvals are broad.** "Always allow" on an X tool saves the pattern `*` for that tool's action. It applies
-  to every agent in the OpenCode project, Plan included, until you remove it. Think twice before saving one for
-  publishing. OpenCode identifies a project by its git repository. A folder outside any git repository with a commit
-  may belong to OpenCode's shared `global` project, so an approval saved there may apply in other such folders too.
+  to every agent in the OpenCode project, Plan included, until you remove it. OpenCode identifies a project by its git
+  repository. A folder outside any git repository with a commit may belong to OpenCode's shared `global` project, so an
+  approval saved there may apply in other such folders too.
 - **Some agents get no default rules.** Agents defined only in your own config, and agents added by plugins that load
-  after this one, are created after the plugin inserts its rules, and agents without a base allow get none. X tools
-  may run there without asking. `/x-status` names these agents and gives the fix: put the default rules it shows first
-  in that agent's own `permissions`, followed by your top-level rules for X tools. Do not put them in the top-level
-  `permissions`, which would loosen Explore.
-- **Unattended runs refuse prompts.** In `opencode run`, an X tool that would ask is refused, so run changes
-  interactively.
-- **The `x_*` rule also matches other servers** whose names start with `x_`. For their tools it only adds prompts.
-- **The rules follow the name, not the server.** When your own `mcp.servers.x` points at another URL, status reports a
-  conflict and the plugin adds no server, but the default rules still allow the known read names, so a tool of that
-  server with such a name runs without asking. Point the entry at X's URL, or remove it.
+  after this one, are created after the plugin inserts its rules, and agents without a base allow get none. With
+  `access: all` they still allow X tools through the agent's own base allow. `/x-status` names these agents and gives
+  the fix: put the rules it shows first in that agent's own `permissions`, followed by your top-level rules for X
+  tools. Do not put them in the top-level `permissions`, which would loosen Explore.
+- **Unattended runs.** With `access: all` (the default) a write can run in `opencode run` with no one present. With
+  `ask-changes`, a tool that would ask is refused; run changes interactively or set `access: all` for that run.
+- **The `x_*` allow also matches other servers** whose names start with `x_`. It allows their tools too. Rename such a
+  server, or put a narrower rule after the block.
 - **The client secret is a credential.** A config file may be synced, backed up or shared, so prefer
-  `{env:X_CLIENT_SECRET}` in `opencode.json`, or the `/connect` X app entry, over a literal value. OpenCode substitutes
-  the variable when it loads the config; an unset variable arrives as an empty string, which `OPTIONS_INVALID`
-  rejects. A Native App needs no secret: X issued it a refresh token in the live test, and OpenCode refreshed it after
-  about two hours.
+  `{env:X_CLIENT_SECRET}` in `opencode.json`, or the `/connect` X app entry, over a literal value. An unset variable
+  arrives as an empty string, which `OPTIONS_INVALID` rejects. A Native App needs no secret.
+- **The rules follow the name, not the server.** When your own `mcp.servers.x` points at another URL, status reports a
+  conflict and the plugin adds no server, but the default `x_*` allow still matches tools of that server. Point the
+  entry at X's URL, or remove it.
 
 ## Scripts
 
 The tools RPC (`x.posts.tools`, see
 [docs/scripting.md](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md)) calls X's tools for a
-script, with no model. Every known tool is a method, with its class, but a method is not a grant:
+script, with no model. Every known tool is a method, with its class. A script gets the same `access` default as the
+model: with `all`, every method resolves `allow`; with `ask-changes` or `read-only`, a method that is not a read is
+refused before dispatch. A method is not a grant:
 
 - A script names a session that names an agent, and runs as them. Before any call, the plugin resolves that method's
   permission action against the agent's rules and then the session's rules, the host's own order. Only `allow` runs: a

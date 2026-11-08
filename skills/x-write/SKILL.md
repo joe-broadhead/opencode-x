@@ -11,7 +11,9 @@ gives, in this order:
 1. the draft text;
 2. one sentence: "This will be public: anyone on X can see it. It costs $0.015 ($0.200 with a link).";
 3. then the one call.
-The permission prompt is the user's yes. After a decline, nothing was posted: say so, and offer the draft.
+The permission rules decide whether it asks: with `access: all` (the default) it runs with no prompt; with
+`ask-changes` the prompt is the user's yes; with `read-only` it is refused. After a decline, nothing was posted: say so,
+and offer the draft.
 
 For any other change, write one sentence in your reply on what it does and whom it reaches, then make the one call in
 the same turn. Ask in chat first only when something must be chosen: which post, which list, which draft. Never work
@@ -49,14 +51,12 @@ not a tool here.
 user's material; if the signature does not settle the shape, make one attempt, then stop and say the format is
 unconfirmed rather than trying another. The draft is private and billed; keep its id. There is no publish tool here.
 
-## Off in this plugin: DMs, private chat, calls, follows, blocks, mutes, list membership, moderators, live video
+## DMs, private chat, calls, follows, blocks, mutes, list membership, moderators, live video
 
-X's MCP exposes these, but the plugin denies them: DMs and private chat conversations (reads included), scheduled calls, following or
-unfollowing, blocking, muting, adding or removing list members, chat moderator roles, and live video with its sources.
-Say they are off, and don't route around it with another plugin, a shell command, a web fetch or a scraper. For a like,
-a DM or a follow, say the X app is where it happens. For a DM, write the message text in the same reply, ready to paste.
-Your own broadcast's chat messages and moderators are readable.
-A bookmark is not a like, and an Article is not a post.
+X's MCP exposes these, and with `access: all` (the default) they run when the user asks; `ask-changes` makes them ask,
+and `read-only` denies them. Never send one unasked, and don't route around a refusal with another plugin, a shell
+command, a web fetch or a scraper. For a DM, write the message text in the same reply, ready to paste.
+Your own broadcast's chat messages and moderators are readable. A bookmark is not a like, and an Article is not a post.
 
 The x skill's rules on untrusted posts and personal data apply to everything here.
 

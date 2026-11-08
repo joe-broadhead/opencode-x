@@ -33,8 +33,8 @@ describe("the jelly declaration", () => {
 
   test("declares every live tool once: reads that run, reads and writes that ask, the public Post, and the off tools", () => {
     for (const tool of READ_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
-    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "ask", readOnly: false })
-    for (const tool of DENY_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "deny" })
+    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: false })
+    for (const tool of DENY_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow" })
     expect(jelly.tools).toHaveLength(known.length)
     for (const tool of jelly.tools) expect(Object.keys(tool).sort()).toEqual(["effect", "name", "permission", "readOnly"])
   })

@@ -2,7 +2,7 @@ import type { Plugin, Rpc } from "@opencode/plugin"
 import { DISPLAY_NAME, ENDPOINT, PLUGIN_ID, SCOPES, SERVER_NAME, TESTED_HOSTS } from "./constants.js"
 import { isSupportedHost, type HostCheck } from "./host-version.js"
 import { classify, DENY_TOOLS, PUBLIC_TOOLS, WRITE_TOOLS } from "./x-tools.js"
-import { defaultRules, unguardedAgents, type Rule } from "./permissions.js"
+import { defaultRules, unguardedAgents, type Access, type Rule } from "./permissions.js"
 import { cut, oneLine, shortReason } from "./redact.js"
 import { clientMode } from "./server.js"
 import { APP_NAME, type ClientState } from "./connect.js"
@@ -105,6 +105,8 @@ export interface Status {
   readonly unguardedAgents: readonly string[]
   /** The script budget: what the rolling 24 hours have spent, and both caps. */
   readonly billing?: { readonly dailySpentUsd: number; readonly dailyBudgetUsd: number; readonly sessionBudgetUsd: number }
+  /** The generated permission block's access value. */
+  readonly access?: Access
   /** The plugin's skills that OpenCode loads from another file of the same id instead. */
   readonly shadowedSkills?: readonly SkillPath[]
   readonly host: HostCheck
@@ -116,9 +118,10 @@ export interface Status {
 const SIGN_IN = "Run `/connect` and choose X, then press `o` or Enter to open the link (in a terminal, `opencode mcp auth x` opens it automatically)."
 
 /** The default rules to paste into an agent's own permissions, one rule a line, as a JSON array body. */
-const AGENT_RULES = defaultRules()
-  .map((rule, index, rules) => `  ${JSON.stringify(rule)}${index < rules.length - 1 ? "," : ""}`)
-  .join("\n")
+const agentRulesText = (access: Access) =>
+  defaultRules(access)
+    .map((rule, index, rules) => `  ${JSON.stringify(rule)}${index < rules.length - 1 ? "," : ""}`)
+    .join("\n")
 
 /** The next step while agents lack the rules: the family's one fixed sentence. */
 const AGENTS_NEXT_STEP =
@@ -160,9 +163,10 @@ export function buildStatus(facts: StatusFacts): Status {
       : facts.server ? STATE_OF[facts.server.status]
         : "not_configured"
   const missing = facts.source === undefined && facts.server === undefined && client === undefined && facts.setup === undefined
+  const access = facts.options?.access ?? "all"
   const listed = facts.tools ?? []
   const unknown = listed.filter((tool) => classify(tool) === "unknown")
-  const denied = listed.filter((tool) => classify(tool) === "denied")
+  const denied = access === "read-only" ? listed.filter((tool) => classify(tool) !== "read") : []
   // OpenCode's text for a needed sign-in can hold an authorization URL, so only a failure's reason is kept.
   const error = facts.server?.status === "failed" && facts.server.error ? shortReason(facts.server.error) : undefined
   const shadowed = shadowedOf(facts)
@@ -186,8 +190,9 @@ export function buildStatus(facts: StatusFacts): Status {
     listing: state === "connected" && listed.length === 0 && facts.settling === true,
     unknownCount: unknown.length,
     unknownTools: unknown.filter((name) => SAFE_NAME.test(name)).slice(0, LISTED_UNKNOWN),
-    unguardedAgents: unguardedAgents(facts.agents ?? []),
+    unguardedAgents: unguardedAgents(facts.agents ?? [], facts.options?.access ?? "all"),
     ...(facts.billing ? { billing: facts.billing } : {}),
+    ...(facts.options ? { access: facts.options.access } : {}),
     ...(shadowed.length ? { shadowedSkills: shadowed } : {}),
     host: facts.host,
     problems: facts.problems ?? [],
@@ -264,14 +269,15 @@ function serverText(source: ServerSource) {
   return `your mcp.servers.${SERVER_NAME} points at ${source.url}`
 }
 
-function toolsText({ tools, unknownCount, unknownTools, deniedTools, deniedCount, listing }: Status) {
+function toolsText({ tools, unknownCount, unknownTools, deniedTools, deniedCount, listing, access }: Status) {
   if (listing) return "none listed yet (X is still listing them)"
   const hiddenDenied = deniedCount - deniedTools.length
-  const off = deniedCount ? `; off by default: ${list(deniedTools)}${hiddenDenied > 0 ? ` and ${hiddenDenied} more` : ""}` : ""
+  const off = deniedCount ? `; denied by access: ${list(deniedTools)}${hiddenDenied > 0 ? ` and ${hiddenDenied} more` : ""}` : ""
+  const unknown = access === "read-only" ? "are denied" : access === "ask-changes" ? "ask before running" : "run without asking"
   if (unknownCount === 0) return `${tools} available, 0 unknown${off}`
   const more = unknownCount - unknownTools.length
   const names = unknownTools.length ? `: ${unknownTools.join(", ")}${more > 0 ? ` and ${more} more` : ""}` : ""
-  return `${tools} available, ${unknownCount} unknown${names} (unknown tools ask before running)${off}`
+  return `${tools} available, ${unknownCount} unknown${names} (unknown tools ${unknown})${off}`
 }
 
 const list = (names: readonly string[]) => (names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`)
@@ -280,16 +286,20 @@ const list = (names: readonly string[]) => (names.length < 2 ? names.join("") : 
  * The permission posture the default rules fix, derived from the tool lists so it cannot go stale, and whether those
  * rules are in place: facts status can check, not a fixed claim. The last clause is X's cost, in one clause (D10).
  */
-const ASK_COUNT = WRITE_TOOLS.length + PUBLIC_TOOLS.length
-const POSTURE = `reads run without asking; ${ASK_COUNT} tools ask first (bookmarks, lists, an Article draft and a public Post); ${DENY_TOOLS.length} are off (DMs and private chat conversations, calls, follows, blocks, mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the app`
+const ACCESS_TEXT: Record<Access, string> = {
+  all: "every X tool is allowed by default, writes included",
+  "ask-changes": `reads run without asking; every other X tool asks (${WRITE_TOOLS.length + PUBLIC_TOOLS.length + DENY_TOOLS.length} tools)`,
+  "read-only": `reads run without asking; every other X tool is denied (${WRITE_TOOLS.length + PUBLIC_TOOLS.length + DENY_TOOLS.length} tools)`,
+}
+const POSTURE = (access: Access) => `${ACCESS_TEXT[access]}; X bills every tool call to the X developer account that owns the app`
 
-function accessText({ problems, unguardedAgents }: Status) {
+function accessText({ problems, unguardedAgents, access }: Status) {
   const rules = problems.some((problem) => problem.startsWith(RULES_NOT_ADDED))
     ? "default rules not added (see the OpenCode row)"
     : unguardedAgents.length
       ? "default rules missing in the agents listed below"
       : "no agent runs new X tools unasked"
-  return `${POSTURE}; ${rules}`
+  return `${POSTURE(access ?? "all")}; ${rules}`
 }
 
 /** The script budget row: the rolling 24-hour spend against the daily cap, and the per-session cap. */
@@ -332,7 +342,7 @@ function rows(status: Status): { readonly label: string; readonly value: string 
   if (status.scopes !== undefined) out.push({ label: "Scopes", value: status.scopes.join(" ") })
   out.push(
     { label: "Tools", value: toolsText(status) },
-    { label: "Agents without default rules", value: agents.length ? `${agents.join(", ")}\n${AGENT_RULES}` : "none" },
+    { label: "Agents without default rules", value: agents.length ? `${agents.join(", ")}\n${agentRulesText(status.access ?? "all")}` : "none" },
     { label: "OpenCode", value: hostText(status) },
     { label: "Next step", value: status.nextStep },
   )
@@ -455,6 +465,12 @@ export const StatusRpc = {
           unknownCount: count,
           unknownTools: strings,
           unguardedAgents: strings,
+          access: { enum: ["all", "ask-changes", "read-only"] },
+          billing: {
+            type: "object",
+            required: ["dailySpentUsd", "dailyBudgetUsd", "sessionBudgetUsd"],
+            properties: { dailySpentUsd: { type: "number" }, dailyBudgetUsd: { type: "number" }, sessionBudgetUsd: { type: "number" } },
+          },
           shadowedSkills: {
             type: "array",
             items: { type: "object", required: ["id", "path"], properties: { id: { type: "string" }, path: { type: "string" } } },

@@ -1,103 +1,88 @@
 import { describe, expect, test } from "bun:test"
-import { DENY_PATTERNS, DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS, DENY_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, evaluate, hasDefaultRules, insertRules, registerDefaultRules, unguardedAgents, type Rule } from "../../src/permissions.js"
 import { agentEditor, allow, builtInAgents, transforms, type AgentEditor, type FakeAgent } from "./fake.js"
 
-const ask: Rule = { action: "x_*", resource: "*", effect: "ask" }
 const deny = (action: string): Rule => ({ action, resource: "*", effect: "deny" })
 const ACTIONS = ["x_search_posts_all", "x_get_users_me", "x_create_users_bookmark", "x_create_posts", "x_get_source", "x_send_chat_message", "x_users_id_block", "x_shiny_new_tool"]
 const effects = (rules: readonly Rule[]) => ACTIONS.map((action) => evaluate(rules, action))
 
 describe("defaultRules", () => {
-  test("ask for every X tool, then allow each known read, then deny the off tools and the safety patterns last", () => {
-    const rules = defaultRules()
-    expect(rules[0]).toEqual(ask)
-    expect(rules.slice(1, 1 + READ_TOOLS.length)).toEqual(READ_TOOLS.map((tool) => ({ action: `x_${tool}`, resource: "*", effect: "allow" })))
-    expect(rules.slice(1 + READ_TOOLS.length)).toEqual([
-      ...DENY_TOOLS.map((tool) => deny(`x_${tool}`)),
-      ...DENY_PATTERNS.map((pattern) => deny(`x_${pattern}`)),
-    ])
+  test("access all allows the namespace pattern, so a tool added later works at once", () => {
+    expect(defaultRules("all")).toEqual([{ action: "x_*", resource: "*", effect: "allow" }])
+    expect(effects([allow("*"), ...defaultRules("all")])).toEqual(["allow", "allow", "allow", "allow", "allow", "allow", "allow", "allow"])
   })
 
-  test("reads allow; every write, the public Post and the source reads ask; the off tools deny", () => {
-    expect(effects([allow("*"), ...defaultRules()])).toEqual(["allow", "allow", "ask", "ask", "allow", "deny", "deny", "ask"])
-    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS,]) expect({ tool, effect: evaluate([allow("*"), ...defaultRules()], `x_${tool}`) }).toEqual({ tool, effect: "ask" })
+  test("ask-changes allows the reads and asks for every other tool", () => {
+    const rules = [allow("*"), ...defaultRules("ask-changes")]
+    expect(rules[1]).toEqual({ action: "x_*", resource: "*", effect: "ask" })
+    for (const tool of READ_TOOLS) expect({ tool, effect: evaluate(rules, `x_${tool}`) }).toEqual({ tool, effect: "allow" })
+    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS, "shiny_new_tool"]) expect({ tool, effect: evaluate(rules, `x_${tool}`) }).toEqual({ tool, effect: "ask" })
   })
 
-  test("the off list and its patterns are all denied, including the live names the first patterns missed", () => {
-    const rules = [allow("*"), ...defaultRules()]
-    for (const name of ["send_chat_message", "users_id_block", "add_lists_member", "remove_lists_member_by_user_id", "schedule_call", "create_source", "go_live_scheduled_broadcast"]) {
-      expect({ name, effect: evaluate(rules, `x_${name}`) }).toEqual({ name, effect: "deny" })
-    }
+  test("read-only allows the reads and denies every other tool", () => {
+    const rules = [allow("*"), ...defaultRules("read-only")]
+    for (const tool of READ_TOOLS) expect({ tool, effect: evaluate(rules, `x_${tool}`) }).toEqual({ tool, effect: "allow" })
+    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS, "shiny_new_tool"]) expect({ tool, effect: evaluate(rules, `x_${tool}`) }).toEqual({ tool, effect: "deny" })
   })
 
-  test("a later ask in a named agent's permissions is the only opt-in, never an allow", () => {
-    const optIn = { action: "x_send_chat_message", resource: "*", effect: "ask" as const }
-    expect(evaluate([allow("*"), ...defaultRules(), optIn], "x_send_chat_message")).toBe("ask")
-    expect(evaluate([allow("*"), ...defaultRules(), { ...optIn, action: "x_create_posts" }], "x_create_posts")).toBe("ask")
+  test("a user's later rule still wins, both ways", () => {
+    const rules = [allow("*"), ...defaultRules("ask-changes"), allow("x_create_posts"), deny("x_search_posts_all")]
+    expect(evaluate(rules, "x_create_posts")).toBe("allow")
+    expect(evaluate(rules, "x_search_posts_all")).toBe("deny")
   })
 })
 
 describe("insertRules", () => {
-  test("splices the rules right after the base allow, before the agent's own rules", () => {
-    const rules = defaultRules()
-    for (const agent of builtInAgents()) {
-      const before = agent.permissions.slice()
-      expect(insertRules(agent.permissions, rules)).toBe(true)
-      expect(agent.permissions).toEqual([before[0]!, ...rules, ...before.slice(1)])
+  test("splices the chosen block right after the base allow, before the agent's own rules", () => {
+    for (const access of ["all", "ask-changes", "read-only"] as const) {
+      const rules = defaultRules(access)
+      for (const agent of builtInAgents()) {
+        const before = agent.permissions.slice()
+        expect(insertRules(agent.permissions, rules)).toBe(true)
+        expect(agent.permissions).toEqual([before[0]!, ...rules, ...before.slice(1)])
+      }
     }
   })
 
   test("is idempotent, and finds the block after another plugin's", () => {
-    const permissions = [allow("*")]
-    insertRules(permissions, defaultRules())
-    const once = permissions.slice()
-    expect(insertRules(permissions, defaultRules())).toBe(false)
-    expect(permissions).toEqual(once)
-    const later = [allow("*"), allow("github_*"), ...defaultRules(), allow("x_create_users_bookmark")]
-    expect(insertRules(later, defaultRules())).toBe(false)
-  })
-
-  test("only the whole block counts: the ask rule alone is not the block, so the block is added", () => {
-    const own = [allow("*"), { ...ask }, allow("x_create_users_bookmark")]
-    expect(hasDefaultRules(own)).toBe(false)
-    expect(insertRules(own, defaultRules())).toBe(true)
-    expect(own.slice(1, 1 + defaultRules().length)).toEqual(defaultRules())
-  })
-
-  test("leaves agents without a base allow untouched and never throws on odd lists", () => {
-    for (const permissions of [[], [deny("*")], [allow("read")]] as Rule[][]) {
-      const before = permissions.slice()
-      expect(insertRules(permissions, defaultRules())).toBe(false)
-      expect(permissions).toEqual(before)
+    for (const access of ["all", "ask-changes", "read-only"] as const) {
+      const rules = defaultRules(access)
+      const permissions = [allow("*")]
+      insertRules(permissions, rules)
+      const once = permissions.slice()
+      expect(insertRules(permissions, rules)).toBe(false)
+      expect(permissions).toEqual(once)
+      const later = [allow("*"), allow("github_*"), ...rules, allow("x_create_users_bookmark")]
+      expect(insertRules(later, rules)).toBe(false)
     }
+  })
+
+  test("only the whole block counts, and an agent without a base allow is left alone", () => {
+    const own = [allow("*"), { action: "x_*", resource: "*", effect: "ask" as const }]
+    expect(hasDefaultRules(own, "ask-changes")).toBe(false)
+    expect(insertRules(own, defaultRules("ask-changes"))).toBe(true)
+    for (const permissions of [[], [deny("*")], [allow("read")]] as Rule[][]) expect(insertRules(permissions, defaultRules("all"))).toBe(false)
   })
 
   test("stricter agents stay stricter: Explore's own deny still wins", () => {
     const [, plan, explore] = builtInAgents() as [FakeAgent, FakeAgent, FakeAgent]
-    insertRules(explore.permissions, defaultRules())
-    expect(effects(explore.permissions)).toEqual(["deny", "deny", "deny", "deny", "deny", "deny", "deny", "deny"])
-    insertRules(plan.permissions, defaultRules())
-    expect(effects(plan.permissions)).toEqual(["allow", "allow", "ask", "ask", "allow", "deny", "deny", "ask"])
-  })
-
-  test("the user's rules come later and win, both ways", () => {
-    const permissions = [allow("*")]
-    insertRules(permissions, defaultRules())
-    permissions.push(allow("x_create_users_bookmark"), { action: "x_create_posts", resource: "*", effect: "deny" }, deny("x_search_*"))
-    expect(effects(permissions)).toEqual(["deny", "allow", "allow", "deny", "allow", "deny", "deny", "ask"])
+    insertRules(explore.permissions, defaultRules("all"))
+    expect(effects(explore.permissions).every((effect) => effect === "deny")).toBe(true)
+    insertRules(plan.permissions, defaultRules("all"))
+    expect(effects(plan.permissions).every((effect) => effect === "allow")).toBe(true)
   })
 })
 
 describe("registerDefaultRules", () => {
-  test("adds the rules to every agent once per rebuild and reports no problem", async () => {
+  test("adds the chosen block to every agent once per rebuild and reports no problem", async () => {
     const { transform, run } = transforms<AgentEditor>()
     const problems: (string | undefined)[] = []
-    await registerDefaultRules({ transform }, defaultRules(), (problem) => problems.push(problem))
+    await registerDefaultRules({ transform }, defaultRules("ask-changes"), (problem) => problems.push(problem))
     for (let rebuild = 0; rebuild < 2; rebuild++) {
       const agents = builtInAgents()
       run(agentEditor(agents))
-      for (const agent of agents) expect(agent.permissions.filter((rule) => rule.action === "x_*")).toHaveLength(1)
+      for (const agent of agents) expect(hasDefaultRules(agent.permissions, "ask-changes")).toBe(true)
     }
     expect(problems).toEqual([undefined, undefined])
   })
@@ -105,32 +90,28 @@ describe("registerDefaultRules", () => {
   test("never throws; a failure is reported for status", async () => {
     const { transform, run } = transforms<AgentEditor>()
     const problems: (string | undefined)[] = []
-    await registerDefaultRules({ transform }, defaultRules(), (problem) => problems.push(problem))
+    await registerDefaultRules({ transform }, defaultRules("all"), (problem) => problems.push(problem))
     const broken = { ...agentEditor([]), list: () => { throw new Error("boom") } }
     expect(() => run(broken)).not.toThrow()
-    expect(problems).toEqual([
-      "RULES_NOT_ADDED: X's default permission rules could not be added (boom), so X tools may run without asking. Next step: Restart OpenCode.",
-    ])
+    expect(problems[0]).toStartWith("RULES_NOT_ADDED:")
   })
 })
 
 describe("unguardedAgents", () => {
   test("names agents with a base allow, no block, and rules that would let a new X tool run", () => {
-    const guarded = [allow("*"), ...defaultRules()]
     const agents = [
-      { id: "build", permissions: guarded },
+      { id: "build", permissions: [allow("*"), ...defaultRules("all")] },
       { id: "reviewer", permissions: [allow("*")] },
-      { id: "fixed", permissions: [allow("*"), ...defaultRules(), allow("x_create_users_bookmark")] },
-      { id: "other-plugin-first", permissions: [allow("*"), allow("github_*"), ...defaultRules()] },
-      { id: "block-before-base", permissions: [...defaultRules(), allow("*")] },
-      { id: "ask-rule-only", permissions: [allow("*"), { ...ask }] },
+      { id: "fixed", permissions: [allow("*"), ...defaultRules("all"), allow("x_create_users_bookmark")] },
+      { id: "other-plugin-first", permissions: [allow("*"), allow("github_*"), ...defaultRules("all")] },
+      { id: "block-before-base", permissions: [...defaultRules("all"), allow("*")] },
+      { id: "ask-rule-only", permissions: [allow("*"), { action: "x_*", resource: "*", effect: "ask" as const }] },
       { id: "locked", permissions: [allow("*"), deny("*")] },
       { id: "denies-x", permissions: [allow("*"), deny("x_*")] },
-      // No base allow: the plugin adds no rules there, and nothing needs fixing.
       { id: "own-allow-no-base", permissions: [allow("x_*")] },
     ]
     expect(unguardedAgents(agents)).toEqual(["reviewer", "block-before-base"])
-    expect(hasDefaultRules(guarded)).toBe(true)
-    expect(hasDefaultRules([...defaultRules()])).toBe(false)
+    expect(hasDefaultRules([allow("*"), ...defaultRules("all")])).toBe(true)
+    expect(hasDefaultRules(defaultRules("all"))).toBe(false)
   })
 })

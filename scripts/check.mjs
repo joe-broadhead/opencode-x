@@ -32,6 +32,7 @@ const stages = {
   host: host,
   pack: () => run("bun", ["test", "./test/pack"]),
   forbidden: () => run("node", ["scripts/check-forbidden.mjs"]),
+  actionlint: () => actionlint(),
   copies: () => run("node", ["scripts/check-copies.mjs"]),
   whitelist: whitelist,
 }
@@ -52,6 +53,16 @@ for (const name of order) {
   }
 }
 console.log(`\n[check] passed: ${order.join(", ")}`)
+
+/** `actionlint` when it is on PATH; a visible notice when it is not, never a silent pass. */
+function actionlint() {
+  const result = spawnSync("actionlint", [], { cwd: root, env, stdio: "inherit" })
+  if (result.error?.code === "ENOENT") {
+    console.log("actionlint is not on PATH; install it to lint the workflows (https://github.com/rhysd/actionlint).")
+    return 0
+  }
+  return result.status ?? 1
+}
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { cwd: options.cwd ?? root, env: { ...env, ...options.env }, stdio: "inherit" })

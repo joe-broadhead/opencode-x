@@ -27,7 +27,7 @@ const CLIENT = { client: { id: "client-1", source: "options" as const }, invalid
 const base: StatusFacts = { server: { status: "connected" }, source: { type: "plugin", url: URL, signIn: "oauth" }, host, client: CLIENT, options: OPTS, tools: ["search_posts_all"] }
 const guarded = { id: "build", permissions: [allow("*"), ...defaultRules()] }
 const RULES = "no agent runs new X tools unasked"
-const POSTURE = "reads run without asking; 9 tools ask first (bookmarks, lists, an Article draft and a public Post); 40 are off (DMs and private chat conversations, calls, follows, blocks, mutes, list membership, moderators and live video); X bills every tool call to the X developer account that owns the app"
+const POSTURE = "every X tool is allowed by default, writes included; X bills every tool call to the X developer account that owns the app"
 const ACCESS = `${POSTURE}; ${RULES}`
 
 describe("buildStatus", () => {
@@ -48,6 +48,7 @@ describe("buildStatus", () => {
       unknownCount: 0,
       unknownTools: [],
       unguardedAgents: [],
+      access: "all",
       host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
       problems: [],
       nextStep: "Nothing to do.",
@@ -177,7 +178,7 @@ describe("buildStatus", () => {
     expect(status.deniedTools).toEqual([])
     expect(status.unknownCount).toBe(2)
     expect(status.unknownTools).toEqual(["shiny_new_tool", "schedule_post"])
-    expect(formatStatus(status)).toContain("- Tools: 4 available, 2 unknown: shiny_new_tool, schedule_post (unknown tools ask before running)\n")
+    expect(formatStatus(status)).toContain("- Tools: 4 available, 2 unknown: shiny_new_tool, schedule_post (unknown tools run without asking)\n")
     expect(status.nextStep).toBe(NOTHING_TO_DO)
   })
 
@@ -194,8 +195,7 @@ describe("buildStatus", () => {
 
   test("the Access row says whether the default rules are in place, from what status can see", () => {
     expect(formatStatus(buildStatus(base))).toContain(`- Access: ${ACCESS}\n`)
-    expect(ACCESS).toContain("9 tools ask first (bookmarks, lists, an Article draft and a public Post)")
-    expect(ACCESS).toContain("40 are off (DMs and private chat conversations, calls, follows, blocks, mutes, list membership, moderators and live video)")
+    expect(ACCESS).toContain("every X tool is allowed by default, writes included")
     const missing = buildStatus({ ...base, agents: [{ id: "reviewer", permissions: [allow("*")] }] })
     expect(formatStatus(missing)).toContain(`- Access: ${POSTURE}; default rules missing in the agents listed below\n`)
     const problem = "RULES_NOT_ADDED: X's default permission rules could not be added (boom), so X tools may run without asking. Next step: Restart OpenCode."
@@ -214,12 +214,12 @@ describe("buildStatus", () => {
     const status = buildStatus({ ...base, tools: ["search_posts_all", ...odd, ...many] })
     expect(status.unknownCount).toBe(29)
     expect(status.unknownTools).toEqual(many.slice(0, 20))
-    expect(formatStatus(status)).toContain(`- Tools: 30 available, 29 unknown: ${many.slice(0, 20).join(", ")} and 9 more (unknown tools ask before running)`)
-    expect(formatStatus(buildStatus({ ...base, tools: odd }))).toContain("- Tools: 4 available, 4 unknown (unknown tools ask before running)")
+    expect(formatStatus(status)).toContain(`- Tools: 30 available, 29 unknown: ${many.slice(0, 20).join(", ")} and 9 more (unknown tools run without asking)`)
+    expect(formatStatus(buildStatus({ ...base, tools: odd }))).toContain("- Tools: 4 available, 4 unknown (unknown tools run without asking)")
     // A future tool the owner ruled out is counted as off, not as available or unknown.
-    const future = buildStatus({ ...base, tools: ["search_posts_all", "create_dm", "delete_post"] })
-    expect(future).toMatchObject({ tools: 1, deniedTools: ["create_dm", "delete_post"], deniedCount: 2, unknownCount: 0 })
-    expect(formatStatus(future)).toContain("- Tools: 1 available, 0 unknown; off by default: create_dm and delete_post\n")
+    const future = buildStatus({ ...base, options: { ...OPTS, access: "read-only" }, tools: ["search_posts_all", "create_dm", "delete_post"] })
+    expect(future).toMatchObject({ tools: 1, deniedTools: ["create_dm", "delete_post"], deniedCount: 2, unknownCount: 2 })
+    expect(formatStatus(future)).toContain("- Tools: 1 available, 2 unknown: create_dm, delete_post (unknown tools are denied); denied by access: create_dm and delete_post\n")
   })
 
   test("names agents without the default rules, with the block to paste, and points the next step at it", () => {
@@ -251,12 +251,12 @@ describe("buildStatus", () => {
   })
 
   test("denied tool names are stripped of controls, kept plain, and capped, while the count stays exact", () => {
-    const status = buildStatus({ ...base, tools: ["search_posts_all", "send_chat_\u001b[31mred", "users_id_block"] })
-    expect(status).toMatchObject({ tools: 1, deniedCount: 2, deniedTools: ["users_id_block"], unknownCount: 0 })
-    expect(formatStatus(status)).toContain("- Tools: 1 available, 0 unknown; off by default: users_id_block and 1 more\n")
+    const status = buildStatus({ ...base, options: { ...OPTS, access: "read-only" }, tools: ["search_posts_all", "send_chat_\u001b[31mred", "users_id_block"] })
+    expect(status).toMatchObject({ tools: 1, deniedCount: 2, deniedTools: ["users_id_block"], unknownCount: 1 })
+    expect(formatStatus(status)).toContain("- Tools: 1 available, 1 unknown (unknown tools are denied); denied by access: users_id_block and 1 more\n")
     expect(formatStatus(status)).not.toContain("\u001b")
     const many = Array.from({ length: 25 }, (_, i) => `send_chat_${i}`)
-    const capped = buildStatus({ ...base, tools: many })
+    const capped = buildStatus({ ...base, options: { ...OPTS, access: "read-only" }, tools: many })
     expect(capped.deniedCount).toBe(25)
     expect(capped.deniedTools).toHaveLength(20)
     expect(formatStatus(capped)).toContain("and 5 more")

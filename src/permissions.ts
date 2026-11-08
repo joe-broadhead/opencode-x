@@ -1,7 +1,7 @@
 import type { Plugin } from "@opencode/plugin"
 import { errorText, SERVER_NAME } from "./constants.js"
 import { reasonOf } from "./redact.js"
-import { DENY_PATTERNS, DENY_TOOLS, READ_TOOLS } from "./x-tools.js"
+import { READ_TOOLS } from "./x-tools.js"
 
 export interface Rule {
   readonly action: string
@@ -13,18 +13,20 @@ export interface Rule {
 const actionOf = (tool: string) => `${SERVER_NAME}_${tool}`
 const rule = (tool: string, effect: Rule["effect"]): Rule => ({ action: actionOf(tool), resource: "*", effect })
 
+/** The plugin's one access option: all tools, reads with changes asking, or reads only. */
+export type Access = "all" | "ask-changes" | "read-only"
+
 /**
- * Broad first, narrow last, because the last matching rule wins: every X tool asks, including tools X adds later, then
- * the known reads run, then the tools the owner ruled out are off. `DENY_TOOLS` names the 40 live tools that are off; `DENY_PATTERNS` holds
- * the effect-based deny that catches a future DM, follow, block, mute, post-delete, list-membership or account tool
- * before any release classifies it.
+ * The generated block for an access value. `all` allows the namespace pattern, so a tool upstream adds later works at
+ * once. `ask-changes` allows the known reads and asks for everything else. `read-only` allows the known reads and
+ * denies everything else. A later rule of the user's still wins.
  */
-export const defaultRules = (): Rule[] => [
-  rule("*", "ask"),
-  ...READ_TOOLS.map((tool) => rule(tool, "allow")),
-  ...DENY_TOOLS.map((tool) => rule(tool, "deny")),
-  ...DENY_PATTERNS.map((pattern) => rule(pattern, "deny")),
-]
+export const defaultRules = (access: Access = "all"): Rule[] =>
+  access === "all"
+    ? [rule("*", "allow")]
+    : access === "ask-changes"
+      ? [rule("*", "ask"), ...READ_TOOLS.map((tool) => rule(tool, "allow"))]
+      : [rule("*", "deny"), ...READ_TOOLS.map((tool) => rule(tool, "allow"))]
 
 const same = (a: Rule, b: Rule) => a.action === b.action && a.resource === b.resource && a.effect === b.effect
 const BASE_ALLOW: Rule = { action: "*", resource: "*", effect: "allow" }
@@ -34,12 +36,14 @@ const BASE_ALLOW: Rule = { action: "*", resource: "*", effect: "allow" }
  * the plugin or pasted by the user. Other plugins insert their blocks at the same place, so the block need not come
  * first. False without a base allow.
  */
-export function hasDefaultRules(permissions: readonly Rule[]) {
+const hasBlock = (permissions: readonly Rule[], rules: readonly Rule[]) => {
   const base = permissions.findIndex((item) => same(item, BASE_ALLOW))
   if (base === -1) return false
-  const rules = defaultRules()
   return permissions.some((_, start) => start > base && rules.every((item, offset) => permissions[start + offset] !== undefined && same(permissions[start + offset]!, item)))
 }
+
+/** True when the block for this access value is already present after the agent's base allow. */
+export const hasDefaultRules = (permissions: readonly Rule[], access: Access = "all") => hasBlock(permissions, defaultRules(access))
 
 /**
  * Splices `rules` in right after the agent's base `* * allow`, by index. Everything later still wins: the agent's
@@ -48,7 +52,7 @@ export function hasDefaultRules(permissions: readonly Rule[]) {
  * it inserted.
  */
 export function insertRules(permissions: Rule[], rules: readonly Rule[]) {
-  if (hasDefaultRules(permissions)) return false
+  if (hasBlock(permissions, rules)) return false
   const base = permissions.findIndex((item) => same(item, BASE_ALLOW))
   if (base === -1) return false
   permissions.splice(base + 1, 0, ...rules.map((item) => ({ ...item })))
@@ -84,7 +88,7 @@ export function evaluate(permissions: readonly Rule[], action: string): Rule["ef
  * the agent's own rules that asks or denies for it. An agent whose rules already stop every X tool needs no fix, and
  * one without a base allow gets no rules.
  */
-export const unguardedAgents = (agents: readonly { readonly id: string; readonly permissions: readonly Rule[] }[]) =>
+export const unguardedAgents = (agents: readonly { readonly id: string; readonly permissions: readonly Rule[] }[], access: Access = "all") =>
   agents
-    .filter((agent) => agent.permissions.some((item) => same(item, BASE_ALLOW)) && !hasDefaultRules(agent.permissions) && evaluate(agent.permissions, actionOf("new_tool")) === "allow")
+    .filter((agent) => agent.permissions.some((item) => same(item, BASE_ALLOW)) && !hasDefaultRules(agent.permissions, access) && evaluate(agent.permissions, actionOf("new_tool")) === "allow")
     .map((agent) => agent.id)

@@ -149,7 +149,7 @@ export const mergeCosts = (costs: readonly ReadCost[]): ReadCost => ({
 })
 
 /** One line the model can repeat: what was returned, at its rate, and the actual total. */
-export function costLine(cost: ReadCost): string | undefined {
+export function costLine(cost: ReadCost): string {
   const parts: string[] = []
   if (cost.posts > 0) parts.push(`${cost.posts} ${cost.posts === 1 ? "post" : "posts"} (${money(cost.posts * POST)})`)
   if (cost.owned > 0) parts.push(`${cost.owned} owned ${cost.owned === 1 ? "post" : "posts"} (${money(cost.owned * OWNED)})`)
@@ -187,8 +187,7 @@ export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">
       pending.delete(event.sessionID)
       const merged = mergeCosts(costs)
       if (merged.total > 0) recordDaily(merged.total)
-      const line = costLine(merged)
-      if (line && event.status === "completed") append(event.result, line)
+      if (event.status === "completed") append(event.result, costLine(merged))
       return
     }
     if (!event.tool.startsWith("x_") || event.status !== "completed") return
@@ -198,8 +197,7 @@ export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">
     if (waiting) waiting.push(cost)
     else {
       recordDaily(cost.total)
-      const line = costLine(cost)
-      if (line) append(event.result, line)
+      append(event.result, costLine(cost))
     }
   })
   return async () => {
@@ -393,6 +391,11 @@ export function resetBilling() {
 
 /** Records the actual spend after a call: the session sum and the rolling daily ledger. */
 export function recordCall(sessionID: string, usd: number) {
+  // A long-lived server must not keep one entry per script session forever: cap the map at 1000 sessions.
+  if (!scriptSpent.has(sessionID) && scriptSpent.size >= 1_000) {
+    const oldest = scriptSpent.keys().next().value
+    if (oldest !== undefined) scriptSpent.delete(oldest)
+  }
   scriptSpent.set(sessionID, exact((scriptSpent.get(sessionID) ?? 0) + usd))
   recordDaily(usd)
 }

@@ -26,6 +26,7 @@ const RULES = [
   // The tools RPC's evaluate hook only turns an ask on one of its own script calls in flight into a deny, because no one
   // can answer it. It is allowed there, and in the bundle that inlines it, exactly once (counted below).
   { id: "permission-hook", pattern: PERMISSION_HOOK, why: "no escalating permission hook; default rules go through ctx.agent.transform", except: TOOLS_RPC },
+  { id: "internal-wording", pattern: /\bowner(?:'s)? (?:decision|ruling)\b|\bthe lead\b|\bhey-jelly #|\bG[1-4]\b|\blane\b/i, why: "shipped docs and comments state behaviour, not who decided it or which internal lane" },
   { id: "host-source", pattern: /packages\/(?:core|plugin|schema)\/src\b|opencode-[\w-]*-host\b|\bconsumer-host\b/, why: "never reference or import private host source or host checkouts" },
   { id: "absolute-path", pattern: /\/Users\/[^/\s"'`]+\/|\/home\/[^/\s"'`]+\/|\/(?:private\/)?var\/folders\/|(?<![\w.:/-])\/tmp\/|[A-Za-z]:\\\\?Users\\/, why: "machine-local home and temp paths do not belong in the repository; make temp folders with mkdtemp under realpathSync(\"/tmp\"), or use a relative path" },
 ]

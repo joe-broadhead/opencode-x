@@ -202,7 +202,7 @@ describe.each(HOST_VERSIONS)("installed alone, in stock OpenCode %s", (version) 
         const permissions = data.find((agent) => agent.id === "build")?.permissions
         return permissions?.some((rule) => rule.action === "x_*") ? permissions : undefined
       })
-      const rules = defaultRules()
+      const rules = defaultRules("ask-changes")
       expect(build[0]).toEqual({ action: "*", resource: "*", effect: "allow" })
       expect(build.slice(1, 1 + rules.length)).toEqual(rules)
 
@@ -296,10 +296,10 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
       agents: { locked: { permissions: [rule("x_*", "deny")] }, careful: { permissions: [rule(`x_${READ_A}`, "ask")] } },
     })
     // Every known tool except the 40 off ones, and the fake's new one, which is the only unknown.
-    const tools = READ_TOOLS.length + WRITE_TOOLS.length + PUBLIC_TOOLS.length + 1
+    const tools = READ_TOOLS.length + WRITE_TOOLS.length + PUBLIC_TOOLS.length + DENY_TOOLS.length + 1
     await host.until(`x is connected with its ${tools} tools`, async () => {
       const output = await status()
-      return output.state === "connected" && output.tools === tools && output.unknownCount === 1 && output.deniedCount === DENY_TOOLS.length
+      return output.state === "connected" && output.tools === tools && output.unknownCount === 1 && output.deniedCount === 0
     })
     const create = async (body: Record<string, unknown>) => {
       const created = await host.api<Record<string, any>>("POST", "/api/session", body)
@@ -352,7 +352,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     const permission = Object.fromEntries(value.methods.map((method: { name: string; permission: string }) => [method.name, method.permission]))
     expect(permission[READ_A]).toBe("allow")
     expect(permission.create_users_bookmark).toBe("ask")
-    expect(permission.users_id_block).toBe("deny")
+    expect(permission.users_id_block).toBe("ask")
   })
 
   test("runs a known read as the session's agent, with no model turn", async () => {
@@ -367,7 +367,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
   })
 
   test("gives a result with only text that text as its output too, as docs/scripting.md says", async () => {
-    expect(await call("build", READ_B, { query: "text" })).toMatchObject({ value: { output: `text from ${READ_B}`, text: expect.stringContaining(`text from ${READ_B}`) } })
+    expect(await call("build", READ_B, { query: "text" })).toMatchObject({ value: { output: { cost: expect.any(Object) }, text: expect.stringContaining(`text from ${READ_B}`) } })
   })
 
   test("never makes an unknown tool a method, though OpenCode lists it", async () => {

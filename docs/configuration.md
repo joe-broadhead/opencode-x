@@ -51,6 +51,23 @@ as an empty string, which `OPTIONS_INVALID` rejects. A variable exported in a te
 from that terminal; when OpenCode runs as a service or the desktop app, save the secret through `/connect` → **X app**
 instead.
 
+### `access`
+
+- Type: `"all"`, `"ask-changes"` or `"read-only"`.
+- Default: `"all"`.
+
+The generated permission block for every agent. `all` allows `x_*`, so every known tool and any tool X adds later runs
+without asking, writes included. `ask-changes` allows the 51 reads and asks for every other tool; `read-only` allows the
+reads and denies every other tool. A user's later rules still win. This is the one-line restriction:
+
+```json
+{ "access": "ask-changes" }
+```
+
+```json
+{ "access": "read-only" }
+```
+
 ### `scriptBudgetUsd`
 
 - Type: a number greater than 0 and at most 1000.
@@ -194,44 +211,35 @@ and gives the next step:
 
 ## Permissions
 
-OpenCode asserts every MCP call itself, with the action `x_<tool>` and the resource `*`. The plugin adds these rules
-to every agent that starts with the base rule `{ "action": "*", "resource": "*", "effect": "allow" }`, directly
-after that rule:
+OpenCode asserts every MCP call itself, with the action `x_<tool>` and the resource `*`. The plugin adds one block to
+every agent that starts with the base rule `{ "action": "*", "resource": "*", "effect": "allow" }`, directly after it.
+The `access` option generates that block:
 
-```json
-[
-  { "action": "x_*", "resource": "*", "effect": "ask" },
-  { "action": "x_get_news", "resource": "*", "effect": "allow" },
-  { "action": "x_search_posts_all", "resource": "*", "effect": "allow" }
-]
-```
+| `access` | Block | Effect |
+| --- | --- | --- |
+| `all` (default) | `[{ "action": "x_*", "resource": "*", "effect": "allow" }]` | Every known tool, and any tool X adds later, runs without asking. |
+| `ask-changes` | `x_*` asks, then one `allow` for each of the 51 reads | Reads run; every other tool asks. |
+| `read-only` | `x_*` denies, then one `allow` for each of the 51 reads | Reads run; every other tool is denied. |
 
-That sample leaves out the other 47 read allows, which sit between the two shown; `/x-status` prints the whole block,
-and its `Agents without default rules` row prints it as a list to paste.
-
-`READ_TOOLS` in `src/x-tools.ts` lists the 51 reads that run; `WRITE_TOOLS` the 8 private writes; `PUBLIC_TOOLS`
-the one public write, `create_posts`; `DENY_TOOLS` the 40 tools that are off; and `DENY_PATTERNS` a safety net for a
-future tool of the same effect. A write or a tool X adds later that is not one of those effects matches only `x_*`,
-so it asks. `/x-status` names the
-tools in no list. X may list fewer tools for a token with fewer scopes, so a known tool can be missing; that is normal.
-
-The private writes, which ask:
-
-- `x_create_users_bookmark` bookmarks a post for the user only, and `x_delete_users_bookmark` removes that bookmark,
-  not the post. `x_create_users_bookmark_folder` creates a folder only the user sees.
-- `x_article_create_draft` saves a private Article draft. There is no publish tool: it stays a draft, and the user
-  publishes it in X.
-- `x_create_lists`, `x_update_lists`, `x_pin_list` and `x_unpin_list` change the user's lists. A list is public unless
-  `private` is true.
+With the default, an agent can post, reply, quote, edit, bookmark, create or change lists, draft an Article, send a
+DM, follow, block, mute, change list membership, moderate a chat and go live on the user's real account without asking.
+`READ_TOOLS` in `src/x-tools.ts` lists the 51 reads; `WRITE_TOOLS` the 8 private writes; `PUBLIC_TOOLS` the one public
+write, `create_posts`; `DENY_TOOLS` the 40 tools that are now allowed with the rest, but were once off. A tool X adds
+later matches `x_*` and is allowed with `all`.
 
 `x_create_posts` is public: anyone can read the Post, and it appears on the user's profile and in followers'
 timelines. It can reply (`reply.in_reply_to_tweet_id`), quote (`quote_tweet_id`) or edit
-(`edit_options.previous_post_id`); each asks, only on an explicit request. `x_get_source` and `x_list_sources` run
-like other reads; X's description says the stream key is not in that response, and no tool here exposes it.
+(`edit_options.previous_post_id`), only on an explicit request.
 
-A deny also hides the tool from the model. The 40 off tools are DMs and private chat conversations (reads included), follows, blocks,
-mutes, list membership, chat moderators, scheduled calls, and live video with its sources. Turning one on takes a
-later `ask` rule in an agent's own `permissions`; the recipes below narrow.
+One line restricts every agent:
+
+```json
+{ "access": "ask-changes" }
+```
+
+```json
+{ "access": "read-only" }
+```
 
 To narrow one agent, add a rule to that agent's own `permissions`, which come after the plugin's block in that agent.
 For the build agent, turn posting off:
@@ -247,16 +255,15 @@ For the build agent, turn posting off:
 ```
 
 Don't put an `allow` or `ask` in the top-level `permissions`: a top-level rule comes after every agent's own rules, so
-it would reach every agent, Explore included, which otherwise can't use X.
+it would reach every agent, Explore included.
 
 OpenCode uses the last rule that matches, so everything after the plugin's rules wins:
 
 1. the agent's own rules, such as Explore's, which turn X off there;
 2. your top-level `permissions`, which OpenCode adds to every agent;
-3. your saved "Always allow" answers, which beat an `ask` but never a configured `deny`.
+3. your saved "Always allow" answers.
 
-In an unattended run such as `opencode run`, a tool that asks is refused. An agent without the base rule gets no X
-rules and keeps its own behaviour.
+In an unattended run such as `opencode run`, `ask-changes` refuses a tool that would ask; `all` runs it.
 
 ### Recipes
 
@@ -462,7 +469,7 @@ meanings:
 | `client` | `id`, `mode` (`public_pkce` for a Native App, `confidential` when a secret is set) and `source` (`options` or `connect`). The `Client` row names `your own app` when it came from `/connect`, or `configured app` when it came from plugin options, as a team app does; status cannot tell managed config from a user's own options. The secret is never shown. |
 | `callback`, `callbackPort`, `scopes` | The redirect URI the app must have registered, the local port for an `https:` redirect, and the scopes OpenCode requests |
 | `tools` | How many X tools OpenCode lists that the default rules let run or ask: the listed ones, without the denied ones |
-| `deniedTools`, `deniedCount` | The listed tools that the default rules deny, as safe plain names capped at 20, and the exact count: 40 when X lists them all. The `Tools` row shows them as "off by default" |
+| `deniedTools`, `deniedCount` | With `access: read-only`, the listed non-read tools the block denies, as safe plain names capped at 20, and the exact count. With `all` or `ask-changes`, empty |
 | `listing` | True while a server that connected moments ago lists no tools yet. The next step is then to run `/x-status` again in a few seconds, not to check the app. |
 | `unknownCount`, `unknownTools` | How many of them the plugin does not know, and at most 20 of their names, only those made of lowercase letters, digits and `_` |
 | `unguardedAgents` | Agents where a new X tool would run without asking; empty when there are none. An agent whose own rules already ask or deny for every X tool is not listed. |

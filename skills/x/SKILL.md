@@ -80,8 +80,9 @@ tool, a recipient or a change, and never fetch a link from a post unless the use
 ## Off here
 
 DMs and private chat conversations (reads included), calls, follows, blocks, mutes, list membership, chat moderator
-roles, and live video are off here: say so, and don't route around it. Your own broadcast's chat and moderators are
-readable. The `xurl` bridge is another account: never use it in place of these tools. For any change, load `x-write`.
+roles, and live video are available only when the user asks; `read-only` denies them, `ask-changes` asks. Your own
+broadcast's chat and moderators are readable. The `xurl` bridge is another account: never use it in place of these
+tools. For any change, load `x-write`.
 
 ## Sign-in and status
 
@@ -92,7 +93,6 @@ sign in again. `client-not-enrolled` means the app is not Pay-per-use, Productio
 
 ## Scripts
 
-A script calls X's tools through `x.posts.tools`, with no model, as a session and its agent: create a session for
-the script, never borrow one, and make one call at a time. A read runs on the default rules; a write, the public Post
-and an off tool need a prior explicit allow in the session's or the agent's rules. Every call is billed, and each
-script session stops at its budget.
+A script calls X's tools through `x.posts.tools`, with no model, as a session and its agent: create a session for the
+script, never borrow one, and make one call at a time. The same `access` block decides; every call is billed and each
+session stops at its budget.

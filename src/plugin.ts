@@ -130,7 +130,7 @@ export function createXPlugin(seam: XSeam) {
         await ctx.tool.transform((editor) => void (source && source.type !== "conflict" ? editor.namespace({ name: SERVER_NAME, description: NAMESPACE_DESCRIPTION }) : undefined))
         // The read cap and the cost line, on the model path and in Code Mode. A conflicting server is not ours.
         stopBilling = await registerBilling(ctx.tool, () => source === undefined || source.type !== "conflict")
-        await registerDefaultRules(ctx.agent, defaultRules(), report("rules"))
+        await registerDefaultRules(ctx.agent, defaultRules(options.access), report("rules"))
         await registerSkills(ctx.skill, skills)
         // A client saved, switched or removed in /connect applies without a restart: the server transform reads the
         // current client on every replay.

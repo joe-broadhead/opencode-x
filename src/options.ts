@@ -1,5 +1,6 @@
 import { REDIRECT_URI, SCOPES } from "./constants.js"
 import { DEFAULT_SCRIPT_BUDGET_USD, DEFAULT_SCRIPT_DAILY_BUDGET_USD } from "./billing.js"
+import type { Access } from "./permissions.js"
 
 export interface Options {
   /** Pins the X app, for example in an organisation's managed config. Otherwise the /connect X app entry sets it. */
@@ -14,6 +15,8 @@ export interface Options {
   readonly scriptBudgetUsd: number
   /** The rolling 24-hour cap on all script spending, in USD, across sessions, jobs and reloads. */
   readonly scriptDailyBudgetUsd: number
+  /** The generated permission block: every tool, reads with changes asking, or reads only. */
+  readonly access: Access
 }
 
 /** A rejected option. Messages name the field and never echo its value. */
@@ -28,7 +31,7 @@ export type ParsedOptions =
   | { readonly ok: true; readonly options: Options }
   | { readonly ok: false; readonly error: OptionsError }
 
-const TOP_KEYS = ["oauth", "allowUntestedHost", "scriptBudgetUsd", "scriptDailyBudgetUsd"]
+const TOP_KEYS = ["oauth", "allowUntestedHost", "scriptBudgetUsd", "scriptDailyBudgetUsd", "access"]
 const OAUTH_KEYS = ["client_id", "redirect_uri", "callback_port", "scopes", "client_secret"]
 const NO_SPACES = /^\S+$/
 
@@ -131,6 +134,12 @@ export function parseOptions(input: unknown): ParsedOptions {
     return fail("scriptDailyBudgetUsd", "Must be a number greater than 0 and at most 1000.", "Set the rolling 24-hour spend cap in US dollars, for example 1.00.")
   }
 
+  const accessValue = raw.access ?? "all"
+  if (accessValue !== "all" && accessValue !== "ask-changes" && accessValue !== "read-only") {
+    return fail("access", "Must be \"all\", \"ask-changes\" or \"read-only\".", "Use \"ask-changes\" to keep reads and ask for every other tool, or \"read-only\" to deny them.")
+  }
+  const access = accessValue as Access
+
   return {
     ok: true,
     options: {
@@ -142,6 +151,7 @@ export function parseOptions(input: unknown): ParsedOptions {
       allowUntestedHost,
       scriptBudgetUsd,
       scriptDailyBudgetUsd,
+      access,
     },
   }
 }

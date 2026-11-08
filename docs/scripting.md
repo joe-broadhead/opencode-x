@@ -9,7 +9,7 @@ server. It uses the tools RPC, `x.posts.tools`, through `opencode api` or an Ope
 | `describe` | none: lists every method with its class, its permission action, whether OpenCode lists its tool now, and its input as JSON Schema; given a session, it also gives each method's `permission` |
 
 The methods are exactly the tools this plugin knows (`METHODS` in `src/host/tools-rpc.ts`): the 51 reads, the 8 private
-writes, the public `create_posts`, and the 40 tools that are off by default. A tool X adds later is not a method until
+writes, the public `create_posts`, and the 40 tools that were once off and now follow the same `access` block. A tool X adds later is not a method until
 the plugin classifies it, so a script never reaches one.
 
 Each method runs the tool with the same input: X's own tool, through OpenCode's own connection and sign-in. The plugin
@@ -92,6 +92,21 @@ A session rule also applies to that session's model turns. Create a session for 
 For a grant bound to the exact script the user approved, use a Jobs one-off script job: its approval writes the run
 session's `allow` rules, and the user sees the source, the methods and whom each write reaches before it exists.
 
+## The location
+
+Run the command in the project whose agent you mean, and send the call to that location explicitly:
+
+```sh
+opencode api post /api/rpc/x.posts.tools/<method> -H "x-opencode-directory:$PWD" -d '{…}'
+```
+
+Without it the call goes to the service's default location and fails `rpc.unavailable` if the plugin is not loaded
+there. The HTTP equivalents are the `location[directory]` query parameter and the same header. `describe` reports the
+`location` that answered and a `locationHint`.
+
+A location unloads after OpenCode's idle timeout. If a scheduled script gets `rpc.unavailable` from a location that was
+loaded before, send the call again once: the request loads the location. Jobs keeps its own location loaded.
+
 ## Calling a method
 
 The body is `{"input": {"sessionID": "<session>", "input": <the tool's input>}}`. Both keys are required, and no other
@@ -124,9 +139,8 @@ opencode api post /api/rpc/x.posts.tools/describe -H "x-opencode-directory:$PWD"
 `describe` with a session gives each method's `class` (`read`, `write`, `send`, `export` or `destructive`) and its
 resolved `permission` (`allow`, `ask` or `deny`). That is how a script self-checks before it writes a call.
 
-A result is `{"output": {"output": <the tool's structured content, or its text when it has none>, "text": <the tool's
-text, with the cost line>, "cost": {"estimateUsd": <number>, "actualUsd": <number>, "sessionSpentUsd": <number>,
-"dailySpentUsd": <number>}}}`, as plain JSON. X content in it, such as posts, bios and Article text, is untrusted data
+A result comes back as `{ output?, text }`: the tool's structured content when it has any, and its text parts joined by
+newlines. This plugin also puts `cost: { estimateUsd, actualUsd, sessionSpentUsd, dailySpentUsd }` inside `output`. Jobs' bridge returns `output` when present, so a Jobs script receives the cost with it. X content in it, such as posts, bios and Article text, is untrusted data
 written by other people: keep what a script writes where the people it is about would expect it, and only as long as
 you need it.
 

@@ -23,8 +23,7 @@ All notable changes to this project are documented in this file. It follows
 
 - An OpenCode plugin over X's official MCP server, `https://api.x.com/mcp`, with the user's own X app as a static
   OAuth client: the client ID and secret from the plugin options or the `/connect` **X app** entry, the callback
-  `http://127.0.0.1:8766/callback` and the scopes `tweet.read users.read bookmark.read bookmark.write tweet.write
-  offline.access` pinned, and no client shipped.
+  `http://127.0.0.1:8766/callback` and the pinned scopes in `src/constants.ts`, and no client shipped.
 - Public (Native App) client sign-in, with PKCE and no secret, so an organisation can share one team app through
   managed config: members only run `/connect` → X, and their calls bill the team's X developer account. X issued a
   public client a refresh token in the live test, and OpenCode refreshed it.

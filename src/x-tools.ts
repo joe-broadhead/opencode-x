@@ -1,6 +1,6 @@
 // Every fact the plugin keeps about X's tools: the live list captured from a signed-in OpenCode on 2026-11-06,
 // classified by name, description and schema. The names, without the `x_` server prefix, are the explicit tool lists
-// below; `DENY_PATTERNS` is only a safety net for a tool X adds later. The default rules, the tools RPC's methods,
+// below. The default rules, the tools RPC's methods,
 // status's unknown and denied tools and the tests all derive from these lists; `jelly.tools` in package.json and the
 // skills' tool names are checked against them. Keep this file free of runtime imports.
 //
@@ -128,74 +128,6 @@ export const DENY_TOOLS: readonly string[] = [
 ]
 
 /**
- * Patterns for a tool X adds later with one of the denied effects. They are narrow so no allowed tool matches one;
- * the test checks that. The explicit names above are the live list's own tools.
- */
-export const DENY_PATTERNS: readonly string[] = [
-  "create_dm*",
-  "send_dm*",
-  "delete_dm*",
-  "get_dm*",
-  "send_chat_*",
-  "archive_chat_*",
-  "unarchive_chat_*",
-  "mark_chat_*",
-  "get_chat_conversation*",
-  "get_chat_message*",
-  "accept_chat_message*",
-  "add_conversation_keys",
-  "get_users_public_key*",
-  "chat_media_*",
-  "create_chat_*",
-  "update_chat_*",
-  "delete_chat_*",
-  "add_chat_*",
-  "remove_chat_*",
-  "add_chat_moderator",
-  "remove_chat_moderator",
-  "follow_*",
-  "unfollow_*",
-  "users_*_follow*",
-  "users_*_unfollow*",
-  "create_follow*",
-  "delete_follow*",
-  "block_*",
-  "unblock_*",
-  "users_*_block*",
-  "users_*_unblock*",
-  "mute_*",
-  "unmute_*",
-  "users_*_mute*",
-  "users_*_unmute*",
-  "delete_post*",
-  "delete_tweet*",
-  "add_*list_member*",
-  "remove_*list_member*",
-  "add_*lists_member*",
-  "remove_*lists_member*",
-  "schedule_call",
-  "update_scheduled_call",
-  "cancel_scheduled_call",
-  "respond_to_scheduled_call",
-  "create_scheduled_broadcast",
-  "update_scheduled_broadcast",
-  "delete_scheduled_broadcast",
-  "go_live_scheduled_broadcast",
-  "create_source",
-  "update_source",
-  "delete_source",
-  "update_account*",
-  "update_profile*",
-  "delete_account*",
-]
-
-/** The host's wildcard: `*` matches any text, `?` one character. */
-const wildcard = (pattern: string) => new RegExp(`^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".")}$`)
-
-/** True when the owner's ruling denies this tool by its effect, before any release classifies it. */
-export const deniedByDefault = (name: string) => DENY_TOOLS.includes(name) || DENY_PATTERNS.some((pattern) => wildcard(pattern).test(name))
-
-/**
  * Each known tool's input parameters, as `name:type`, with `*` after a required name, from the live list's schemas.
  * The drift script compares them with a saved list; the skills test lets a skill write a literal call only with
  * parameters recorded here.
@@ -309,6 +241,6 @@ export function classify(name: string): ToolClass {
   if (READ_TOOLS.includes(name)) return "read"
   if (WRITE_TOOLS.includes(name)) return "write"
   if (PUBLIC_TOOLS.includes(name)) return "public"
-  if (deniedByDefault(name)) return "denied"
+  if (DENY_TOOLS.includes(name)) return "denied"
   return "unknown"
 }

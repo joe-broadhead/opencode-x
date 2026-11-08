@@ -2,7 +2,7 @@
 // derives from it. These tests pin every one of the 100 to its list and its intended default rule.
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
-import { classify, DENY_TOOLS, deniedByDefault, PARAMETERS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { classify, DENY_TOOLS, PARAMETERS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
 
 const ALL = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
@@ -35,10 +35,8 @@ describe("X's live tool lists", () => {
     for (const tool of ["shiny_new_tool", "", "x_search_posts_all", "SEARCH_POSTS_ALL", "describe", "article_publish"]) expect(classify(tool)).toBe("unknown")
   })
 
-  test("every tool gets its intended default rule", () => {
-    for (const tool of READ_TOOLS) expect({ tool, effect: effectOf(tool) }).toEqual({ tool, effect: "allow" })
-    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect({ tool, effect: effectOf(tool) }).toEqual({ tool, effect: "ask" })
-    for (const tool of DENY_TOOLS) expect({ tool, effect: effectOf(tool) }).toEqual({ tool, effect: "deny" })
+  test("every tool is allowed by default, writes and off tools included", () => {
+    for (const tool of [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]) expect({ tool, effect: effectOf(tool) }).toEqual({ tool, effect: "allow" })
   })
 
   test("reads only read: get_ or search_, and no change verb", () => {
@@ -101,15 +99,6 @@ describe("X's live tool lists", () => {
     ]) {
       expect({ name, denied: DENY_TOOLS.includes(name) }).toEqual({ name, denied: true })
     }
-  })
-
-  test("the safety patterns catch a later tool of a denied effect, and no known tool", () => {
-    for (const name of ["create_dm", "send_chat_message_reaction", "get_chat_conversation_by_id", "follow_user", "block_user", "mute_user", "delete_post", "add_lists_member_to_list", "update_account", "users_id_follow", "users_id_mute", "create_chat_conversation", "update_chat_conversation", "delete_chat_conversation"]) {
-      expect({ name, denied: deniedByDefault(name) }).toEqual({ name, denied: true })
-    }
-    for (const name of ALL) expect({ name, denied: deniedByDefault(name) }).toEqual({ name, denied: DENY_TOOLS.includes(name) })
-    expect(deniedByDefault("schedule_post")).toBe(false)
-    expect(deniedByDefault("shiny_new_tool")).toBe(false)
   })
 
   test("PARAMETERS records every live tool's inputs from its schema", () => {

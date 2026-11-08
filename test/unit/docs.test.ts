@@ -5,6 +5,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { defaultRules } from "../../src/permissions.js"
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url))
 // Everything a user or the model reads about the current release.
@@ -160,6 +161,19 @@ describe("docs", () => {
     }
   })
 
+  test("the README prints the generated default block for access all", () => {
+    const readme = text("README.md")
+    const block = defaultRules("all")
+    expect(readme.replace(/\s+/g, " ")).toContain(JSON.stringify(block))
+  })
+
+  test("every tested-hosts mention that lists 2.2.3 and 2.2.5 includes 2.2.6", () => {
+    for (const file of ["README.md", "AGENTS.md", "SECURITY.md", "docs/configuration.md", "CHANGELOG.md"]) {
+      const body = text(file)
+      if (body.includes("2.2.3") && body.includes("2.2.5")) expect({ file, has206: body.includes("2.2.6") }).toEqual({ file, has206: true })
+    }
+  })
+
   test("every call is billed, in the README, the skills, the namespace and status", () => {
     expect(text("README.md")).toContain("**X bills every tool call**")
     expect(text("README.md")).toContain("$0.005 per post read")
@@ -205,7 +219,7 @@ describe("docs", () => {
     expect(readme).toContain("`403` on a write")
     expect(readme).toContain("Posting asks first")
     expect(readme).toContain("How much credit is left")
-    expect(readme).toContain("`x_create_posts` is public and asks every time")
+    expect(readme).toContain("`x_create_posts` is public. With `access: all` (the default) it runs without a prompt")
     expect(readme).toContain("Answers cost more than expected")
     expect(readme).toContain("`429`")
   })
