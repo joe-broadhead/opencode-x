@@ -42,7 +42,7 @@ const hidden = (rules: readonly Rule[], action: string) => {
 const xTools = (host: Host) =>
   until("X's tools are registered", async () => {
     const ids = (await host.probe().tool.list()).map((tool) => tool.id).filter((id) => id.startsWith("x_"))
-    return ids.length === 15 && ids.sort()
+    return ids.length === 16 && ids.sort()
   })
 
 async function status(host: Host, sessionID: string) {
@@ -91,7 +91,8 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     expect(plugins.find((plugin) => plugin.id === "x.posts")?.state.status).toBe("active")
     const { data: servers } = await host.client.mcp.list({ location: host.location })
     expect(servers.find((server) => server.name === "x")?.status).toEqual({ status: "connected" })
-    expect(await xTools(host)).toEqual([...["search_posts_all", "get_users_me", "shiny_new_tool", ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENIED_SAMPLE].map((tool) => `x_${tool}`)].sort())
+    // The fake's tools, and the plugin's own x_events_list.
+    expect(await xTools(host)).toEqual([...["search_posts_all", "get_users_me", "shiny_new_tool", "events_list", ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENIED_SAMPLE].map((tool) => `x_${tool}`)].sort())
     const { data: skills } = await host.client.skill.list({ location: host.location })
     expect(skills.map((skill) => skill.id).filter((id) => id.startsWith("x")).sort()).toEqual([...SKILL_NAMES].sort())
     const { data: commands } = await host.client.command.list({ location: host.location })
@@ -167,6 +168,22 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     expect(reviewer.some((rule) => rule.action.startsWith("x_"))).toBe(false)
     const sessionID = await session(host, "reviewer")
     expect(await attempt(host, sessionID, "reviewer", "create_users_bookmark", "reject", { query: "q" })).toMatchObject({ asked: undefined, ok: true })
+  })
+
+  test("x_events_list asserts its own action on the real host, then reads through the host's executors", async () => {
+    await xTools(host)
+    const events = (await host.probe().tool.list()).find((tool) => tool.id === "x_events_list")!
+    const run = (sessionID: string, id: string) =>
+      events.execute({}, { sessionID, agent: "build", messageID: "msg_host_test", id, signal: new AbortController().signal, progress: async () => {} } as never)
+    const before = host.fake.calls.length
+    // The default rules allow it; the fake answers get_users_me with its call, not a user, so it stops there.
+    await expect(run(await session(host), "call_events_1")).rejects.toThrow(/^UPSTREAM_UNREADABLE: X's get_users_me answered/)
+    expect(host.fake.calls.slice(before)).toEqual(["get_users_me"])
+    // A session that denies x_events_list: the assert refuses it before any read.
+    const permissions = [{ action: "x_events_list", resource: "*", effect: "deny" as const }]
+    const locked = (await host.client.sessions.create({ agent: "build", location: host.location, permissions })).id
+    await expect(run(locked, "call_events_2")).rejects.toThrow("x_events_list")
+    expect(host.fake.calls.slice(before)).toEqual(["get_users_me"])
   })
 
   test("H5: /x-status reports the connection, client, callback, scopes, tools, the unguarded agent and its fix", async () => {
@@ -548,7 +565,7 @@ describe("an X app client saved in /connect", () => {
     expect(server.integrationID).toBeString()
     expect(await status()).toMatchObject({ client: { id: "CONNECT_CLIENT_ID", mode: "confidential", source: "connect" }, callback: REDIRECT_URI })
     // The registered entry carries the client and never shows it in status.
-    expect(await xTools(host)).toHaveLength(15)
+    expect(await xTools(host)).toHaveLength(16)
     expect(JSON.stringify(await status())).not.toContain("secret-2")
   })
 })

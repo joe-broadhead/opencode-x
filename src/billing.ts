@@ -75,7 +75,8 @@ const payloadOf = (value: unknown, depth = 0): Record<string, unknown> | undefin
   return undefined
 }
 
-const payload = (result: Result) => {
+/** X's answer, `{ data, includes, meta }`, from a result's structured content or its JSON text; undefined for anything else. */
+export const payload = (result: Result) => {
   const fromOutput = payloadOf(result.output)
   if (fromOutput) return fromOutput
   const content = result.content

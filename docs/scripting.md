@@ -6,11 +6,17 @@ OpenCode server. It uses the tools RPC, `x.posts.tools`, through `opencode api` 
 | Method | The tool |
 | --- | --- |
 | one per known read, named after X's tool: `search_posts_all`, `get_users_me`, `get_users_timeline` and the others | `x_<method>`, such as `x_search_posts_all` |
+| `events_list` | `x_events_list`: your mentions and new bookmarks since a cursor, as Memory's events, within its call cap ([configuration](configuration.md#events-list)) |
 | `describe` | none: lists the methods, their permission actions, whether OpenCode lists each tool now, and each tool's input as JSON Schema |
 
 The methods are exactly the read tools that the plugin knows, the ones its default rules allow (`READ_TOOLS` in
 `src/x-tools.ts`). Call `describe` for the list: X may list fewer tools for a token with fewer scopes, so `describe`
 marks a known read that X does not offer you as unavailable.
+
+`events_list` is the plugin's own read for Memory's collector. It runs `x_events_list`'s own spec as the session and
+its agent: it asserts `x_events_list`, then makes at most `events.maxCalls` reads through OpenCode's executors, each
+under its own rules. Its own refusals, such as a cursor from another account, are the codes in the configuration
+guide's [Errors](configuration.md#errors); a refused read is `PERMISSION_DENIED` naming that read.
 
 Each method runs the tool with the same input: X's own tool, through OpenCode's own connection and sign-in. The plugin
 never sees the OAuth token. X's bookmark changes, `create_users_bookmark_folder`, `article_create_draft`,
@@ -128,7 +134,7 @@ added later, and `rpc.invalid_input` for a body that is not the envelope above, 
 
 - Change anything in X: no write tool is a method.
 - Post: `create_posts` is public and is never a method.
-- Call a tool that is not one of the known reads, even with an allow rule.
+- Call a tool that is not one of the known reads or `events_list`, even with an allow rule.
 - Answer an approval prompt, or use a tool that asks.
 - Use a token or key: the plugin has none to give.
 - Read X without a bill: every call is charged to the developer account that owns the app.

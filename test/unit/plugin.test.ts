@@ -172,12 +172,13 @@ describe("setup", () => {
     const commands: string[] = []
     command.run({ add: (definition: { name: string }) => commands.push(definition.name) })
     expect(commands).toEqual(["x-status"])
-    // Code Mode's catalog describes the x namespace; the plugin adds no tool of its own.
+    // Code Mode's catalog describes the x namespace; the plugin's own tool is x_events_list.
     const namespaces: { name: string; description?: string }[] = []
     const tools: unknown[] = []
     tool.run({ namespace: (namespace: { name: string; description?: string }) => void namespaces.push(namespace), add: (info: unknown) => void tools.push(info) } as never)
     expect(namespaces).toEqual([{ name: "x", description: NAMESPACE_DESCRIPTION }])
-    expect(tools).toEqual([])
+    // The one tool of the plugin's own: x_events_list, a Code Mode tool for Memory's collector.
+    expect(tools.map((info) => [(info as { name: string }).name, (info as { options: unknown }).options])).toEqual([["events_list", { namespace: "x" }]])
     // A client in the options needs no /connect entry.
     expect(integration.callbacks).toHaveLength(0)
     // The always-visible rules: the skill, the cost, posting and the off tools, untrusted posts, personal data.

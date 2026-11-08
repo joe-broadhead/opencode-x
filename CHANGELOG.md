@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `x_events_list`, Memory's source of X events: mentions and the home timeline by `since_id`, oldest first (a window
+  too large for one call is narrowed with `until_id`), and bookmarks walked newest first to the last known one, as the
+  shared `events_list` contract's events (`src/host/events-list.ts`, pinned by `scripts/check-copies.mjs`). Every X
+  call is billed, so one call makes at most `events.maxCalls` reads (default 4), and `events.feeds` chooses the feeds
+  (default mentions and bookmarks; the timeline only when named). It is a Code Mode tool and the tools RPC method
+  `events_list`, with a default allow rule and a `jelly` declaration as a read that never asks. New error codes:
+  `INPUT_INVALID`, `SOURCE_UNKNOWN`, `ACCOUNT_UNKNOWN`, `CURSOR_INVALID`, `UPSTREAM_ERROR`, `UPSTREAM_UNREADABLE` and
+  `TOOL_UNAVAILABLE`.
+
 ## [0.0.0] - 2026-11-07
 
 ### Added

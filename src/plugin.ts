@@ -2,6 +2,7 @@ import { Plugin, type Mcp } from "@opencode/plugin"
 import { reasonOf } from "./redact.js"
 import { errorText, ENDPOINT, NAMESPACE_DESCRIPTION, PLUGIN_ID, SERVER_NAME, SUPPORTED_HOST } from "./constants.js"
 import { checkHost, isSupportedHost } from "./host-version.js"
+import { eventsMethod, eventsTool, type EventsToolOptions } from "./events.js"
 import { registerToolsRpc } from "./host/tools-rpc.js"
 import { watchIntegration } from "./integration.js"
 import { watchListing } from "./listing.js"
@@ -126,8 +127,21 @@ export function createXPlugin(seam: XSeam) {
           source = next
           report("server")(problem)
         })
+        // Memory's source of X events, a Code Mode tool in the x namespace and the tools RPC method events_list. It
+        // never calls a server at another URL, and reads status (registered below) only when it cannot call X.
+        const events: EventsToolOptions = {
+          tool: ctx.tool,
+          permission: ctx.permission,
+          feeds: options.feeds,
+          maxCalls: options.maxCalls,
+          owned: () => source?.type !== "conflict",
+          status: () => read(),
+        }
         // Code Mode's catalog describes the server's namespace with this text; a server at another URL keeps its own.
-        await ctx.tool.transform((editor) => void (source && source.type !== "conflict" ? editor.namespace({ name: SERVER_NAME, description: NAMESPACE_DESCRIPTION }) : undefined))
+        await ctx.tool.transform((editor) => {
+          if (source && source.type !== "conflict") editor.namespace({ name: SERVER_NAME, description: NAMESPACE_DESCRIPTION })
+          editor.add(eventsTool(events))
+        })
         // The read cap and the cost line, on the model path and in Code Mode. A conflicting server is not ours.
         stopBilling = await registerBilling(ctx.tool, () => source === undefined || source.type !== "conflict")
         await registerDefaultRules(ctx.agent, defaultRules(), report("rules"))
@@ -168,6 +182,7 @@ export function createXPlugin(seam: XSeam) {
                 ? undefined
                 : { code: client.invalid ? "CLIENT_ID_INVALID" : "CLIENT_ID_MISSING", next: clientNextStep() },
           },
+          owned: [eventsMethod(events)],
         })
         stopWatch = watchIntegration(ctx, ownedServer)
       }
