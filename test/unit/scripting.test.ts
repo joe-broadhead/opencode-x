@@ -1,12 +1,26 @@
-// R1: every scripting example is runnable as written: a known method, the location header, and the envelope.
+// R1: every scripting example is runnable as written: a known method, its own schema, and the header and envelope.
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { METHODS } from "../../src/host/tools-rpc.js"
+import { PARAMETERS } from "../../src/x-tools.js"
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url))
 const NAMES = new Set(METHODS.map((method) => method.name))
+
+/**
+ * The tool's recorded parameters, from X's own schema: the keys it has, and which of them are required. An example
+ * that names a field X does not have, or leaves out a required one, would be refused by X as written.
+ */
+function toolSchema(method: string) {
+  const entries = PARAMETERS[method] ?? []
+  const name = (entry: string) => entry.replace(/\*?:.*$/, "")
+  return {
+    keys: new Set(entries.map(name)),
+    required: entries.filter((entry) => entry.includes("*:")).map(name),
+  }
+}
 
 /** `opencode api` commands, with a trailing backslash joined to the next line. */
 function commands(text: string) {
@@ -40,13 +54,18 @@ describe("the scripting examples", () => {
         const method = /\/api\/rpc\/x\.posts\.tools\/([a-z_]+)/.exec(command)?.[1]
         expect(method).toBeDefined()
         expect(method === "describe" || NAMES.has(method!)).toBe(true)
-        const input = payload(command)
+        const body = payload(command) as { input?: Record<string, unknown> }
         if (method === "describe") {
-          expect(input).toHaveProperty("input")
+          expect(body).toHaveProperty("input")
           continue
         }
-        expect(input).toHaveProperty("input.sessionID")
-        expect(typeof input.input).toBe("object")
+        const envelope = body.input as { sessionID?: unknown; input?: Record<string, unknown> }
+        expect(typeof envelope.sessionID).toBe("string")
+        // R1: the tool's input is the tool's own, so its keys come from X's schema.
+        const example = envelope.input as Record<string, unknown>
+        const { keys, required } = toolSchema(method!)
+        expect({ method, unknown: Object.keys(example).filter((key) => !keys.has(key)) }).toEqual({ method, unknown: [] })
+        expect({ method, missing: required.filter((key) => !(key in example)) }).toEqual({ method, missing: [] })
       }
     })
   }
