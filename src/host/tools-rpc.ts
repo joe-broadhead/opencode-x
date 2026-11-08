@@ -83,11 +83,9 @@ export function shapeResult(method: string, result: McpResult, call: ShapeCall):
   const cost = scriptCostOfCall(method, {}, result, estimate)
   recordCall(call.sessionID, cost.actualUsd)
   const spent = spentOf(call.sessionID)
-  return {
-    ...result,
-    text: result.text === "" ? cost.line : `${result.text}\n${cost.line}`,
-    cost: { estimateUsd: estimate.estimateUsd, actualUsd: cost.actualUsd, sessionSpentUsd: spent.sessionSpentUsd, dailySpentUsd: spent.dailySpentUsd },
-  }
+  const costValue = { estimateUsd: estimate.estimateUsd, actualUsd: cost.actualUsd, sessionSpentUsd: spent.sessionSpentUsd, dailySpentUsd: spent.dailySpentUsd }
+  const output = result.output && typeof result.output === "object" && !Array.isArray(result.output) ? { ...(result.output as Record<string, unknown>), cost: costValue } : { cost: costValue }
+  return { ...result, output, text: result.text === "" ? cost.line : `${result.text}\n${cost.line}` }
 }
 
 /** The next step for each code. Each is one sentence that ends with a full stop. */
@@ -135,8 +133,6 @@ export type JsonSchema = Readonly<Record<string, unknown>>
 export interface McpResult {
   readonly output?: unknown
   readonly text: string
-  /** A plugin's own cost for the call, beside the output; optional, so a plugin without billing keeps the shape. */
-  readonly cost?: { readonly estimateUsd: number; readonly actualUsd: number; readonly sessionSpentUsd: number; readonly dailySpentUsd: number }
 }
 
 /** What a method can do. It never decides whether a call runs; the rules do. */
@@ -307,16 +303,7 @@ const object = (properties: Record<string, JsonSchema>, required: readonly strin
 const STRING = { type: "string" } as const
 const ANY_OBJECT = { type: "object" } as const
 const FAILED = object({ code: STRING, next: STRING }, ["code", "next"])
-const COST = object(
-  {
-    estimateUsd: { type: "number" },
-    actualUsd: { type: "number" },
-    sessionSpentUsd: { type: "number" },
-    dailySpentUsd: { type: "number" },
-  },
-  ["estimateUsd", "actualUsd", "sessionSpentUsd", "dailySpentUsd"],
-)
-const mcpOutput = (output: JsonSchema = {}) => object({ output, text: STRING, cost: COST }, ["text"])
+const mcpOutput = (output: JsonSchema = {}) => object({ output, text: STRING }, ["text"])
 const DESCRIBED = object(
   {
     name: STRING,

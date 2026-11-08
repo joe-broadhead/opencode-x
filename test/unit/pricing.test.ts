@@ -61,7 +61,7 @@ describe("the budget", () => {
     shapeInput("create_users_bookmark", { id: "1" }, call())
     const result = shapeResult("create_users_bookmark", { text: "ok" }, call())
     expect(result.text).toBe("ok\nCost: 1 request ($0.005) = $0.005.")
-    expect(result.cost).toMatchObject({ estimateUsd: 0.005, actualUsd: 0.005, sessionSpentUsd: 0.005 })
+    expect((result.output as Record<string, unknown>).cost).toMatchObject({ estimateUsd: 0.005, actualUsd: 0.005, sessionSpentUsd: 0.005 })
   })
 
   test("persists across a reload and shares the daily ledger across sessions", async () => {

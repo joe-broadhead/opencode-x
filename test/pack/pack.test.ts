@@ -359,7 +359,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     const from = fake.called.length
     const result = await call("build", READ_A, { query: "hello" })
     expect(result).toMatchObject({ value: { output: { tool: READ_A, path: "/mcp", arguments: { query: "hello" } }, text: expect.stringContaining(`called ${READ_A}`) } })
-    expect(result.value.cost).toMatchObject({ estimateUsd: 0.005, actualUsd: 0.005 })
+    expect(result.value.output.cost).toMatchObject({ estimateUsd: 0.005, actualUsd: 0.005 })
     expect(fake.called.slice(from)).toEqual([{ tool: READ_A, path: "/mcp" }])
     const { data: info } = await host.api<{ data: Record<string, any> }>("GET", `/api/session/${sessions.build}`)
     expect(info.tokens).toMatchObject({ input: 0, output: 0 })
@@ -535,7 +535,7 @@ async function serve(version: string, installed: string, options: { readonly nam
   const providers = { lmstudio: { settings: { baseURL: "" } }, ollama: { settings: { baseURL: "" } }, vllm: { settings: { baseURL: "" } } }
   mkdirSync(directory, { recursive: true })
   const agents = options.agents ?? { reviewer: { description: "Reviews changes", mode: "subagent" } }
-  writeFileSync(join(directory, "opencode.json"), JSON.stringify({ plugins: [{ package: installed, options: { oauth: { client_id: "client-1", client_secret: "secret-1" }, scriptDailyBudgetUsd: 100 } }], agents, providers }))
+  writeFileSync(join(directory, "opencode.json"), JSON.stringify({ plugins: [{ package: installed, options: { oauth: { client_id: "client-1", client_secret: "secret-1" }, scriptDailyBudgetUsd: 100, access: "ask-changes" } }], agents, providers }))
   const password = randomUUID()
   const env = { ...isolated(base), ...OFFLINE, PATH: "/usr/bin:/bin", LANG: "en_US.UTF-8", OPENCODE_PASSWORD: password }
 

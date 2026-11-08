@@ -362,21 +362,7 @@ describe("describe", () => {
       description: `${ID} (test)`,
       available: true,
       input: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
-      output: {
-        type: "object",
-        properties: {
-          output: {},
-          text: { type: "string" },
-          cost: {
-            type: "object",
-            properties: { estimateUsd: { type: "number" }, actualUsd: { type: "number" }, sessionSpentUsd: { type: "number" }, dailySpentUsd: { type: "number" } },
-            required: ["estimateUsd", "actualUsd", "sessionSpentUsd", "dailySpentUsd"],
-            additionalProperties: false,
-          },
-        },
-        required: ["text"],
-        additionalProperties: false,
-      },
+      output: { type: "object", properties: { output: {}, text: { type: "string" } }, required: ["text"], additionalProperties: false },
     })
     expect(description.methods[1]).toMatchObject({ name: WRITE, class: "write", available: false, reason: "TOOL_UNAVAILABLE" })
     expect(description.methods[3]).toMatchObject({ name: "owned_write", kind: "plugin", class: "write", action: "plugin_owned_write", available: true })
@@ -727,13 +713,13 @@ describe("X's block", () => {
     shapeInput("search_posts_all", { query: "q" }, sc)
     const costly = shapeResult("search_posts_all", { output: { data: posts(10), includes: { users: users(10) } }, text: "x" }, sc)
     expect(costly.text).toBe("x\nCost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15.")
-    expect(costly.cost).toMatchObject({ estimateUsd: 0.005, actualUsd: 0.15, sessionSpentUsd: 0.15, dailySpentUsd: 0.15 })
+    expect((costly.output as Record<string, unknown>).cost).toMatchObject({ estimateUsd: 0.005, actualUsd: 0.15, sessionSpentUsd: 0.15, dailySpentUsd: 0.15 })
     // An empty page still gets its line, as a direct call does.
     expect(shapeResult("search_posts_all", { output: { data: [] }, text: "x" }, sc).text).toBe("x\nCost: 0 posts + 0 authors = $0.00.")
     // A write is priced too, at its published request rate.
     const draft = shapeResult("article_create_draft", { text: "draft" }, sc)
     expect(draft.text).toBe("draft\nCost: 1 request ($0.005) = $0.005.")
-    expect(draft.cost?.actualUsd).toBe(0.005)
+    expect((draft.output as Record<string, unknown>).cost).toMatchObject({ actualUsd: 0.005 })
   })
 
   test("an estimate above the remaining session or daily budget is refused with X_BUDGET_EXCEEDED before dispatch", async () => {
