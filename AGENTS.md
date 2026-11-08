@@ -1,8 +1,8 @@
 # Repository rules
 
 This repository builds `@joe-broadhead/opencode-x`, an OpenCode plugin that registers X's official MCP server and
-adds default permission rules, a status command, a status dialog, two skills and a tools RPC for scripts. It has no
-tool of its own. Read [docs/architecture.md](docs/architecture.md) before you change code, and
+adds default permission rules, a status command, a status dialog, two skills and a tools RPC (v2) for scripts. It has
+no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you change code, and
 [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and the release steps.
 
 ## Rules
@@ -74,7 +74,7 @@ tool of its own. Read [docs/architecture.md](docs/architecture.md) before you ch
   glyph and no brand black, because the plugin is unofficial. It uses only the drawing elements Jelly's icon cleaner
   keeps, and no `<title>`: the `jelly.title` is the accessible name.
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
-- **The tools RPC.** `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block
+- **The tools RPC (v2).** `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block
   between the `PLUGIN-SPECIFIC` markers here; change the rest in every plugin at once.
   `scripts/check-copies.mjs` holds it, and the declaration kit `test/support/jelly-kit.ts`, equal to the copy every
   plugin carries. Its methods are every known tool, from `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS` and `DENY_TOOLS`,
