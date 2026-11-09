@@ -197,6 +197,8 @@ export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">
     if (event.tool === "execute") {
       const costs = pending.get(event.sessionID) ?? []
       pending.delete(event.sessionID)
+      // Only an execute that made a billed X call gets a line; one that made none is left as it is.
+      if (costs.length === 0) return
       const merged = mergeCosts(costs)
       if (merged.total > 0) recordDaily(merged.total)
       if (event.status === "completed") append(event.result, costLine(merged))

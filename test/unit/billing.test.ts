@@ -91,4 +91,38 @@ describe("the cost line", () => {
     await stop()
     expect(editor.registrations).toEqual([])
   })
+
+  test("adds no cost line to a Code Mode result that made no X call", async () => {
+    const editor = hookEditor()
+    const stop = await registerBilling(editor as never, () => true)
+    const before = editor.handlers.get("execute.before")!
+    const after = editor.handlers.get("execute.after")!
+
+    before({ sessionID: "s3", messageID: "m3", tool: "execute", input: { code: "return 1" } })
+    const outer = { content: [{ type: "text", text: "1" }] } as Record<string, unknown>
+    after({ sessionID: "s3", messageID: "m3", tool: "execute", status: "completed", result: outer })
+    expect(outer.content).toEqual([{ type: "text", text: "1" }])
+
+    // A failed execute with no X call is left alone too.
+    before({ sessionID: "s4", messageID: "m4", tool: "execute", input: { code: "throw new Error('x')" } })
+    const failed = { content: [{ type: "text", text: "boom" }] } as Record<string, unknown>
+    after({ sessionID: "s4", messageID: "m4", tool: "execute", status: "error", result: failed })
+    expect(failed.content).toEqual([{ type: "text", text: "boom" }])
+    await stop()
+  })
+
+  test("a Code Mode X call that returned nothing still gets the zero line", async () => {
+    const editor = hookEditor()
+    const stop = await registerBilling(editor as never, () => true)
+    const before = editor.handlers.get("execute.before")!
+    const after = editor.handlers.get("execute.after")!
+
+    before({ sessionID: "s5", messageID: "m5", tool: "execute", input: { code: "code" } })
+    const inner = { content: [{ type: "text", text: "empty" }], output: { data: [], meta: { result_count: 0 } } } as Record<string, unknown>
+    after({ sessionID: "s5", messageID: "m5", tool: "x_search_posts_all", status: "completed", result: inner })
+    const outer = { content: [{ type: "text", text: "[]" }] } as Record<string, unknown>
+    after({ sessionID: "s5", messageID: "m5", tool: "execute", status: "completed", result: outer })
+    expect(outer.content).toEqual([{ type: "text", text: "[]" }, { type: "text", text: "Cost: 0 posts + 0 authors = $0.00." }])
+    await stop()
+  })
 })

@@ -807,6 +807,15 @@ describe("the read cap and the cost line on the model path", () => {
     expect(codeMode.fake.callArguments.at(-1)).toEqual({ query: "cost", max_results: 10 })
     await until("the cost line in the execute result", async () => toolText(codeMode.fake.model.requests.slice(before)).includes("Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15."))
   })
+
+  test("an execute that makes no X call ends with no cost line", async () => {
+    codeMode.fake.model.script = [{ tool: "execute", arguments: { code: "return 'no x call here'" } }]
+    const before = codeMode.fake.model.requests.length
+    const sessionID = (await scripted(codeMode).create({ agent: "build", location: codeMode.location, model: { providerID: "lmstudio", id: MODEL_ID } })).id
+    await scripted(codeMode).prompt({ sessionID, text: "Run a small script." })
+    await until("the execute result", async () => toolText(codeMode.fake.model.requests.slice(before)).includes("no x call here"))
+    expect(toolText(codeMode.fake.model.requests.slice(before))).not.toContain("Cost:")
+  })
 })
 
 describe("the daily script cap, across two sessions", () => {
