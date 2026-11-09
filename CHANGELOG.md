@@ -8,6 +8,8 @@ All notable changes to this project are documented in this file. It follows
 
 ### Changed
 
+- Each X skill's first line says how to sign in when the tools are absent: `/connect`, or on Jelly `jelly_connection_request`.
+
 - Every tool is allowed by default. The generated permission block allows the `x_*` namespace for `access: "all"` (the
   default), so all 100 of X's live tools run without asking, the writes and the 40 tools that were once off included,
   and a tool X adds later is allowed at once. `access` is the one option to restrict it: `"ask-changes"` lets the 51

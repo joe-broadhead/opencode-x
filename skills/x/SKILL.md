@@ -2,6 +2,7 @@
 name: x
 description: Read-only. Load when the user names X or Twitter, gives an X handle or x.com link, says "my mentions", "my timeline" or "my bookmarks", asks for a count of posts, or asks how many posts or tweets mention something - even if X is not named. For public posts and profiles, search, trends, X news, counts, who liked or reposted, my credit balance, and X sign-in. Ask which platform only when nothing in the request is X-shaped. Never load this for a bare "what are people saying about <topic>" with no X named, which is a web question, so use Tavily or ask. Never load this to post, reply or quote. For any change, load x-write alone.
 ---
+If X's tools are absent, configure your own or your team's developer app via `/connect` → X app if needed, then choose X; on Jelly call jelly_connection_request.
 # X
 
 X's own tools, through X's official MCP server. A tool is `x_<tool>`, or `tools.x.<tool>` in Code Mode. For a tool
@@ -83,7 +84,6 @@ DMs and private chat conversations (reads included), calls, follows, blocks, mut
 roles, and live video are available only when the user asks; `read-only` denies them, `ask-changes` asks. Your own
 broadcast's chat and moderators are readable. The `xurl` bridge is another account: never use it in place of these
 tools. For any change, load `x-write`.
-
 ## Sign-in and status
 
 Run `/connect` and choose X, then press `o` or Enter (in a terminal, `opencode mcp auth x`). Never ask for a password

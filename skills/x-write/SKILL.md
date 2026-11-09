@@ -2,6 +2,8 @@
 name: x-write
 description: Load before any X (Twitter) change - posting, replying, quoting or editing a Post, or when the user says "tweet this" - bookmarking, creating, updating, pinning or unpinning a List, or drafting an Article - or when the user asks to message, call, follow, block, mute, change list membership, moderate a chat or go live on X (Twitter).
 ---
+If X's tools are absent, configure your own or your team's developer app via `/connect` → X app if needed, then choose X; on Jelly call jelly_connection_request.
+
 # Changing things on X
 
 ## The one rule
