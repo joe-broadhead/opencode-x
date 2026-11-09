@@ -9,6 +9,7 @@ import { existsSync, realpathSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, sep } from "node:path"
 import { Plugin } from "@opencode/plugin"
+import * as z from "zod"
 import { REDIRECT_URI, SUPPORTED_HOST, TESTED_HOSTS, SCOPES } from "../../src/constants.js"
 import { PUBLIC_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
@@ -26,6 +27,34 @@ const SIGN_IN_AGAIN = "X needs a new sign-in. Choose this account to sign in aga
 // Starting a host takes several seconds, more on a busy machine.
 setDefaultTimeout(120_000)
 afterAll(cleanup)
+
+test("the forced X catalogue stays under 1,000 tokens", async () => {
+  let captured = ""
+  const mock = Bun.serve({ port: 0, hostname: "127.0.0.1", async fetch(request) {
+    const body = await request.json() as { messages?: { role: string; content?: unknown }[] }
+    const system = (body.messages ?? []).filter(item => item.role === "system").map(item => typeof item.content === "string" ? item.content : "").join("\n")
+    if (system.includes("- x (")) captured = system
+    const chunk = (delta: Record<string, unknown>, finish: string | null = null) => `data: ${JSON.stringify({ id: "mock", object: "chat.completion.chunk", created: 0, model: "m1", choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`
+    return new Response(`${chunk({ role: "assistant", content: "ok" })}${chunk({}, "stop")}data: [DONE]\n\n`, { headers: { "content-type": "text/event-stream" } })
+  } })
+  let target: Awaited<ReturnType<typeof startHost>> | undefined
+  try {
+    target = await startHost({ options: { ...appOptions(), access: "all" }, config: () => ({ providers: { scripted: { name: "Scripted", package: ["@opencode", "ai", "providers", "openai-compatible"].join("/"), settings: { baseURL: `http://127.0.0.1:${mock.port}/v1`, apiKey: "test" }, models: { m1: { name: "Mock", capabilities: { tools: true } } } } }, model: "scripted/m1" }) })
+    await until("the X tools to register", async () => (await target!.probe().tool.list()).some(tool => tool.id === "x_search_posts_all"))
+    const filler = await target.probe().tool.transform(editor => {
+      editor.namespace({ name: "filler", description: "Spends the inline budget." })
+      editor.add({ name: "pad", description: "pad", input: z.object({ note: z.string().describe("x".repeat(9000)) }), options: { namespace: "filler", permission: "filler_pad", pinned: true }, execute: async () => ({ content: "ok" }) } as never)
+    })
+    try {
+      const session = await target.client.session.create({ location: target.location, agent: "build" } as never)
+      await target.client.session.prompt({ sessionID: session.id, text: "Reply with ok." } as never)
+      await until("the catalogue", async () => captured.includes("- x ("))
+      const lines = captured.split("\n"), start = lines.findIndex(line => line.startsWith("- x (")), section = [lines[start]!]
+      for (let i = start + 1; i < lines.length && lines[i]!.startsWith("  "); i++) section.push(lines[i]!)
+      expect(Math.round(section.join("\n").length / 4)).toBeLessThanOrEqual(1000)
+    } finally { await filler.dispose() }
+  } finally { await target?.close(); mock.stop(true) }
+}, 120_000)
 
 const BUILT_IN = ["build", "general", "explore", "compaction", "title", "summary", "plan"]
 const allow = (tool: string): Rule => ({ action: `x_${tool}`, resource: "*", effect: "allow" })
