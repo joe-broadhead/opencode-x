@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { DISPLAY_NAME, SERVER_NAME } from "../../src/constants.js"
 import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { METHODS } from "../../src/host/tools-rpc.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { type Declaration, type DeclaredTool, declarationProblems, docProblems, readPackage } from "../support/jelly-kit.js"
@@ -35,6 +36,7 @@ describe("the jelly declaration", () => {
     for (const tool of READ_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
     for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: false })
     for (const tool of DENY_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow" })
+    for (const method of METHODS) expect(byPermission.get(`x_${method.name}`)?.readOnly, method.name).toBe(method.class === "read")
     expect(jelly.tools).toHaveLength(known.length)
     for (const tool of jelly.tools) expect(Object.keys(tool).sort()).toEqual(["effect", "name", "permission", "readOnly"])
   })

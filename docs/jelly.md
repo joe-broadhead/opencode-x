@@ -28,8 +28,8 @@ carries no vendor marks, colours or letterforms: only our own Neutral slate tile
 
 ## Tools and permissions
 
-100 tools are declared (58 read-only), and every declared effect is `allow`: the 51 reads and the 7 DM and public-key
-reads, the 8 private writes, the public `x_create_posts`, and the 33 other changes that were once off. `jelly.tools`
+100 tools are declared (57 read-only), and every declared effect is `allow`: the 51 reads and the 6 DM and public-key
+reads, the 8 private writes, the public `x_create_posts`, and the 34 other changes that were once off. `jelly.tools`
 follows `src/x-tools.ts`, so each declared tool has the effect the plugin's own `access: all` block gives it. Jelly's
 agents have no base "allow everything" rule, so this plugin's own default rules, which it puts after that rule, never
 reach them; the declaration is what Jelly applies instead. A declared `allow` changes nothing in Jelly, and a person's
@@ -37,8 +37,8 @@ own choice replaces it.
 
 - Reads: 51 of the tools return data and run without asking: posts, profiles, timelines, mentions, bookmarks, lists,
   Spaces, Communities, news, trends, your own broadcast's chat and moderators, and the usage balance.
-- The other 7 `readOnly` tools are X's DM conversation and public-key reads. They reach private messages, and they run
-  like the rest.
+- The other 6 `readOnly` tools are X's DM conversation and public-key reads. They reach private messages, and they run
+  like the rest. Opening one message request is not read-only: X marks the messages delivered and updates the unread badge.
 - Changes: bookmarks, lists, an Article draft and the public `x_create_posts`, plus X's DM, follow, block, mute,
   list-membership, moderator and live-video tools. All of them run without asking under the default, on the user's real
   X account; `x_create_posts` is **public**: anyone can read the Post, and it can reply or quote only when the user asks
@@ -67,7 +67,7 @@ A feed of posts would put other people's words on a dashboard and call billed to
 
 ## Signing in
 
-`jelly.signIns` declares one sign-in, `x`, for X's MCP server `x`, which signs in with OpenCode's MCP
+`jelly.signIns` declares the X app client ID, then `x`, for X's MCP server `x`, which signs in with OpenCode's MCP
 OAuth. An X app supplies the client: an organisation can set a team app's public client ID in managed config, or the
 user can save their own app in `/connect` → **X app**, before signing in.
 

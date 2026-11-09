@@ -34,22 +34,22 @@ import { Rpc } from "@opencode/plugin/rpc"
 // >>> PLUGIN-SPECIFIC >>>
 import { assertBudget, BudgetExceededError, estimateCall, PriceUnknownError, recordCall, rememberEstimate, resetBilling, scriptCostOfCall, spentOf, takeEstimate, widenRead } from "../billing.js"
 import { PLUGIN_ID as X_PLUGIN_ID, SERVER_NAME } from "../constants.js"
-import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../x-tools.js"
+import { DENY_TOOLS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../x-tools.js"
 
 /** The plugin's id. The RPC id is `<PLUGIN_ID>.tools`. */
 export const PLUGIN_ID = X_PLUGIN_ID
 
 /**
  * Every known X tool, by its upstream name, with its class: the 51 reads, the 8 private writes, the public
- * `create_posts` (a send, because it reaches everyone), and the 40 tools for DMs, follows, mutes and live video
- * (destructive: they delete, or they reach another person). The class is what `describe` reports and what an approval
+ * `create_posts` (a send, because it reaches everyone), and the 40 privacy-restricted tools for DMs, follows, mutes
+ * and live video (six reads and 34 destructive actions). The class is what `describe` reports and what an approval
  * shows; the rules, not the class, decide whether a call runs. A tool X adds later is not a method.
  */
 export const METHODS: readonly MethodSpec[] = [
   ...READ_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "read" })),
   ...WRITE_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "write" })),
   ...PUBLIC_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "send" })),
-  ...DENY_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "destructive" })),
+  ...DENY_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: PRIVATE_READ_TOOLS.includes(name) ? "read" : "destructive" })),
 ]
 
 /** Forgets every session's recorded spend and the daily ledger. The tests use it. */

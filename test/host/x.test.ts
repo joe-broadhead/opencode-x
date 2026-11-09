@@ -255,7 +255,7 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     expect(methods).toHaveLength(100)
     const counts: Record<string, number> = {}
     for (const method of methods) counts[method.class!] = (counts[method.class!] ?? 0) + 1
-    expect(counts).toEqual({ read: 51, write: 8, send: 1, destructive: 40 })
+    expect(counts).toEqual({ read: 57, write: 8, send: 1, destructive: 34 })
     const permission = Object.fromEntries(methods.map((method) => [method.name, method.permission]))
     expect(permission.search_posts_all).toBe("allow")
     expect(permission.create_users_bookmark).toBe("ask")

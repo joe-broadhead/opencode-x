@@ -688,11 +688,11 @@ describe("X's block", () => {
   const posts = (n: number) => Array.from({ length: n }, (_, index) => ({ id: String(index) }))
   const users = (n: number) => Array.from({ length: n }, (_, index) => ({ id: String(index), username: `user${index}` }))
 
-  test("classifies all 100 known tools: 51 reads, 8 writes, the public send and the 40 deny-by-default tools", () => {
+  test("classifies all 100 known tools: 57 reads, 8 writes, the public send and 34 destructive tools", () => {
     expect(METHODS).toHaveLength(100)
     const counts: Record<string, number> = {}
     for (const method of METHODS) counts[method.class] = (counts[method.class] ?? 0) + 1
-    expect(counts).toEqual({ read: 51, write: 8, send: 1, destructive: 40 })
+    expect(counts).toEqual({ read: 57, write: 8, send: 1, destructive: 34 })
     for (const method of METHODS) expect(method.kind).toBe("mcp")
     expect(METHODS.find((method) => method.name === "create_posts")?.class).toBe("send")
     expect(METHODS.find((method) => method.name === "users_id_block")?.class).toBe("destructive")

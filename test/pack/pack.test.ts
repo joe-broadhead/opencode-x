@@ -18,7 +18,7 @@ import { basename, join, relative, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { ENDPOINT, REDIRECT_URI, SUPPORTED_HOST, TESTED_HOSTS } from "../../src/constants.js"
 import { TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
-import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { DENY_TOOLS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, type Rule } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { X_SCOPES, NEW_TOOL, startFakeMcp, UPSTREAM_FAILURE, type FakeMcp } from "../host/fake-mcp.js"
@@ -333,7 +333,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS])
     const classes: Record<string, string> = {}
     for (const method of value.methods) classes[method.class] = (classes[method.class] ?? "") + "."
-    expect(classes).toEqual({ read: ".".repeat(READ_TOOLS.length), write: ".".repeat(WRITE_TOOLS.length), send: ".", destructive: ".".repeat(DENY_TOOLS.length) })
+    expect(classes).toEqual({ read: ".".repeat(READ_TOOLS.length + PRIVATE_READ_TOOLS.length), write: ".".repeat(WRITE_TOOLS.length), send: ".", destructive: ".".repeat(DENY_TOOLS.length - PRIVATE_READ_TOOLS.length) })
     for (const method of value.methods) {
       expect({ name: method.name, kind: method.kind, action: method.action, available: method.available }).toEqual({
         name: method.name,

@@ -566,7 +566,7 @@
         "name": "x.get_chat_message_request",
         "permission": "x_get_chat_message_request",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       },
       {
         "name": "x.get_chat_message_requests",

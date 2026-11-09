@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { PLUGIN_ID } from "../../src/constants.js"
 import { METHODS, NEXT_STEPS, PLUGIN_ID as RPC_PLUGIN_ID, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
-import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { DENY_TOOLS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 
 describe("X's block of the shared tools RPC", () => {
   test("has the plugin's id and one method per known tool, by its exact name and class, and nothing else", () => {
@@ -12,7 +12,8 @@ describe("X's block of the shared tools RPC", () => {
     for (const name of READ_TOOLS) expect(METHODS.find((method) => method.name === name)?.class).toBe("read")
     for (const name of WRITE_TOOLS) expect(METHODS.find((method) => method.name === name)?.class).toBe("write")
     for (const name of PUBLIC_TOOLS) expect(METHODS.find((method) => method.name === name)?.class).toBe("send")
-    for (const name of DENY_TOOLS) expect(METHODS.find((method) => method.name === name)?.class).toBe("destructive")
+    for (const name of DENY_TOOLS) expect(METHODS.find((method) => method.name === name)?.class).toBe(PRIVATE_READ_TOOLS.includes(name) ? "read" : "destructive")
+    expect(METHODS.find((method) => method.name === "get_chat_message_request")?.class).toBe("destructive")
     expect(METHODS.map((method) => method.name)).not.toContain("shiny_new_tool")
   })
 

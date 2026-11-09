@@ -127,6 +127,16 @@ export const DENY_TOOLS: readonly string[] = [
   "users_id_unblock",
 ]
 
+/** Read-only methods among the privacy-restricted tools. The single request read marks messages delivered. */
+export const PRIVATE_READ_TOOLS: readonly string[] = [
+  "get_chat_conversation",
+  "get_chat_conversation_events",
+  "get_chat_conversations",
+  "get_chat_message_requests",
+  "get_users_public_key",
+  "get_users_public_keys",
+]
+
 /**
  * Each known tool's input parameters, as `name:type`, with `*` after a required name, from the live list's schemas.
  * The drift script compares them with a saved list; the skills test lets a skill write a literal call only with
