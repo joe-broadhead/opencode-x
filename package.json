@@ -703,9 +703,16 @@
     "views": [],
     "signIns": [
       {
+        "id": "app",
+        "label": "X app client ID",
+        "integration": "x-app",
+        "presetBy": "oauth.client_id"
+      },
+      {
         "id": "x",
         "label": "X",
-        "server": "x"
+        "server": "x",
+        "after": "app"
       }
     ],
     "contributes": {

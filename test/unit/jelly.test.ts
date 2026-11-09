@@ -39,10 +39,13 @@ describe("the jelly declaration", () => {
     for (const tool of jelly.tools) expect(Object.keys(tool).sort()).toEqual(["effect", "name", "permission", "readOnly"])
   })
 
-  test("names every skill the package ships, the one sign-in, and no views, RPC, feeds or widgets", () => {
+  test("names every skill the package ships, both sign-ins, and no views, RPC, feeds or widgets", () => {
     expect(jelly.title).toBe(DISPLAY_NAME)
     expect(jelly.skills).toEqual([...SKILL_NAMES])
-    expect(jelly.signIns).toEqual([{ id: SERVER_NAME, label: DISPLAY_NAME, server: SERVER_NAME }])
+    expect(jelly.signIns).toEqual([
+      { id: "app", label: "X app client ID", integration: "x-app", presetBy: "oauth.client_id" },
+      { id: SERVER_NAME, label: DISPLAY_NAME, server: SERVER_NAME, after: "app" },
+    ])
     expect(jelly.rpc).toEqual([])
     expect(jelly.views).toEqual([])
     expect(jelly.contributes).toEqual({ homeFeeds: [], homeWidgets: [], workKinds: [], settings: [] })
