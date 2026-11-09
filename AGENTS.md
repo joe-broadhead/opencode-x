@@ -92,6 +92,10 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   test counts, machine-local paths, secrets or personal data.
 - **Releases** come from a `v<version>` tag on `master`. The release workflow refuses a private package or a tag that
   differs from the version; no test or script checks `private`.
+- **No personal email in anything we publish.** Every commit, tag and package is authored and committed as
+  `joe-broadhead <91376460+joe-broadhead@users.noreply.github.com>`. Before committing or tagging, check that
+  `git config user.email` is that address: a fresh clone inherits the machine's global identity, which is not that
+  address. Never commit, tag or publish with a work or personal address, or with a local hostname.
 - **One check command.** `npm run check` passes before every commit. Never skip, weaken or delete a test to get
   green.
 
