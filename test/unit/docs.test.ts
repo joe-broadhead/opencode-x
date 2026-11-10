@@ -77,8 +77,9 @@ describe("docs", () => {
     expect(readme).not.toMatch(/provisional/i)
   })
 
-  test("the README names no version of the plugin, not even in an example", () => {
-    expect(text("README.md")).not.toMatch(/opencode-x@\d|\bv\d+\.\d+\.\d+\b|(?<![\d.])0\.\d+\.\d+(?![\d.])/)
+  test("the README names no version of the plugin, not even in an example, except the install spec", () => {
+    // D19: the README's install line names the release tag, and nothing else may name a version.
+    expect(text("README.md").replace("opencode-x#v0.0.0", "")).not.toMatch(/opencode-x@\d|\bv\d+\.\d+\.\d+\b|(?<![\d.])0\.\d+\.\d+(?![\d.])/)
   })
 
   test("the README and the configuration guide give the narrowing recipes, and no allow for any write", () => {

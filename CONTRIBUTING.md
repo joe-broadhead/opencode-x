@@ -194,30 +194,17 @@ check (`SUPPORTED_HOST` in `src/constants.ts`). Both must change together, with 
 
 ### Releasing
 
-1. Update `version` in `package.json` and add the `CHANGELOG.md` entry, then run `npm run check`.
-2. Push the release commit to `master` and tag it `v<version>`. The release workflow refuses a private package or a
-   tag that differs from `version`.
-3. Approve the run in the GitHub environment `release`.
+Every plugin releases as `v0.0.0`, and it installs from that GitHub tag. The release is one commit on top of a `master`
+head that CI passed, and the tag points at it.
 
-CI then runs `npm run check`, packs the tree, runs the pack test against that exact tarball
-(`PACK_TARBALL=<tarball> node scripts/check.mjs pack`), and publishes it with npm trusted publishing and provenance:
-`npm publish <tarball> --provenance --access public`. The trusted publisher on npmjs.com names this repository, the
-workflow `release.yml` and the environment `release`, and allows `npm publish`. A rerun skips a version that is
-already on npm.
+1. Set `version` to `0.0.0` in `package.json`, date the `## [0.0.0]` entry in `CHANGELOG.md`, then run `npm run check`.
+2. Push that commit to `master`, and wait for CI to pass on it.
+3. In a clean checkout of `master` at that commit, run `node scripts/release-commit.mjs --ci-sha <its full sha>`. It builds
+   `dist/`, removes the lifecycle scripts, and creates the signed commit and the signed annotated tag `v0.0.0`. It never
+   pushes; `--dry-run` shows the change first.
+4. Push the tag only: `git push origin v0.0.0`.
+5. Approve the run in the `release` environment. The release workflow checks the tag and its commit, installs the tag on
+   each stock OpenCode host (2.2.3 to 2.2.6), packs it, and creates the GitHub Release with the notes, the tarball and
+   `SHA256SUMS`.
 
-### Dist-tags
-
-- `latest`: the newest stable release. The release workflow sets it for versions without a prerelease part.
-- `next`: prereleases, such as `<version>-rc.1`. The release workflow sets it.
-- `host-2.2`: the newest release for OpenCode 2.2.x. Move it by hand, so users on 2.2 can still install a matching
-  version after `latest` moves to a newer OpenCode line:
-
-  ```sh
-  npm dist-tag add @joe-broadhead/opencode-x@<version> host-2.2
-  ```
-
-Never unpublish a release. Deprecate it instead, and name the version to use:
-
-```sh
-npm deprecate @joe-broadhead/opencode-x@<version> "<reason>. Use <version> instead."
-```
+A tag that already exists stops step 3. Delete the old tag and its Release first, then start again.

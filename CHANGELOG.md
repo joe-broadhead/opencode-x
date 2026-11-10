@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. It follows
 
 ## [Unreleased]
 
+## [0.0.0] - 2026-11-10
+
 ### Changed
 
 - Each X skill's first line says how to sign in when the tools are absent: `/connect`, or on Jelly `jelly_connection_request`.
