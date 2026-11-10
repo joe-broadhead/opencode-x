@@ -81,18 +81,18 @@ order the host uses, and the last matching rule wins. Only `allow` runs.
   one deliberate break from the earlier reads-only RPC.
 - The session must belong to the location you call. A session in another directory is `SESSION_UNKNOWN`.
 
-Create the session once, with the agent the script runs as, and keep its id. Never reuse a session found through
+Create the session once, with the agent the script runs as, and keep its id. Give the project as the session's `location`: a session made without one belongs to the service's default location, where the project's agents may not exist, and each call then fails `Agent not found`. Never reuse a session found through
 history or a list: the script would run as that session's agent, under its rules.
 
 ```sh
-opencode api post /api/session -d '{"title":"daily mentions","agent":"build"}'
+opencode api post /api/session -d '{"title":"daily mentions","agent":"build","location":{"directory":"/path/to/project"}}'
 ```
 
 Session rules come after the agent's, so a session can narrow what its script may do, and it can grant one write for
 one script without touching the agent's rules. This one can only post a bookmark and search posts:
 
 ```sh
-opencode api post /api/session -d '{"title":"bookmark sync","agent":"build","permissions":[
+opencode api post /api/session -d '{"title":"bookmark sync","agent":"build","location":{"directory":"/path/to/project"},"permissions":[
   {"action":"x_*","resource":"*","effect":"deny"},
   {"action":"x_search_posts_all","resource":"*","effect":"allow"},
   {"action":"x_create_users_bookmark","resource":"*","effect":"allow"}
