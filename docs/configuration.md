@@ -4,7 +4,7 @@ Every option is optional. The smallest setup is one entry in `plugins`, then the
 
 ```json
 {
-  "plugins": ["@joe-broadhead/opencode-x"]
+  "plugins": ["github:joe-broadhead/opencode-x#v0.0.0"]
 }
 ```
 
@@ -14,7 +14,7 @@ To set options, use the object form:
 {
   "plugins": [
     {
-      "package": "@joe-broadhead/opencode-x",
+      "package": "github:joe-broadhead/opencode-x#v0.0.0",
       "options": {
         "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" }
       }
@@ -167,7 +167,7 @@ no secret, and no per-member app.
 {
   "plugins": [
     {
-      "package": "@joe-broadhead/opencode-x",
+      "package": "github:joe-broadhead/opencode-x#v0.0.0",
       "options": { "oauth": { "client_id": "YOUR_TEAM_APP_CLIENT_ID" } }
     }
   ]

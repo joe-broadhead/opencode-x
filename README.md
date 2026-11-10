@@ -54,12 +54,15 @@ The plugin registers X's MCP server under the name `x`, adds default permission 
 `/x` status view and two skills. Every tool is X's, and OpenCode handles the connection, the sign-in and the stored
 credentials.
 
-A Git install is removed and updated by its installed spec: `opencode plugin remove github:joe-broadhead/opencode-x#v0.0.0`. `opencode plugin update` and `opencode plugin check` take the same spec.
+Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-x#v0.0.0`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-x#v<version>`.
 
-**Update** with `opencode plugin update github:joe-broadhead/opencode-x#v0.0.0`, then run `opencode reload`. An entry pinned to a tag does not update: remove the tag from its `plugins` entry first.
+Or add the plugin to `opencode.json` instead, with the same spec:
+
+```json
+{ "plugins": [{ "package": "github:joe-broadhead/opencode-x#v0.0.0" }] }
+```
 
 The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
-A new release is a new tag: install it with its own `#v<version>` spec.
 
 ## Who signs up for what
 
@@ -209,7 +212,7 @@ Set options with the object form of the plugin entry:
 {
   "plugins": [
     {
-      "package": "@joe-broadhead/opencode-x",
+      "package": "github:joe-broadhead/opencode-x#v0.0.0",
       "options": {
         "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" }
       }
@@ -250,7 +253,7 @@ on macOS, or `/etc/opencode/opencode.json` on Linux. Members then only run `/con
 {
   "plugins": [
     {
-      "package": "@joe-broadhead/opencode-x",
+      "package": "github:joe-broadhead/opencode-x#v0.0.0",
       "options": { "oauth": { "client_id": "YOUR_TEAM_APP_CLIENT_ID" } }
     }
   ]
@@ -337,6 +340,8 @@ A script's errors from the tools RPC have their own codes, listed in
   can set it to ask.
 - **X's prices are X's.** The rates above are from X's pricing page on 5 November 2026, and can change without
   notice.
+
+- Updates are not automatic for a Git install, and `opencode plugin update` and `opencode plugin check` do not work on one: to move to a newer release, remove the old entry and add the new tag.
 
 ## Uninstall
 
