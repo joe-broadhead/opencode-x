@@ -330,11 +330,13 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
   test("describes exactly the known tools, each with its class, available and with its live schema", async () => {
     const { value } = await script("describe", {})
     expect(value.id).toBe(TOOLS_RPC_ID)
-    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS])
+    // The known tools, then the plugin's own events_list, which is not one of X's tools and is checked below.
+    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS, "events_list"])
     const classes: Record<string, string> = {}
     for (const method of value.methods) classes[method.class] = (classes[method.class] ?? "") + "."
-    expect(classes).toEqual({ read: ".".repeat(READ_TOOLS.length + PRIVATE_READ_TOOLS.length), write: ".".repeat(WRITE_TOOLS.length), send: ".", destructive: ".".repeat(DENY_TOOLS.length - PRIVATE_READ_TOOLS.length) })
-    for (const method of value.methods) {
+    expect(classes).toEqual({ read: ".".repeat(READ_TOOLS.length + PRIVATE_READ_TOOLS.length + 1), write: ".".repeat(WRITE_TOOLS.length), send: ".", destructive: ".".repeat(DENY_TOOLS.length - PRIVATE_READ_TOOLS.length) })
+    expect(value.methods.find((method: { name: string }) => method.name === "events_list")).toMatchObject({ kind: "plugin", class: "read" })
+    for (const method of value.methods.filter((method: { name: string }) => method.name !== "events_list")) {
       expect({ name: method.name, kind: method.kind, action: method.action, available: method.available }).toEqual({
         name: method.name,
         kind: "mcp",
