@@ -878,7 +878,7 @@ describe("a boot with an existing X sign-in", () => {
       await Bun.sleep(2000)
       const servers = (await second.client.mcp.list({ location: second.location })).data
       expect(servers.some((server) => server.name === "x")).toBe(true)
-      expect((await second.probe().tool.list()).filter((tool) => tool.id.startsWith("x_")).length).toBe(15)
+      expect((await second.probe().tool.list()).filter((tool) => tool.id.startsWith("x_")).length).toBe(16)
     } finally {
       await second?.close().catch(() => undefined)
       await first?.close().catch(() => undefined)
