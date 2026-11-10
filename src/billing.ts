@@ -32,9 +32,9 @@ const USER_TOOLS = new Set([
 /** Reads that return posts, billed per post plus any users X includes. */
 const POST_TOOLS = new Set(["search_posts_all", "get_posts_by_id", "get_posts_by_ids"])
 
-export type CostBasis = "conservative" | "owned"
+type CostBasis = "conservative" | "owned"
 
-export interface ReadCost {
+interface ReadCost {
   readonly posts: number
   readonly owned: number
   readonly users: number
@@ -141,11 +141,6 @@ export function costOf(tool: string, result: Result, owns = ownsXApp): ReadCost 
     return { posts: OWNED_TOOLS.has(name) ? 0 : posts, owned: OWNED_TOOLS.has(name) ? posts : 0, users, counts: 0, total: posts * rate + users * USER, basis: owned ? "owned" : "conservative", ownedRate: rate, userRate: USER }
   }
   return undefined
-}
-
-/** A tools-RPC result's billed cost, read by the same rules: its structured content, or its text when it has none. */
-export function scriptCostOf(tool: string, result: { readonly output?: unknown; readonly text: string }): ReadCost | undefined {
-  return costOf(tool, { content: result.text, ...(result.output === undefined ? {} : { output: result.output }) })
 }
 
 export const mergeCosts = (costs: readonly ReadCost[]): ReadCost => ({
@@ -280,7 +275,7 @@ const recordDaily = (usd: number) => {
 /** The session's spend and the rolling daily spend, both in USD. */
 export const spentOf = (sessionID: string) => ({ sessionSpentUsd: scriptSpent.get(sessionID) ?? 0, dailySpentUsd: dailySpent() })
 
-export interface CallEstimate {
+interface CallEstimate {
   readonly method: string
   readonly pageSize: number
   readonly estimateUsd: number

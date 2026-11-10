@@ -16,7 +16,7 @@ export { shortReason }
 type State = "connected" | "sign_in_required" | "connecting" | "disabled" | "failed" | "not_configured" | "conflict" | "host_untested"
 
 /** The setup codes status itself can be in, beside the problems a transform or the skills report. */
-export type StatusCode = "OPTIONS_INVALID" | "HOST_UNTESTED" | "CLIENT_ID_MISSING" | "CLIENT_ID_INVALID"
+type StatusCode = "OPTIONS_INVALID" | "HOST_UNTESTED" | "CLIENT_ID_MISSING" | "CLIENT_ID_INVALID"
 
 /**
  * Who owns the `x` server: this plugin, the user's own config (adopted unchanged), or a server at another URL

@@ -22,14 +22,14 @@ export interface Options {
 }
 
 /** A rejected option. Messages name the field and never echo its value. */
-export interface OptionsError {
+interface OptionsError {
   readonly code: "OPTIONS_INVALID"
   readonly field: string
   readonly message: string
   readonly next: string
 }
 
-export type ParsedOptions =
+type ParsedOptions =
   | { readonly ok: true; readonly options: Options }
   | { readonly ok: false; readonly error: OptionsError }
 

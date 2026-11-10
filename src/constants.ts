@@ -44,7 +44,7 @@ export const TESTED_HOSTS: readonly string[] = ["2.2.3", "2.2.4", "2.2.5", "2.2.
  * `docs/configuration.md` name each one, and a test fails when a code raised in `src` is in neither table, or when a
  * table entry nothing raises is left behind. `errorText` and `xError` take only these, so a typo fails `tsc`.
  */
-export type PluginCode =
+type PluginCode =
   | "CLIENT_ID_INVALID"
   | "CLIENT_ID_MISSING"
   | "HOST_UNTESTED"
@@ -73,7 +73,7 @@ export const PLUGIN_CODES: readonly PluginCode[] = [
  * The codes the tools RPC shares with every plugin of this family, which `docs/scripting.md` documents beside its own.
  * They come from the shared tools RPC module and from OpenCode, not from this plugin's code.
  */
-export type RpcCode =
+type RpcCode =
   | "AUTH_REQUIRED"
   | "CANCELLED"
   | "CONNECTING"

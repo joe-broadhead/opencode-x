@@ -42,7 +42,7 @@ export function displayUrl(url: string) {
  * A conflicting server's address for status. Another origin shows only its origin, because its path can hold a secret,
  * as some servers' URLs do. X's own origin keeps its path, so a wrong path there is visible.
  */
-export function conflictUrl(url: string, expected: string) {
+function conflictUrl(url: string, expected: string) {
   try {
     const parsed = new URL(url)
     if (parsed.origin === new URL(expected).origin) return displayUrl(url)

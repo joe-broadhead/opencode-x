@@ -245,7 +245,7 @@ export const PARAMETERS: Readonly<Record<string, readonly string[]>> = {
   "users_id_unblock": ["source_user_id*:string", "target_user_id*:string"],
 }
 
-export type ToolClass = "read" | "write" | "public" | "denied" | "unknown"
+type ToolClass = "read" | "write" | "public" | "denied" | "unknown"
 
 export function classify(name: string): ToolClass {
   if (READ_TOOLS.includes(name)) return "read"
