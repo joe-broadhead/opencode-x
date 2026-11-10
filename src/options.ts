@@ -1,6 +1,7 @@
 import { REDIRECT_URI, SCOPES } from "./constants.js"
 import { DEFAULT_SCRIPT_BUDGET_USD, DEFAULT_SCRIPT_DAILY_BUDGET_USD } from "./billing.js"
 import type { Access } from "./permissions.js"
+import { DEFAULT_FEEDS, DEFAULT_MAX_CALLS, FEEDS, MAX_CALLS, type Feed } from "./events.js"
 
 export interface Options {
   /** Pins the X app, for example in an organisation's managed config. Otherwise the /connect X app entry sets it. */
@@ -19,6 +20,10 @@ export interface Options {
   readonly access: Access
   /** True only when the signed-in account owns the developer app, so Owned Read pricing applies. */
   readonly ownsXApp: boolean
+  /** The feeds `x_events_list` reads for Memory, in order. */
+  readonly feeds: readonly Feed[]
+  /** The most X reads one `x_events_list` call makes, the owner's included. */
+  readonly maxCalls: number
 }
 
 /** A rejected option. Messages name the field and never echo its value. */
@@ -33,7 +38,8 @@ type ParsedOptions =
   | { readonly ok: true; readonly options: Options }
   | { readonly ok: false; readonly error: OptionsError }
 
-const TOP_KEYS = ["oauth", "allowUntestedHost", "scriptBudgetUsd", "scriptDailyBudgetUsd", "access", "ownsXApp"]
+const TOP_KEYS = ["oauth", "allowUntestedHost", "scriptBudgetUsd", "scriptDailyBudgetUsd", "access", "ownsXApp", "events"]
+const EVENTS_KEYS = ["feeds", "maxCalls"]
 const OAUTH_KEYS = ["client_id", "redirect_uri", "callback_port", "scopes", "client_secret"]
 const NO_SPACES = /^\S+$/
 
@@ -144,6 +150,22 @@ export function parseOptions(input: unknown): ParsedOptions {
   const ownsXApp = raw.ownsXApp ?? false
   if (typeof ownsXApp !== "boolean") return fail("ownsXApp", "Must be true or false.", 'Set it to true only if the signed-in X account owns the developer app.')
 
+  const events = raw.events ?? {}
+  if (!isRecord(events)) return fail("events", "Must be an object.", 'Set events to an object such as { "feeds": ["mentions", "bookmarks"], "maxCalls": 4 }.')
+  const unknownEventsKey = Object.keys(events).find((key) => !EVENTS_KEYS.includes(key))
+  if (unknownEventsKey !== undefined) {
+    return fail(`events.${unknownEventsKey}`, "This option is not supported.", `Remove it. Supported events options: ${EVENTS_KEYS.join(", ")}.`)
+  }
+  const feeds: unknown = events.feeds ?? DEFAULT_FEEDS
+  if (!Array.isArray(feeds) || feeds.length === 0 || !feeds.every((feed) => (FEEDS as readonly unknown[]).includes(feed))) {
+    return fail("events.feeds", `Must be a non-empty list of ${FEEDS.join(", ")}.`, `List the feeds Memory collects, for example ${JSON.stringify(DEFAULT_FEEDS)}.`)
+  }
+  if (new Set(feeds).size !== feeds.length) return fail("events.feeds", "Lists a feed more than once.", "Remove the duplicate feed.")
+  const maxCalls = events.maxCalls ?? DEFAULT_MAX_CALLS
+  if (typeof maxCalls !== "number" || !Number.isInteger(maxCalls) || maxCalls < MAX_CALLS.min || maxCalls > MAX_CALLS.max) {
+    return fail("events.maxCalls", `Must be a whole number from ${MAX_CALLS.min} to ${MAX_CALLS.max}.`, `Set it to the most billed X reads one collection call may make, ${DEFAULT_MAX_CALLS} by default.`)
+  }
+
   return {
     ok: true,
     options: {
@@ -157,6 +179,8 @@ export function parseOptions(input: unknown): ParsedOptions {
       scriptDailyBudgetUsd,
       access,
       ownsXApp,
+      feeds: [...feeds] as Feed[],
+      maxCalls,
     },
   }
 }

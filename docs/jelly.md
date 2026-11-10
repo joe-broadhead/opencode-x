@@ -28,7 +28,7 @@ carries no vendor marks, colours or letterforms: only our own Neutral slate tile
 
 ## Tools and permissions
 
-100 tools are declared (57 read-only), and every declared effect is `allow`: the 51 reads and the 6 DM and public-key
+101 tools are declared (58 read-only), and every declared effect is `allow`: the 51 reads and the 6 DM and public-key
 reads, the 8 private writes, the public `x_create_posts`, and the 34 other changes that were once off. `jelly.tools`
 follows `src/x-tools.ts`, so each declared tool has the effect the plugin's own `access: all` block gives it. Jelly's
 agents have no base "allow everything" rule, so this plugin's own default rules, which it puts after that rule, never

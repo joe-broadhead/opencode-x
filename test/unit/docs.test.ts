@@ -29,13 +29,14 @@ const PREFIXED = ["X_BUDGET_EXCEEDED", "X_PRICE_UNKNOWN"]
 describe("docs", () => {
   test.each(FILES)("%s states no count of read, write or declared tools that could go stale", (file) => {
     const counts = [...text(file).matchAll(/\b\d+ (?:known )?(?:read|write|private write|read-only)(?:s\b| tools\b| read-only)|\b\d+ tools are declared/g)].map((match) => match[0])
-    const stale = counts.filter((count) => !count.startsWith(`${READ_TOOLS.length} read`) && !count.startsWith(`${WRITE_TOOLS.length} write`) && !count.startsWith(`${WRITE_TOOLS.length} private write`) && count !== `${KNOWN.length} tools are declared`)
+    // The declaration holds every known tool and the plugin's own x_events_list.
+    const stale = counts.filter((count) => !count.startsWith(`${READ_TOOLS.length} read`) && !count.startsWith(`${WRITE_TOOLS.length} write`) && !count.startsWith(`${WRITE_TOOLS.length} private write`) && count !== `${KNOWN.length + 1} tools are declared`)
     expect(stale).toEqual([])
   })
 
-  test.each(FILES)("%s names only X tools the plugin knows", (file) => {
+  test.each(FILES)("%s names only X tools the plugin knows, and its own x_events_list", (file) => {
     const named = [...text(file).matchAll(/\bx_([a-z][a-z_]*)(?![\w*])/g)].map((match) => match[1]!)
-    expect(named.filter((tool) => !KNOWN.includes(tool))).toEqual([])
+    expect(named.filter((tool) => ![...KNOWN, "events_list"].includes(tool))).toEqual([])
   })
 
   test.each(["docs/configuration.md", "docs/scripting.md", "docs/jelly.md", "SECURITY.md", "CHANGELOG.md"])("%s says nothing provisional or pending", (file) => {

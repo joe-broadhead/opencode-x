@@ -35,7 +35,7 @@ const RULES = [
 
 // The family's working folders never reach a public file. This rule reads every git-tracked file, so a note in a doc,
 // a skill or a fixture is caught as well as code. AGENTS.md and this script name the folder on purpose and are skipped.
-const WORKING_FOLDER = /opencode-release\//
+const WORKING_FOLDER = /opencode-release\/|prosus|toqan/i
 const WORKING_FOLDER_SKIP = new Set(["AGENTS.md", "scripts/check-forbidden.mjs"])
 
 /** Every git-tracked path under the root. Outside a git checkout, such as a packed tarball, there are none to read. */

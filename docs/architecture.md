@@ -57,7 +57,8 @@ adds, and ships no declaration files.
    there is one, the pinned `redirect_uri` and the pinned scopes. It adopts the user's own entry at that URL, reading
    only its type, URL and whether `oauth` is `false`. Any other URL, or a local command, is a conflict. With no client
    and no user entry, it registers nothing and status asks for the app.
-6. `ctx.tool.transform` gives the `x` namespace its Code Mode description, unless the name belongs to another server.
+6. `ctx.tool.transform` gives the `x` namespace its Code Mode description, unless the name belongs to another server,
+   and adds `x_events_list`, a Code Mode tool that never calls a server at another URL.
 7. `ctx.agent.transform` inserts the default rules after each agent's base `* * allow`.
 8. `watchListing` notes when the `x` server's status last changes. The plugin adds no tool hook.
 9. `ctx.skill.transform`, `ctx.command.transform` (`/x-status`) and `ctx.rpc.register` (`x.posts/status`).

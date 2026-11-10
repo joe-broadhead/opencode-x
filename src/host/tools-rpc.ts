@@ -120,6 +120,11 @@ export function pluginError(error: unknown): Failure | undefined {
       next: `Raise "scriptBudgetUsd" or "scriptDailyBudgetUsd" in this plugin's options, or wait for the 24-hour window to roll; each call is billed.`,
     }
   }
+  if (error instanceof Error) {
+    // The events_list method's own failures are xErrors: a code, what happened and the next step.
+    const { code, detail, nextStep } = error as Error & { code?: unknown; detail?: unknown; nextStep?: unknown }
+    if (typeof code === "string" && typeof detail === "string" && typeof nextStep === "string") return { code, what: detail, next: nextStep }
+  }
   return undefined
 }
 

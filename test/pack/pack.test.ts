@@ -355,6 +355,15 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(permission.users_id_block).toBe("ask")
   })
 
+  test("events_list runs the packed plugin's own spec, reads through OpenCode, and reports an answer it cannot read with its own code", async () => {
+    const from = fake.calls.length
+    // The fake answers get_users_me with its call, not a user, so the call stops after that one billed read.
+    const result = await call("build", "events_list", {})
+    expect(result).toMatchObject({ type: "failed", code: "UPSTREAM_UNREADABLE" })
+    expect(String(result.message)).toContain("UPSTREAM_UNREADABLE: X's get_users_me answered in a shape events_list does not read.")
+    expect(toolCalls(from)).toEqual(["get_users_me"])
+  })
+
   test("runs a known read as the session's agent, with no model turn", async () => {
     const from = fake.called.length
     const result = await call("build", READ_A, { query: "hello" })

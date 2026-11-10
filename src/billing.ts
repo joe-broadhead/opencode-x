@@ -34,7 +34,7 @@ const POST_TOOLS = new Set(["search_posts_all", "get_posts_by_id", "get_posts_by
 
 type CostBasis = "conservative" | "owned"
 
-interface ReadCost {
+export interface ReadCost {
   readonly posts: number
   readonly owned: number
   readonly users: number
@@ -102,7 +102,8 @@ const payloadOf = (value: unknown, depth = 0): Record<string, unknown> | undefin
   return undefined
 }
 
-const payload = (result: Result) => {
+/** X's answer, `{ data, includes, meta }`, from a result's structured content or its JSON text; undefined for anything else. */
+export const payload = (result: Result) => {
   const fromOutput = payloadOf(result.output)
   if (fromOutput) return fromOutput
   const content = result.content

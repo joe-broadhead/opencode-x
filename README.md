@@ -122,6 +122,15 @@ Two skills teach the model to use X well:
 - `x-write`: whom each change reaches, saying so before the call, drafting and publishing an Article, and how `access`
   decides whether a change runs, asks or is refused.
 
+### Memory's events
+
+`x_events_list` is for Memory's collector, not for answering questions: it lists, since a cursor, your mentions and new
+bookmarks (and your home timeline if you turn it on) as normalised events, oldest first, each with its author's handle
+and link. Every X call is billed, so one call makes at most `events.maxCalls` reads (4 by default, your account's
+lookup included) and says there is more when it stops early; a collector picks up the rest on its next call. It is
+this plugin's side of the shared `events_list` source contract
+([configuration](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/configuration.md#events-list)).
+
 ### Scripts
 
 A script or a cron job can call X's tools with no model, through `opencode api`. It runs as a session and its agent,
@@ -215,6 +224,8 @@ Set options with the object form of the plugin entry:
 | `access` | `all`, `ask-changes` or `read-only` | `all` | The generated permission block: everything, reads with changes asking, or reads only. |
 | `ownsXApp` | `true` or `false` | `false` | Use the $0.001 Owned Read price for the account's own posts, mentions, bookmarks, followers and lists. Set it only if that account owns the developer app. |
 | `allowUntestedHost` | `true` or `false` | `false` | Starts on an OpenCode version outside `>=2.2.3 <2.3.0`, with a warning in status. |
+| `events.feeds` | `mentions`, `bookmarks`, `timeline` | `["mentions", "bookmarks"]` | What `x_events_list` lists for Memory. Your home timeline is the busiest and dearest feed, so it is listed only when you name it. |
+| `events.maxCalls` | `2`–`50` | `4` | The most billed X reads one `x_events_list` call makes, your account's lookup included. |
 
 `{env:NAME}` is substituted when OpenCode loads the config, so the secret can stay in your environment instead of the
 file. An unset variable arrives as an empty string, which the plugin rejects with `OPTIONS_INVALID`. A variable
@@ -282,6 +293,13 @@ Run `/x-status` first. Its last line is the next step.
 | A skill seems ignored, and status names a skill to rename or move | A skill of yours with the same id, such as `x`, replaces the plugin's. Rename or move it. |
 | `/x` is missing | The plugin did not start. Run `/plugins` to see the error. |
 | `OPTIONS_INVALID` | An option is unknown or has a wrong value. The message names the option and the accepted values. |
+| `INPUT_INVALID` | `x_events_list`: the input is not the contract's, such as a `limit` outside 1 to 500. | Pass the inputs as its schema describes them. |
+| `SOURCE_UNKNOWN` | `x_events_list`: `source` is not `x`. | Leave `source` out, or pass `x`. |
+| `ACCOUNT_UNKNOWN` | `x_events_list`: `account` is not the signed-in handle. | Leave `account` out, or pass the handle the message names. |
+| `CURSOR_INVALID` | `x_events_list`: the cursor is malformed, another source's, or another account's. | Call without a cursor to start again. |
+| `UPSTREAM_ERROR` | `x_events_list`: X refused one of its reads, such as a rate limit. The message holds the first line of X's text, at most 300 characters, with tokens and URL query strings removed. | Run `/x-status`, then call again with the same cursor. |
+| `UPSTREAM_UNREADABLE` | `x_events_list`: one of its reads answered in a shape it does not read. | Call the read the message names directly, and run `/x-status`. |
+| `TOOL_UNAVAILABLE` | `x_events_list`: OpenCode does not list a read it needs. While X cannot be called, it gives status's own code and next step instead. | Wait a few seconds, then run `/x-status` and follow its next step. |
 | `HOST_UNTESTED` | Your OpenCode is outside `>=2.2.3 <2.3.0`, so the plugin did not start. Use OpenCode `>=2.2.3 <2.3.0`, or set `"allowUntestedHost": true` to run anyway. |
 | `STATUS_UNAVAILABLE` | The status could not be read, or the plugin is not running. Follow the next step in the message. |
 | `SKILLS_INVALID` | A skill file in the package is missing or broken. Reinstall the plugin. |

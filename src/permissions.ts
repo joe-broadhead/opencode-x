@@ -1,5 +1,6 @@
 import type { Plugin } from "@opencode/plugin"
 import { errorText, SERVER_NAME } from "./constants.js"
+import { EVENTS_LIST } from "./host/events-list.js"
 import { reasonOf } from "./redact.js"
 import { READ_TOOLS } from "./x-tools.js"
 
@@ -25,8 +26,8 @@ export const defaultRules = (access: Access = "all"): Rule[] =>
   access === "all"
     ? [rule("*", "allow")]
     : access === "ask-changes"
-      ? [rule("*", "ask"), ...READ_TOOLS.map((tool) => rule(tool, "allow"))]
-      : [rule("*", "deny"), ...READ_TOOLS.map((tool) => rule(tool, "allow"))]
+      ? [rule("*", "ask"), ...[...READ_TOOLS, EVENTS_LIST].map((tool) => rule(tool, "allow"))]
+      : [rule("*", "deny"), ...[...READ_TOOLS, EVENTS_LIST].map((tool) => rule(tool, "allow"))]
 
 const same = (a: Rule, b: Rule) => a.action === b.action && a.resource === b.resource && a.effect === b.effect
 const BASE_ALLOW: Rule = { action: "*", resource: "*", effect: "allow" }

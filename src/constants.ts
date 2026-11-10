@@ -44,7 +44,8 @@ export const TESTED_HOSTS: readonly string[] = ["2.2.3", "2.2.4", "2.2.5", "2.2.
  * `docs/configuration.md` name each one, and a test fails when a code raised in `src` is in neither table, or when a
  * table entry nothing raises is left behind. `errorText` and `xError` take only these, so a typo fails `tsc`.
  */
-type PluginCode =
+export type PluginCode =
+  | "ACCOUNT_UNKNOWN"
   | "CLIENT_ID_INVALID"
   | "CLIENT_ID_MISSING"
   | "HOST_UNTESTED"
@@ -55,8 +56,15 @@ type PluginCode =
   | "STATUS_UNAVAILABLE"
   | "X_BUDGET_EXCEEDED"
   | "X_PRICE_UNKNOWN"
+  | "CURSOR_INVALID"
+  | "INPUT_INVALID"
+  | "SOURCE_UNKNOWN"
+  | "TOOL_UNAVAILABLE"
+  | "UPSTREAM_ERROR"
+  | "UPSTREAM_UNREADABLE"
 
 export const PLUGIN_CODES: readonly PluginCode[] = [
+  "ACCOUNT_UNKNOWN",
   "CLIENT_ID_INVALID",
   "CLIENT_ID_MISSING",
   "HOST_UNTESTED",
@@ -67,6 +75,12 @@ export const PLUGIN_CODES: readonly PluginCode[] = [
   "STATUS_UNAVAILABLE",
   "X_BUDGET_EXCEEDED",
   "X_PRICE_UNKNOWN",
+  "CURSOR_INVALID",
+  "INPUT_INVALID",
+  "SOURCE_UNKNOWN",
+  "TOOL_UNAVAILABLE",
+  "UPSTREAM_ERROR",
+  "UPSTREAM_UNREADABLE",
 ]
 
 /**
@@ -106,5 +120,5 @@ export const RPC_CODES: readonly RpcCode[] = [
 export const errorText = (code: PluginCode, message: string, nextStep: string) => `${code}: ${message} Next step: ${nextStep}`
 
 export function xError(code: PluginCode, message: string, nextStep: string) {
-  return Object.assign(new Error(errorText(code, message, nextStep)), { code, nextStep })
+  return Object.assign(new Error(errorText(code, message, nextStep)), { code, detail: message, nextStep })
 }

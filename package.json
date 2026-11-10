@@ -1,7 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-x",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.0.1",
   "description": "Unofficial OpenCode plugin for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, post, and draft long-form Articles, through X's official MCP server",
   "keywords": [
     "opencode",
@@ -397,6 +396,12 @@
       {
         "name": "x.search_users",
         "permission": "x_search_users",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "x.events_list",
+        "permission": "x_events_list",
         "effect": "allow",
         "readOnly": true
       },
