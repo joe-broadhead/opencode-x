@@ -87,7 +87,7 @@ function parseArgs(argv) {
     else if (arg === "--native-run") options.nativeRun = argv[++i]
     else die(`unknown argument ${arg}`)
   }
-  if (!options.ciSha) die("--ci-sha is required: the full sha of the head that CI passed")
+  if (!options.ciSha) die("--ci-sha is required: the full sha of the master head whose CI passed")
   if (!/^[0-9a-f]{40}$/.test(options.ciSha)) die("--ci-sha must be a full 40-character sha")
   if (options.nativeRun !== undefined && !/^\d+$/.test(options.nativeRun)) die("--native-run must be a run id")
   return options
@@ -202,7 +202,7 @@ function main() {
   git(["tag", "-s", "-a", TAG, "-m", TAG, commit])
   console.log(`release commit ${commit} on parent ${head}`)
   console.log(`tag ${TAG} is annotated and signed on it${native ? `; manifest from native run ${options.nativeRun}` : ""}`)
-  console.log(`staged: ${staged.length} paths; nothing is pushed. Push the tag only, after release approval: git push origin ${TAG}`)
+  console.log(`staged: ${staged.length} paths; nothing is pushed. Push the tag only, after review: git push origin ${TAG}`)
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main()
