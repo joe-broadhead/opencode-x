@@ -25,6 +25,9 @@ All notable changes to this project are documented in this file. It follows
   actual cost line and a structured `cost`. The model path is unchanged: ten results, no pagination, the cost line.
 - `get_posts_by_ids` with `post.fields=article` returns an X Article's full text in `article.plain_text`; the `x`
   skill and the scripting guide say so.
+- Jelly's settings declare `access` (`all`, `ask-changes` or `read-only`, default `"all"`), the option the generated
+  permission block reads. `x_events_list` is allowed under every access value, as a read that never asks, and the
+  Jelly declaration counts it.
 
 ### Added
 

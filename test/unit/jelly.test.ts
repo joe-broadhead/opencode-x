@@ -53,7 +53,12 @@ describe("the jelly declaration", () => {
     ])
     expect(jelly.rpc).toEqual([])
     expect(jelly.views).toEqual([])
-    expect(jelly.contributes).toEqual({ homeFeeds: [], homeWidgets: [], workKinds: [], settings: [] })
+    expect(jelly.contributes).toEqual({
+      homeFeeds: [],
+      homeWidgets: [],
+      workKinds: [],
+      settings: [{ key: "access", label: "Access", type: "string", default: "all", description: "all, ask-changes or read-only. Generates default rules for agents with a base allow rule." }],
+    })
   })
 })
 
