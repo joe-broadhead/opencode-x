@@ -1,6 +1,8 @@
 // Fails when a forbidden API, legacy surface, private host reference or machine-local path appears
 // in src/, test/, scripts/ or dist/. The list is the "Forbidden in this repository" list in AGENTS.md. APIs that the
-// public @opencode/plugin 2.2.3 types already reject fail the typecheck instead.
+// public @opencode/plugin 2.2.3 types already reject fail the typecheck instead. The family's internal working-folder
+// path is refused in every git-tracked file, so a note in a doc or a skill is caught too.
+import { execFileSync } from "node:child_process"
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { extname, join, relative, sep } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -31,6 +33,36 @@ const RULES = [
   { id: "absolute-path", pattern: /\/Users\/[^/\s"'`]+\/|\/home\/[^/\s"'`]+\/|\/(?:private\/)?var\/folders\/|(?<![\w.:/-])\/tmp\/|[A-Za-z]:\\\\?Users\\/, why: "machine-local home and temp paths do not belong in the repository; make temp folders with mkdtemp under realpathSync(\"/tmp\"), or use a relative path" },
 ]
 
+// The family's working folders never reach a public file. This rule reads every git-tracked file, so a note in a doc,
+// a skill or a fixture is caught as well as code. AGENTS.md and this script name the folder on purpose and are skipped.
+const WORKING_FOLDER = /opencode-release\//
+const WORKING_FOLDER_SKIP = new Set(["AGENTS.md", "scripts/check-forbidden.mjs"])
+
+/** Every git-tracked path under the root. Outside a git checkout, such as a packed tarball, there are none to read. */
+function trackedFiles() {
+  try {
+    return execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).split("\0").filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+/** Lines that name a working folder, in any tracked file. */
+function workingFolderFindings() {
+  const found = []
+  for (const path of trackedFiles()) {
+    if (WORKING_FOLDER_SKIP.has(path)) continue
+    const file = join(root, path)
+    if (!existsSync(file)) continue
+    const buffer = readFileSync(file)
+    if (buffer.includes(0)) continue
+    buffer.toString("utf8").split(/\r?\n/).forEach((text, index) => {
+      if (WORKING_FOLDER.test(text)) found.push({ path, line: index + 1, id: "working-folder", why: "the family's internal working folders must not appear in a public file", text })
+    })
+  }
+  return found
+}
+
 const findings = []
 for (const top of ROOTS) {
   const dir = join(root, top)
@@ -54,6 +86,7 @@ for (const top of ROOTS) {
     }
   }
 }
+findings.push(...workingFolderFindings())
 
 for (const { path, line, id, why, text } of findings) {
   console.error(`${path}${line ? `:${line}` : ""}: [${id}] ${why}${text ? `\n    ${text.trim().slice(0, 160)}` : ""}`)

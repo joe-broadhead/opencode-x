@@ -115,6 +115,7 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   because no one can answer it, and touches nothing else;
 - references to private host source or host checkouts;
 - machine-local home and temp paths;
+- the family's internal working-folder path in any git-tracked file, this file and the check itself excepted;
 - `.tsx` or `.jsx` files in `dist/`.
 
 The pack test also rejects anything in `dist/` other than the two bundles, any relative, dynamic or `require` import in
