@@ -79,7 +79,7 @@ describe("docs", () => {
 
   test("the README names no version of the plugin, not even in an example, except the install spec", () => {
     // D19: the README's install line names the release tag, and nothing else may name a version.
-    expect(text("README.md").replace("opencode-x#v0.0.0", "")).not.toMatch(/opencode-x@\d|\bv\d+\.\d+\.\d+\b|(?<![\d.])0\.\d+\.\d+(?![\d.])/)
+    expect(text("README.md").split("opencode-x#v0.0.0").join("")).not.toMatch(/opencode-x@\d|\bv\d+\.\d+\.\d+\b|(?<![\d.])0\.\d+\.\d+(?![\d.])/)
   })
 
   test("the README and the configuration guide give the narrowing recipes, and no allow for any write", () => {
@@ -222,7 +222,7 @@ describe("docs", () => {
     const uninstall = /## Uninstall(.*?)## Links/.exec(text("README.md"))?.[1] ?? ""
     const logout = uninstall.indexOf("opencode mcp logout x")
     const list = uninstall.indexOf("opencode auth list")
-    const remove = uninstall.indexOf("opencode plugin remove @joe-broadhead/opencode-x")
+    const remove = uninstall.indexOf("opencode plugin remove github:joe-broadhead/opencode-x#v0.0.0")
     expect(logout).toBeGreaterThanOrEqual(0)
     expect(list).toBeGreaterThan(logout)
     expect(remove).toBeGreaterThan(list)

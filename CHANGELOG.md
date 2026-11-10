@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file. It follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.0.0] - 2026-11-10
+<!-- kit-release: the GitHub release v0.0.0 -->
 
 ### Changed
 
