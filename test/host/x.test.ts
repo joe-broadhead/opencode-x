@@ -253,10 +253,11 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     const sessionID = await scriptSession(host)
     const described = await rpcDescribe(host, sessionID)
     const methods = described.methods as { name: string; class: string; permission?: string }[]
-    expect(methods).toHaveLength(100)
+    // The 100 known tools, and the plugin's own events_list, a read.
+    expect(methods).toHaveLength(101)
     const counts: Record<string, number> = {}
     for (const method of methods) counts[method.class!] = (counts[method.class!] ?? 0) + 1
-    expect(counts).toEqual({ read: 57, write: 8, send: 1, destructive: 34 })
+    expect(counts).toEqual({ read: 58, write: 8, send: 1, destructive: 34 })
     const permission = Object.fromEntries(methods.map((method) => [method.name, method.permission]))
     expect(permission.search_posts_all).toBe("allow")
     expect(permission.create_users_bookmark).toBe("ask")
@@ -868,7 +869,7 @@ describe("a boot with an existing X sign-in", () => {
       await until("the client registers the server", async () => (await first!.client.mcp.list({ location: first!.location })).data.some((server) => server.name === "x"))
       await signIn(first)
       await until("the sign-in connects", async () => (await first!.client.mcp.list({ location: first!.location })).data.find((server) => server.name === "x")?.status.status === "connected")
-      expect(await xTools(first)).toHaveLength(15)
+      expect(await xTools(first)).toHaveLength(16)
       await first.close()
       first = undefined
 
