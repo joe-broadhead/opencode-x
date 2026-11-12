@@ -55,8 +55,8 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   annotations, and `PARAMETERS` comes from its input schemas: reconciling is a change to that file,
   `test/unit/x-live-tools.json`, `jelly.tools` and the skills, which `npm run drift` guides. `src/constants.ts` has no
   imports at all: `scripts/check.mjs` loads it with Node's type stripping.
-- **Every call is billed.** Docs, skills, status and the namespace text say so plainly. The skills keep result counts
-  small, never page a search in a loop, and say when a wide search will cost money. The plugin cannot cap the bill.
+- **Every call is billed.** Docs, skills, status and the namespace text say so plainly. The skills let the model fetch
+  what the question needs, and every answer that read ends with its actual cost line. The plugin does not cap reads.
 - **X content is adversarial and personal.** The namespace text and the skills treat every post, bio and Article as
   untrusted data, never instructions, and never let one choose a tool, a recipient or a change. They never infer
   health, financial status, politics, race or ethnicity, religion, sex life or sexual orientation, trade-union
@@ -79,8 +79,8 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   `scripts/check-copies.mjs` holds it, and the declaration kit `test/support/jelly-kit.ts`, equal to the copy every
   plugin carries. Its methods are every known tool, from `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS` and `DENY_TOOLS`,
   each with its class, and never an unknown tool. A rule must allow a method before a script can run it: an `ask` is
-  refused, and a saved "Always allow" is not a grant. The model path keeps its ten-result cap; the RPC's `shapeInput`
-  allows X's 100 and pagination, and `shapeResult` always appends the cost line and counts the session's spend; only an
+  refused, and a saved "Always allow" is not a grant. Neither path caps a read: the model's arguments and the RPC's
+  `shapeInput` pass page size and pagination to X unchanged, and `shapeResult` always appends the cost line and counts the session's spend; only an
   opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` refuses. Keep the RPC id `x.posts.tools` and its method names stable: scripts call them by name.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
   `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`.

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { clampRead, costLine, costOf, mergeCosts, registerBilling } from "../../src/billing.js"
+import { costLine, costOf, mergeCosts, registerBilling } from "../../src/billing.js"
 
 type Handler = (event: Record<string, unknown>) => void
 
@@ -24,21 +24,24 @@ const search = (posts: number, users = posts) => ({
   meta: { result_count: posts },
 })
 
-describe("the read cap", () => {
-  test("clamps a page to ten, sets an absent page size, and drops a next-page token", () => {
-    const input: Record<string, unknown> = { query: "coffee", max_results: 50, next_token: "n", pagination_token: "p", expansions: "author_id" }
-    clampRead("x_search_posts_all", input)
-    expect(input).toEqual({ query: "coffee", max_results: 10, expansions: "author_id" })
+describe("no read cap on the model path", () => {
+  test("a read's page size and next-page token reach X unchanged, and X's next-page token reaches the model", async () => {
+    const editor = hookEditor()
+    const stop = await registerBilling(editor as never, () => true)
+    const before = editor.handlers.get("execute.before")!
+    const after = editor.handlers.get("execute.after")!
+    const input: Record<string, unknown> = { query: "coffee", max_results: 100, next_token: "n", pagination_token: "p", expansions: "author_id" }
+    before({ sessionID: "s9", messageID: "m9", tool: "x_search_posts_all", input })
+    expect(input).toEqual({ query: "coffee", max_results: 100, next_token: "n", pagination_token: "p", expansions: "author_id" })
     const absent: Record<string, unknown> = { query: "coffee" }
-    clampRead("x_search_posts_all", absent)
-    expect(absent.max_results).toBe(10)
-    const small: Record<string, unknown> = { query: "coffee", max_results: 3 }
-    clampRead("x_search_posts_all", small)
-    expect(small.max_results).toBe(3)
-    // A tool without a page size is left alone.
-    const user: Record<string, unknown> = { username: "example" }
-    clampRead("x_get_users_by_username", user)
-    expect(user).toEqual({ username: "example" })
+    before({ sessionID: "s9", messageID: "m9", tool: "x_search_posts_all", input: absent })
+    expect(absent).toEqual({ query: "coffee" })
+    const answer = { ...search(100), meta: { result_count: 100, next_token: "page-2" } }
+    const result = { content: content(answer), output: answer } as Record<string, unknown>
+    after({ sessionID: "s9", messageID: "m9", tool: "x_search_posts_all", status: "completed", result })
+    expect(result.output).toMatchObject({ meta: { next_token: "page-2" } })
+    expect(result.content).toEqual([...content(answer), { type: "text", text: "Cost: at most 100 posts ($0.50) + 100 authors ($1.00) = $1.50." }])
+    await stop()
   })
 })
 
@@ -75,7 +78,7 @@ describe("the cost line", () => {
 
     const direct: Record<string, unknown> = { query: "coffee", max_results: 50, next_token: "n" }
     before({ sessionID: "s1", messageID: "m1", tool: "x_search_posts_all", input: direct })
-    expect(direct).toMatchObject({ max_results: 10 })
+    expect(direct).toEqual({ query: "coffee", max_results: 50, next_token: "n" })
     const result = { content: [{ type: "text", text: "called" }], output: search(10) } as Record<string, unknown>
     after({ sessionID: "s1", messageID: "m1", tool: "x_search_posts_all", status: "completed", result })
     expect(result.content).toEqual([{ type: "text", text: "called" }, { type: "text", text: "Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15." }])

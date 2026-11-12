@@ -143,7 +143,8 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
         if (name === "search_posts_all" && String(args.query ?? "") === "cost") {
           const data = Array.from({ length: 10 }, (_, index) => ({ id: String(index), author_id: String(index), created_at: "2026-11-06T00:00:00Z" }))
           const users = Array.from({ length: 10 }, (_, index) => ({ id: String(index), username: `user${index}` }))
-          return reply({ content: [{ type: "text", text: JSON.stringify({ data, includes: { users }, meta: { result_count: 10 } }) }], structuredContent: { data, includes: { users }, meta: { result_count: 10 } } })
+          const meta = { result_count: 10, next_token: "cost-page-2" }
+          return reply({ content: [{ type: "text", text: JSON.stringify({ data, includes: { users }, meta }) }], structuredContent: { data, includes: { users }, meta } })
         }
         if (String(args.query ?? "").startsWith("fail")) return reply({ content: [{ type: "text", text: UPSTREAM_FAILURE }], isError: true })
         if (String(args.query ?? "").startsWith("text")) return reply({ content: [{ type: "text", text: `text from ${name}` }] })

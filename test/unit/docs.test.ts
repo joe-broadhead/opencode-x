@@ -6,7 +6,7 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules } from "../../src/permissions.js"
-import { PLUGIN_CODES, RPC_CODES, TESTED_HOSTS } from "../../src/constants.js"
+import { NAMESPACE_DESCRIPTION, PLUGIN_CODES, RPC_CODES, TESTED_HOSTS } from "../../src/constants.js"
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url))
 // Everything a user or the model reads about the current release.
@@ -25,6 +25,32 @@ const text = (file: string) => readFileSync(join(ROOT, file), "utf8").replace(/\
 const CODES: readonly string[] = PLUGIN_CODES
 // The tools RPC's budget code names the vendor on purpose: it is the plugin's own, not a shared host code.
 const PREFIXED = ["X_BUDGET_EXCEEDED", "X_PRICE_UNKNOWN"]
+
+// The owner removed every read limit: no text the model or a user reads may bring back a page, result-count or
+// per-answer spend cap.
+const REMOVED_READ_LIMITS = [
+  "one page of at most ten",
+  "one page of ten",
+  "one small page",
+  "`max_results` at most 10",
+  "about $0.20",
+  "keep result counts small",
+  "result count small",
+  "next-page token unless",
+  "one widening",
+  "widen once",
+  "ten-result cap",
+  "read cap",
+]
+
+describe("no read limits in the text", () => {
+  test("the skills, the namespace description, README, docs, SECURITY and AGENTS name no page, count or spend cap", () => {
+    const sources: Record<string, string> = { NAMESPACE_DESCRIPTION }
+    for (const path of ["skills/x/SKILL.md", "skills/x-write/SKILL.md", "README.md", "SECURITY.md", "AGENTS.md", "docs/configuration.md", "docs/scripting.md", "docs/architecture.md"]) sources[path] = text(path).replace(/\s+/g, " ")
+    const found = Object.entries(sources).flatMap(([where, body]) => REMOVED_READ_LIMITS.filter((phrase) => body.toLowerCase().includes(phrase)).map((phrase) => `${where}: ${phrase}`))
+    expect(found).toEqual([])
+  })
+})
 
 describe("docs", () => {
   test.each(FILES)("%s states no count of read, write or declared tools that could go stale", (file) => {

@@ -54,39 +54,6 @@ const money = (value: number) => {
   return `$${exact.endsWith("0") ? value.toFixed(2) : exact}`
 }
 
-/**
- * Caps one billed read before it runs: a page of at most ten, and no next-page token. An absent page size is set to
- * ten, because X's default page can be 100. Expansions are left alone: only the answer knows which it needs, and the
- * skill asks for the ones the answer uses.
- */
-export function clampRead(tool: string, input: unknown) {
-  const name = nameOf(tool)
-  const parameters = PARAMETERS[name]
-  if (parameters === undefined || !input || typeof input !== "object") return
-  const call = input as Record<string, unknown>
-  if (parameters.some((entry) => entry.split(":")[0] === "max_results")) {
-    const size = call.max_results
-    call.max_results = typeof size === "number" && Number.isFinite(size) && size >= 1 ? Math.min(Math.floor(size), 10) : 10
-  }
-  delete call.next_token
-  delete call.pagination_token
-}
-
-/**
- * The script path's shape for a billed read: X's own maximum page of 100, and the next-page token as the script wrote
- * it, because the user approved the script's code. The model path's ten-result cap and token strip are unchanged, in
- * `clampRead`.
- */
-export function widenRead(tool: string, input: unknown) {
-  const name = nameOf(tool)
-  const parameters = PARAMETERS[name]
-  if (parameters === undefined || !input || typeof input !== "object") return
-  const call = input as Record<string, unknown>
-  if (!parameters.some((entry) => entry.split(":")[0] === "max_results")) return
-  const size = call.max_results
-  if (typeof size !== "number" || !Number.isFinite(size)) return
-  call.max_results = Math.min(Math.max(1, Math.floor(size)), 100)
-}
 
 const payloadOf = (value: unknown, depth = 0): Record<string, unknown> | undefined => {
   if (depth > 3 || !value || typeof value !== "object") return undefined
@@ -171,8 +138,9 @@ const append = (result: Result, line: string) => {
 }
 
 /**
- * Registers the read cap and the cost line. `execute.before` can change an MCP call's arguments on the model path and
- * in Code Mode; `execute.after` can add the line to the result. Both were verified on 2.2.3, 2.2.4, 2.2.5 and 2.2.6. In Code
+ * Registers the cost line. A read's arguments pass to X unchanged, page size and next-page token included: X
+ * validates them against its own limits. `execute.before` marks a Code Mode program; `execute.after` adds the line to
+ * the result. Both were verified on 2.2.3, 2.2.4, 2.2.5 and 2.2.6. In Code
  * Mode the inner calls are summed and one line goes on the `execute` result the model reads.
  */
 export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">, managed: () => boolean, owns = ownsXApp) {
@@ -183,7 +151,6 @@ export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">
       pending.set(event.sessionID, [])
       return
     }
-    if (event.tool.startsWith("x_")) clampRead(event.tool, event.input)
   })
   const after = await tool.hook("execute.after", (event) => {
     if (!managed()) return

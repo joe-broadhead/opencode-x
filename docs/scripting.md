@@ -47,15 +47,15 @@ table, from [X's pay-per-usage pricing](https://docs.x.com/x-api/getting-started
 - **The script sees its cost.** Every result carries the actual cost line, computed from what X returned, and a
   structured `cost: { estimateUsd, actualUsd, sessionSpentUsd, dailySpentUsd }` beside the output. Where X reports no
   usage the actual is the estimate. Example: `Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15.`
-- **A script's page is not the model's page.** The model path keeps one page of ten; a script, whose code you approved,
-  may ask for up to X's maximum of 100 and for a next-page token. A loop is still a loop: 500 posts cost about $2.50,
+- **Pages pass through.** A script, like the model, sends the `max_results` and next-page token it chooses, unchanged;
+  X validates them against its own limits. A loop is still a loop: 500 posts cost about $2.50,
   and only an opt-in budget or X's app spending limit bounds it; with a budget set, the estimate refuses the call that
   would cross it.
 - **Bookmarks need a daily cadence.** `get_users_bookmarks` has no `since_id`; every poll re-reads the newest page, and
   X charges a resource once in a 24-hour UTC window. Poll once a day, not every few minutes; a 15-minute schedule buys
   the same page many times and gains nothing.
 - A script goes through the tools RPC, which calls the tool executor directly: no `execute.before` or `execute.after`
-  hook runs, so it is not capped by the model's ten and gets no hook cost line. The tools RPC's own estimate and
+  hook runs, so it gets no hook cost line. The tools RPC's own estimate and
   `shapeResult` cost line replace them.
 
 ## Rate limits

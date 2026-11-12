@@ -142,7 +142,7 @@ export function createXPlugin(seam: XSeam) {
           if (source && source.type !== "conflict") editor.namespace({ name: SERVER_NAME, description: NAMESPACE_DESCRIPTION })
           editor.add(eventsTool(events))
         })
-        // The read cap and the cost line, on the model path and in Code Mode. A conflicting server is not ours.
+        // The cost line, on the model path and in Code Mode; reads pass to X unchanged. A conflicting server is not ours.
         stopBilling = await registerBilling(ctx.tool, () => source === undefined || source.type !== "conflict", options.ownsXApp)
         await registerDefaultRules(ctx.agent, defaultRules(options.access), report("rules"))
         await registerSkills(ctx.skill, skills)

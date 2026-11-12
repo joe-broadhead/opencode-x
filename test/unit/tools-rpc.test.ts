@@ -699,10 +699,11 @@ describe("X's block", () => {
     expect(METHODS.find((method) => method.name === "users_id_block")?.class).toBe("destructive")
   })
 
-  test("a script's page reaches X's own maximum and keeps its next-page token; the model path's cap never applies", () => {
+  test("a script's page size and next-page token pass to X unchanged; X validates them against its own limits", () => {
     resetScriptSpend()
     expect(shapeInput("search_posts_all", { query: "q", max_results: 100, next_token: "t" }, sc)).toEqual({ query: "q", max_results: 100, next_token: "t" })
-    expect(shapeInput("search_posts_all", { query: "q", max_results: 500 }, sc)).toEqual({ query: "q", max_results: 100 })
+    expect(shapeInput("get_users_me_followers", { max_results: 1000 }, sc)).toEqual({ max_results: 1000 })
+    expect(shapeInput("search_posts_all", { query: "q", max_results: 500 }, sc)).toEqual({ query: "q", max_results: 500 })
     expect(shapeInput("search_posts_all", { query: "q" }, sc)).toEqual({ query: "q" })
     // A tool without a page size, and a write, are untouched.
     expect(shapeInput("create_users_bookmark", { id: "1" }, sc)).toEqual({ id: "1" })

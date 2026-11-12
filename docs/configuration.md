@@ -180,8 +180,8 @@ Each member runs `/connect` and chooses X, then presses `o` or Enter. Status sho
 
 **The consequences, plainly:**
 
-- Every member's calls bill the team's X developer account. A model read is capped to one page of at most ten posts
-  or users, one widening, about $0.20 an answer, and the answer ends with its actual cost line; a script has no
+- Every member's calls bill the team's X developer account. The plugin does not cap a model read; each answer that
+  read ends with its actual cost line, and a script has no
   budget unless the admin sets `scriptBudgetUsd` (per session) or `scriptDailyBudgetUsd` (per rolling 24 hours), so
   the app's spending limit in X's Developer Console is what caps many sessions.
 - The owned-reads discount (about $0.001 a post) applies only when the authenticated user owns the app. Other members'
@@ -610,7 +610,7 @@ events_list({ since?, cursor?, limit?, account?, source? })
   turned on later, listing starts 24 hours ago.
 - **Limits**: `limit` is 1 to 500 (100 by default), and a result stays within 900 KB.
 - **Permissions**: it asserts `x_events_list`, then each read goes through OpenCode's own executor with its own rules.
-  The model path's read cap does not apply to these reads; the call cap does. Every result carries
+  The call cap bounds these reads. Every result carries
   `trust: "untrusted"`.
 
 ## Errors
