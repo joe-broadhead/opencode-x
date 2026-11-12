@@ -142,7 +142,7 @@ To narrow what the model may do in X, use permission rules; see [Permissions](#p
 ### `events`
 
 - `feeds`: a non-empty list of `mentions`, `bookmarks` and `timeline`, each once. Default `["mentions", "bookmarks"]`.
-- `maxCalls`: a whole number from 2 to 50. Default 4.
+- `maxCalls`: a whole number of at least 2. Default 4.
 
 What `x_events_list` lists for Memory's collector, and the most billed X reads one call of it makes, the account
 lookup included. See [Events list](#events-list).

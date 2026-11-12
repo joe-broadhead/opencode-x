@@ -32,6 +32,8 @@ describe("parseOptions", () => {
     })
     // The home timeline is collected only when the person names it; the call cap is theirs to raise.
     expect(parseOptions({ events: { feeds: ["timeline", "mentions"], maxCalls: 10 } })).toEqual({ ok: true, options: { ...defaults, feeds: ["timeline", "mentions"], maxCalls: 10 } })
+    // No ceiling: a large call cap is the user's choice.
+    expect(parseOptions({ events: { maxCalls: 500 } })).toMatchObject({ ok: true, options: { maxCalls: 500 } })
     expect(parseOptions({ oauth: { redirect_uri: "https://example.com/callback", callback_port: 8767 } })).toMatchObject({ ok: true, options: { callbackPort: 8767 } })
   })
 
@@ -67,8 +69,8 @@ describe("parseOptions", () => {
     [{ events: { feeds: [] } }, "events.feeds", "Must be a non-empty list of mentions, bookmarks, timeline."],
     [{ events: { feeds: ["likes"] } }, "events.feeds", "Must be a non-empty list of mentions, bookmarks, timeline."],
     [{ events: { feeds: ["mentions", "mentions"] } }, "events.feeds", "Lists a feed more than once."],
-    [{ events: { maxCalls: 1 } }, "events.maxCalls", "Must be a whole number from 2 to 50."],
-    [{ events: { maxCalls: 2.5 } }, "events.maxCalls", "Must be a whole number from 2 to 50."],
+    [{ events: { maxCalls: 1 } }, "events.maxCalls", "Must be a whole number of at least 2."],
+    [{ events: { maxCalls: 2.5 } }, "events.maxCalls", "Must be a whole number of at least 2."],
   ])("rejects %j with the field, the message and a next step", (input, field, message) => {
     const parsed = parseOptions(input)
     expect(parsed.ok).toBe(false)

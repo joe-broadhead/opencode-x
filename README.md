@@ -233,7 +233,7 @@ Set options with the object form of the plugin entry:
 | `ownsXApp` | `true` or `false` | `false` | Use the $0.001 Owned Read price for the account's own posts, mentions, bookmarks, followers and lists. Set it only if that account owns the developer app. |
 | `allowUntestedHost` | `true` or `false` | `false` | Starts on an OpenCode version outside `>=2.2.3 <2.3.0`, with a warning in status. |
 | `events.feeds` | `mentions`, `bookmarks`, `timeline` | `["mentions", "bookmarks"]` | What `x_events_list` lists for Memory. Your home timeline is the busiest and dearest feed, so it is listed only when you name it. |
-| `events.maxCalls` | `2`–`50` | `4` | The most billed X reads one `x_events_list` call makes, your account's lookup included. |
+| `events.maxCalls` | `2` or more | `4` | The most billed X reads one `x_events_list` call makes, your account's lookup included. |
 
 `{env:NAME}` is substituted when OpenCode loads the config, so the secret can stay in your environment instead of the
 file. An unset variable arrives as an empty string, which the plugin rejects with `OPTIONS_INVALID`. A variable

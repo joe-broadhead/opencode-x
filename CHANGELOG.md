@@ -13,6 +13,7 @@ All notable changes to this project are documented in this file. It follows
   limits and the app's spending limit apply. A number you set works as before, the persisted daily ledger included,
   and any positive amount is accepted: the 1000 ceiling that treated a large value as a typo is gone. Every result
   still carries its actual cost line, and `/x-status` shows the estimated 24-hour spend, against a cap when one is set.
+- `events.maxCalls` has no upper bound. It still defaults to 4 and must be at least 2; the 50 ceiling is gone.
 
 ## [0.0.0] - 2026-11-10
 <!-- kit-release: the GitHub release v0.0.0 -->

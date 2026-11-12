@@ -49,7 +49,8 @@ export type Feed = (typeof FEEDS)[number]
 export const DEFAULT_FEEDS: readonly Feed[] = ["mentions", "bookmarks"]
 /** Reads per call, the owner's included: enough for the owner and one page of each default feed and one more. */
 export const DEFAULT_MAX_CALLS = 4
-export const MAX_CALLS = { min: 2, max: 50 } as const
+/** At least the owner lookup and one feed read; no ceiling: a larger number is the user's choice. */
+export const MAX_CALLS = { min: 2 } as const
 
 /** X's largest page; a bookmarks page is smaller, so a whole page always fits in one result. */
 const PAGE_SIZE = 100

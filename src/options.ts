@@ -164,8 +164,8 @@ export function parseOptions(input: unknown): ParsedOptions {
   }
   if (new Set(feeds).size !== feeds.length) return fail("events.feeds", "Lists a feed more than once.", "Remove the duplicate feed.")
   const maxCalls = events.maxCalls ?? DEFAULT_MAX_CALLS
-  if (typeof maxCalls !== "number" || !Number.isInteger(maxCalls) || maxCalls < MAX_CALLS.min || maxCalls > MAX_CALLS.max) {
-    return fail("events.maxCalls", `Must be a whole number from ${MAX_CALLS.min} to ${MAX_CALLS.max}.`, `Set it to the most billed X reads one collection call may make, ${DEFAULT_MAX_CALLS} by default.`)
+  if (typeof maxCalls !== "number" || !Number.isInteger(maxCalls) || maxCalls < MAX_CALLS.min) {
+    return fail("events.maxCalls", `Must be a whole number of at least ${MAX_CALLS.min}.`, `Set it to the most billed X reads one collection call may make, ${DEFAULT_MAX_CALLS} by default.`)
   }
 
   return {
