@@ -76,6 +76,11 @@ describe("buildStatus", () => {
     expect(formatStatus(status)).toContain("- Scripts: estimated spend, at most: $0.25 of $1.00 in the last 24 hours; $0.80 per session; X's Developer Console has the real bill")
   })
 
+  test("with no opt-in caps, the Scripts row gives the spend and says there is no budget", () => {
+    const status = buildStatus({ ...base, billing: { dailySpentUsd: 2.5, dailyBudgetUsd: null, sessionBudgetUsd: null } })
+    expect(formatStatus(status)).toContain("- Scripts: estimated spend, at most: $2.50 in the last 24 hours; no per-session budget; X's Developer Console has the real bill")
+  })
+
   test("without a sign-in label, the Account row says X's MCP reports no account name, and the RPC has no account", () => {
     const status = buildStatus(base)
     expect(status).not.toHaveProperty("account")

@@ -11,7 +11,7 @@ const call = (sessionID = "ses_test") => ({ sessionID, agent: "build", action: "
 const fresh = async (input: { sessionBudgetUsd?: number; dailyBudgetUsd?: number; ownsXApp?: boolean; store?: ReturnType<typeof storage> } = {}) => {
   resetScriptSpend()
   const store = input.store ?? storage()
-  await configureBilling({ storage: store, sessionBudgetUsd: input.sessionBudgetUsd ?? 1, dailyBudgetUsd: input.dailyBudgetUsd ?? 1, ownsXApp: input.ownsXApp })
+  await configureBilling({ storage: store, sessionBudgetUsd: input.sessionBudgetUsd, dailyBudgetUsd: input.dailyBudgetUsd, ownsXApp: input.ownsXApp })
   return store
 }
 
@@ -45,6 +45,25 @@ describe("the price table", () => {
 })
 
 describe("the budget", () => {
+  test("is off by default: no session or daily cap, and status says so", async () => {
+    const store = await fresh()
+    expect(billingStatus()).toEqual({ dailySpentUsd: 0, dailyBudgetUsd: null, sessionBudgetUsd: null })
+    // $1.50 in one session, then a reload and another session: nothing refuses, and the ledger still counts it.
+    for (let read = 0; read < 30; read++) {
+      shapeInput("search_posts_all", { query: "q", max_results: 10 }, call("ses_a"))
+      shapeResult("search_posts_all", { output: { data: Array.from({ length: 10 }, (_, i) => ({ id: String(i) })) }, text: "" }, call("ses_a"))
+    }
+    await flushBilling()
+    await configureBilling({ storage: store })
+    expect(() => shapeInput("search_posts_all", { query: "q", max_results: 100 }, call("ses_b"))).not.toThrow()
+    expect(billingStatus().dailySpentUsd).toBe(1.5)
+  })
+
+  test("a large opt-in budget is honoured as set", async () => {
+    await fresh({ sessionBudgetUsd: 5_000, dailyBudgetUsd: 25_000 })
+    expect(billingStatus()).toMatchObject({ sessionBudgetUsd: 5_000, dailyBudgetUsd: 25_000 })
+  })
+
   test("refuses an estimate above the remaining session budget, before dispatch", async () => {
     await fresh({ sessionBudgetUsd: 0.04 })
     let code: string | undefined

@@ -59,7 +59,7 @@ export interface StatusFacts {
   /** The plugin's own skills, and the skills OpenCode lists; the listed one wins when both have an id. */
   readonly skills?: { readonly own: readonly SkillPath[]; readonly listed: readonly SkillPath[] }
   /** The script budget: what the rolling 24 hours have spent, and both caps. */
-  readonly billing?: { readonly dailySpentUsd: number; readonly dailyBudgetUsd: number; readonly sessionBudgetUsd: number }
+  readonly billing?: { readonly dailySpentUsd: number; readonly dailyBudgetUsd: number | null; readonly sessionBudgetUsd: number | null }
 }
 
 /**
@@ -105,7 +105,7 @@ export interface Status {
   /** Agents where a new X tool would run without asking; empty when there are none. */
   readonly unguardedAgents: readonly string[]
   /** The script budget: what the rolling 24 hours have spent, and both caps. */
-  readonly billing?: { readonly dailySpentUsd: number; readonly dailyBudgetUsd: number; readonly sessionBudgetUsd: number }
+  readonly billing?: { readonly dailySpentUsd: number; readonly dailyBudgetUsd: number | null; readonly sessionBudgetUsd: number | null }
   /** The generated permission block's access value. */
   readonly access?: Access
   /** The plugin's skills that OpenCode loads from another file of the same id instead. */
@@ -304,9 +304,11 @@ function accessText({ problems, unguardedAgents, access }: Status) {
   return `${POSTURE(access ?? "all")}; ${rules}`
 }
 
-/** The script budget row: the rolling 24-hour spend against the daily cap, and the per-session cap. */
+/** The script spend row: the rolling 24-hour spend, and the opt-in daily and per-session caps when set. */
 function scriptsText(billing: NonNullable<Status["billing"]>) {
-  return `estimated spend, at most: $${billing.dailySpentUsd.toFixed(2)} of $${billing.dailyBudgetUsd.toFixed(2)} in the last 24 hours; $${billing.sessionBudgetUsd.toFixed(2)} per session; X's Developer Console has the real bill`
+  const daily = billing.dailyBudgetUsd === null ? "" : ` of $${billing.dailyBudgetUsd.toFixed(2)}`
+  const session = billing.sessionBudgetUsd === null ? "no per-session budget" : `$${billing.sessionBudgetUsd.toFixed(2)} per session`
+  return `estimated spend, at most: $${billing.dailySpentUsd.toFixed(2)}${daily} in the last 24 hours; ${session}; X's Developer Console has the real bill`
 }
 
 /** The OpenCode row: the version, whether it is tested, the supported range, then any setup problems. */
@@ -471,7 +473,7 @@ export const StatusRpc = {
           billing: {
             type: "object",
             required: ["dailySpentUsd", "dailyBudgetUsd", "sessionBudgetUsd"],
-            properties: { dailySpentUsd: { type: "number" }, dailyBudgetUsd: { type: "number" }, sessionBudgetUsd: { type: "number" } },
+            properties: { dailySpentUsd: { type: "number" }, dailyBudgetUsd: { type: ["number", "null"] }, sessionBudgetUsd: { type: ["number", "null"] } },
           },
           shadowedSkills: {
             type: "array",

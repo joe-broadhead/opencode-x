@@ -72,9 +72,6 @@ export function clampRead(tool: string, input: unknown) {
   delete call.pagination_token
 }
 
-/** The per-session spend budget a script gets, in USD, until the plugin's `scriptBudgetUsd` option sets it. */
-export const DEFAULT_SCRIPT_BUDGET_USD = 1
-
 /**
  * The script path's shape for a billed read: X's own maximum page of 100, and the next-page token as the script wrote
  * it, because the user approved the script's code. The model path's ten-result cap and token strip are unchanged, in
@@ -216,9 +213,6 @@ export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">
   }
 }
 
-/** The daily cap a script gets, across sessions and reloads, in USD, until the plugin's option sets it. */
-export const DEFAULT_SCRIPT_DAILY_BUDGET_USD = 1
-
 /** The rolling window of the daily ledger: 24 hours. */
 const DAY_MS = 24 * 60 * 60 * 1000
 const LEDGER_KEY = "billing.ledger.v1"
@@ -227,8 +221,9 @@ type LedgerEntry = { readonly at: number; readonly usd: number }
 type LedgerStorage = { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
 
 let storage: LedgerStorage | undefined
-let sessionBudgetUsd = DEFAULT_SCRIPT_BUDGET_USD
-let dailyBudgetUsd = DEFAULT_SCRIPT_DAILY_BUDGET_USD
+// Both are opt-in: undefined means no budget, and nothing here refuses a script call.
+let sessionBudgetUsd: number | undefined
+let dailyBudgetUsd: number | undefined
 let ledger: LedgerEntry[] = []
 let writing = Promise.resolve()
 const scriptSpent = new Map<string, number>()
@@ -238,8 +233,8 @@ let ownsXApp = false
 
 const prune = (entries: LedgerEntry[], now = Date.now()) => entries.filter((entry) => entry.at > now - DAY_MS && entry.usd > 0)
 
-/** Loads the persisted ledger and sets both caps. Called once at setup, before any call. */
-export async function configureBilling(input: { readonly storage?: LedgerStorage; readonly sessionBudgetUsd: number; readonly dailyBudgetUsd: number; readonly ownsXApp?: boolean }) {
+/** Loads the persisted ledger and sets both opt-in caps (absent: none). Called once at setup, before any call. */
+export async function configureBilling(input: { readonly storage?: LedgerStorage; readonly sessionBudgetUsd?: number | undefined; readonly dailyBudgetUsd?: number | undefined; readonly ownsXApp?: boolean }) {
   storage = input.storage
   sessionBudgetUsd = input.sessionBudgetUsd
   dailyBudgetUsd = input.dailyBudgetUsd
@@ -249,9 +244,9 @@ export async function configureBilling(input: { readonly storage?: LedgerStorage
   ledger = prune(entries.flatMap((entry) => (entry && typeof entry === "object" && typeof (entry as LedgerEntry).at === "number" && typeof (entry as LedgerEntry).usd === "number" ? [entry as LedgerEntry] : [])))
 }
 
-/** The spend in the rolling 24-hour window, and both caps, for status. */
+/** The spend in the rolling 24-hour window, and both caps (null when not set), for status. */
 export function billingStatus() {
-  return { dailySpentUsd: dailySpent(), dailyBudgetUsd, sessionBudgetUsd }
+  return { dailySpentUsd: dailySpent(), dailyBudgetUsd: dailyBudgetUsd ?? null, sessionBudgetUsd: sessionBudgetUsd ?? null }
 }
 
 const dailySpent = (now = Date.now()) => {
@@ -296,10 +291,10 @@ export class PriceUnknownError extends Error {
 export class BudgetExceededError extends Error {
   readonly estimateUsd: number
   readonly sessionSpentUsd: number
-  readonly sessionBudgetUsd: number
+  readonly sessionBudgetUsd: number | undefined
   readonly dailySpentUsd: number
-  readonly dailyBudgetUsd: number
-  constructor(input: { estimateUsd: number; sessionSpentUsd: number; sessionBudgetUsd: number; dailySpentUsd: number; dailyBudgetUsd: number }) {
+  readonly dailyBudgetUsd: number | undefined
+  constructor(input: { estimateUsd: number; sessionSpentUsd: number; sessionBudgetUsd: number | undefined; dailySpentUsd: number; dailyBudgetUsd: number | undefined }) {
     super(`the call is estimated at $${input.estimateUsd.toFixed(2)}, above the remaining X budget`)
     this.estimateUsd = input.estimateUsd
     this.sessionSpentUsd = input.sessionSpentUsd
@@ -337,12 +332,13 @@ export function estimateCall(method: string, input: unknown, owns = ownsXApp): C
   return { method, pageSize, estimateUsd: exact(pageSize * rateFor(price, owns)), price }
 }
 
-/** Refuses before dispatch when the estimate does not fit the session or daily cap. */
+/** Refuses before dispatch when the estimate does not fit a cap the user set. With neither set, it never refuses. */
 export function assertBudget(sessionID: string, estimateUsd: number) {
+  if (sessionBudgetUsd === undefined && dailyBudgetUsd === undefined) return
   const sessionSpentUsd = scriptSpent.get(sessionID) ?? 0
   const dailySpentUsd = dailySpent()
-  const fitsSession = sessionSpentUsd + estimateUsd <= sessionBudgetUsd + 1e-9
-  const fitsDaily = dailySpentUsd + estimateUsd <= dailyBudgetUsd + 1e-9
+  const fitsSession = sessionBudgetUsd === undefined || sessionSpentUsd + estimateUsd <= sessionBudgetUsd + 1e-9
+  const fitsDaily = dailyBudgetUsd === undefined || dailySpentUsd + estimateUsd <= dailyBudgetUsd + 1e-9
   if (!fitsSession || !fitsDaily) throw new BudgetExceededError({ estimateUsd, sessionSpentUsd, sessionBudgetUsd, dailySpentUsd, dailyBudgetUsd })
 }
 

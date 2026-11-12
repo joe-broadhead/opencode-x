@@ -3,7 +3,7 @@ import { REDIRECT_URI, SCOPES } from "../../src/constants.js"
 import type { Feed } from "../../src/events.js"
 import { parseOptions } from "../../src/options.js"
 
-const defaults = { redirectUri: REDIRECT_URI, scopes: [...SCOPES], allowUntestedHost: false, scriptBudgetUsd: 1, scriptDailyBudgetUsd: 1, access: "all" as const, ownsXApp: false, feeds: ["mentions", "bookmarks"] as Feed[], maxCalls: 4 }
+const defaults = { redirectUri: REDIRECT_URI, scopes: [...SCOPES], allowUntestedHost: false, access: "all" as const, ownsXApp: false, feeds: ["mentions", "bookmarks"] as Feed[], maxCalls: 4 }
 
 describe("parseOptions", () => {
   test("defaults to the pinned callback and scopes, a tested host, and no client", () => {
@@ -11,6 +11,10 @@ describe("parseOptions", () => {
     expect(parseOptions({})).toEqual({ ok: true, options: defaults })
     expect(parseOptions({ scriptBudgetUsd: 2.5 })).toMatchObject({ ok: true, options: { scriptBudgetUsd: 2.5 } })
     expect(parseOptions({ scriptDailyBudgetUsd: 5 })).toMatchObject({ ok: true, options: { scriptDailyBudgetUsd: 5 } })
+    // Both script budgets are opt-in: unset or null is no budget, and a large number is the user's choice.
+    expect(parseOptions({})).toMatchObject({ ok: true, options: expect.not.objectContaining({ scriptBudgetUsd: expect.anything() }) })
+    expect(parseOptions({ scriptBudgetUsd: null, scriptDailyBudgetUsd: null })).toEqual({ ok: true, options: defaults })
+    expect(parseOptions({ scriptBudgetUsd: 5_000, scriptDailyBudgetUsd: 25_000 })).toMatchObject({ ok: true, options: { scriptBudgetUsd: 5_000, scriptDailyBudgetUsd: 25_000 } })
     expect(parseOptions({ access: "ask-changes" })).toMatchObject({ ok: true, options: { access: "ask-changes" } })
     expect(parseOptions({ ownsXApp: true })).toMatchObject({ ok: true, options: { ownsXApp: true } })
     expect(REDIRECT_URI).toBe("http://127.0.0.1:8766/callback")
@@ -24,7 +28,7 @@ describe("parseOptions", () => {
     })
     expect(parseOptions({ oauth: { redirect_uri: "http://localhost:8766/callback", scopes: ["tweet.read"] }, allowUntestedHost: true })).toEqual({
       ok: true,
-      options: { redirectUri: "http://localhost:8766/callback", scopes: ["tweet.read"], allowUntestedHost: true, scriptBudgetUsd: 1, scriptDailyBudgetUsd: 1, access: "all" as const, ownsXApp: false, feeds: ["mentions", "bookmarks"] as Feed[], maxCalls: 4 },
+      options: { redirectUri: "http://localhost:8766/callback", scopes: ["tweet.read"], allowUntestedHost: true, access: "all" as const, ownsXApp: false, feeds: ["mentions", "bookmarks"] as Feed[], maxCalls: 4 },
     })
     // The home timeline is collected only when the person names it; the call cap is theirs to raise.
     expect(parseOptions({ events: { feeds: ["timeline", "mentions"], maxCalls: 10 } })).toEqual({ ok: true, options: { ...defaults, feeds: ["timeline", "mentions"], maxCalls: 10 } })
@@ -50,14 +54,13 @@ describe("parseOptions", () => {
     [{ oauth: { client_secret: "" } }, "oauth.client_secret", "Must be a non-empty string."],
     [{ oauth: { client_secret: "secret-1" } }, "oauth.client_secret", "Needs oauth.client_id."],
     [{ allowUntestedHost: "yes" }, "allowUntestedHost", "Must be true or false."],
-    [{ scriptBudgetUsd: "1.00" }, "scriptBudgetUsd", "Must be a number greater than 0 and at most 1000."],
-    [{ scriptBudgetUsd: 0 }, "scriptBudgetUsd", "Must be a number greater than 0 and at most 1000."],
-    [{ scriptBudgetUsd: -1 }, "scriptBudgetUsd", "Must be a number greater than 0 and at most 1000."],
-    [{ scriptBudgetUsd: Number.POSITIVE_INFINITY }, "scriptBudgetUsd", "Must be a number greater than 0 and at most 1000."],
-    [{ scriptBudgetUsd: 1001 }, "scriptBudgetUsd", "Must be a number greater than 0 and at most 1000."],
-    [{ scriptDailyBudgetUsd: "1.00" }, "scriptDailyBudgetUsd", "Must be a number greater than 0 and at most 1000."],
-    [{ scriptDailyBudgetUsd: 0 }, "scriptDailyBudgetUsd", "Must be a number greater than 0 and at most 1000."],
-    [{ scriptDailyBudgetUsd: 1001 }, "scriptDailyBudgetUsd", "Must be a number greater than 0 and at most 1000."],
+    [{ scriptBudgetUsd: "1.00" }, "scriptBudgetUsd", "Must be a number greater than 0, or unset for no budget."],
+    [{ scriptBudgetUsd: 0 }, "scriptBudgetUsd", "Must be a number greater than 0, or unset for no budget."],
+    [{ scriptBudgetUsd: -1 }, "scriptBudgetUsd", "Must be a number greater than 0, or unset for no budget."],
+    [{ scriptBudgetUsd: Number.POSITIVE_INFINITY }, "scriptBudgetUsd", "Must be a number greater than 0, or unset for no budget."],
+    [{ scriptDailyBudgetUsd: "1.00" }, "scriptDailyBudgetUsd", "Must be a number greater than 0, or unset for no cap."],
+    [{ scriptDailyBudgetUsd: 0 }, "scriptDailyBudgetUsd", "Must be a number greater than 0, or unset for no cap."],
+    [{ scriptDailyBudgetUsd: -5 }, "scriptDailyBudgetUsd", "Must be a number greater than 0, or unset for no cap."],
     [{ ownsXApp: "yes" }, "ownsXApp", "Must be true or false."],
     [{ events: [] }, "events", "Must be an object."],
     [{ events: { since: "x" } }, "events.since", "This option is not supported."],

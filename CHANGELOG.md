@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Script budgets are opt-in. `scriptBudgetUsd` and `scriptDailyBudgetUsd` are unset by default, so a script has no
+  per-session or daily budget and nothing in the plugin refuses or clamps its calls for cost; X's own billing, rate
+  limits and the app's spending limit apply. A number you set works as before, the persisted daily ledger included,
+  and any positive amount is accepted: the 1000 ceiling that treated a large value as a typo is gone. Every result
+  still carries its actual cost line, and `/x-status` shows the estimated 24-hour spend, against a cap when one is set.
+
 ## [0.0.0] - 2026-11-10
 <!-- kit-release: the GitHub release v0.0.0 -->
 

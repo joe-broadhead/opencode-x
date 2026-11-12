@@ -118,7 +118,7 @@ methods are `describe` and one per entry in `METHODS`, which classifies every kn
 the private writes, the public send and the deny-by-default tools. A tool that X adds later is not a method.
 `describe` reports each method's class, its availability from what OpenCode lists now, and, given a session, its
 resolved permission. The model path is unchanged; the RPC's shapers reproduce its hooks: `shapeInput` allows X's 100
-results and pagination and stops a session at its budget, and `shapeResult` appends the actual-cost line.
+results and pagination and stops a session at an opt-in budget when one is set, and `shapeResult` appends the actual-cost line.
 
 A call is `{ sessionID, input }`. The module:
 

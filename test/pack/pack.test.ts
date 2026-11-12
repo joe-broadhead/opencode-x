@@ -451,18 +451,15 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(toolCalls(from)).toEqual([])
   })
 
-  test("stops a session at its spend budget with X_BUDGET_EXCEEDED, before the next X call", async () => {
+  test("with no budget set (the default), a session spends past $1.00 and every call reaches X", async () => {
     const budgeted = await (async () => {
       const created = await host.api<Record<string, any>>("POST", "/api/session", { agent: "build" })
       return (created.id ?? created.data?.id) as string
     })()
-    // The fake's "cost" search returns ten posts and their ten authors, $0.15 a call; the default budget is $1.00.
-    for (let read = 0; read < 7; read++) expect((await call(budgeted, READ_A, { query: "cost" })).value).toBeDefined()
+    // The fake's "cost" search returns ten posts and their ten authors, $0.15 a call: ten calls are $1.50.
     const from = fake.calls.length
-    const refused = await call(budgeted, READ_A, { query: "cost" })
-    expect(refused.code).toBe("X_BUDGET_EXCEEDED")
-    expect(refused.message).toMatch(/scriptBudgetUsd/)
-    expect(fake.calls.length).toBe(from)
+    for (let read = 0; read < 10; read++) expect((await call(budgeted, READ_A, { query: "cost" })).value).toBeDefined()
+    expect(fake.calls.length - from).toBeGreaterThanOrEqual(10)
   })
 
   test("the location decides: another location answers rpc.unavailable, and the query and the header name this one", async () => {
@@ -546,7 +543,7 @@ async function serve(version: string, installed: string, options: { readonly nam
   const providers = { lmstudio: { settings: { baseURL: "" } }, ollama: { settings: { baseURL: "" } }, vllm: { settings: { baseURL: "" } } }
   mkdirSync(directory, { recursive: true })
   const agents = options.agents ?? { reviewer: { description: "Reviews changes", mode: "subagent" } }
-  writeFileSync(join(directory, "opencode.json"), JSON.stringify({ plugins: [{ package: installed, options: { oauth: { client_id: "client-1", client_secret: "secret-1" }, scriptDailyBudgetUsd: 100, access: "ask-changes" } }], agents, providers }))
+  writeFileSync(join(directory, "opencode.json"), JSON.stringify({ plugins: [{ package: installed, options: { oauth: { client_id: "client-1", client_secret: "secret-1" }, access: "ask-changes" } }], agents, providers }))
   const password = randomUUID()
   const env = { ...isolated(base), ...OFFLINE, PATH: "/usr/bin:/bin", LANG: "en_US.UTF-8", OPENCODE_PASSWORD: password }
 

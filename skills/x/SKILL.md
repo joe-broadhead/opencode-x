@@ -94,5 +94,5 @@ sign in again. `client-not-enrolled` means the app is not Pay-per-use, Productio
 ## Scripts
 
 A script calls X's tools through `x.posts.tools`, with no model, as a session and its agent: create a session for the
-script, never borrow one, and make one call at a time. The same `access` block decides; every call is billed and each
-session stops at its budget.
+script, never borrow one, and make one call at a time. The same `access` block decides; every call is billed, and a
+session stops only at a budget the user set.

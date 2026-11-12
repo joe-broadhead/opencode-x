@@ -1,5 +1,4 @@
 import { REDIRECT_URI, SCOPES } from "./constants.js"
-import { DEFAULT_SCRIPT_BUDGET_USD, DEFAULT_SCRIPT_DAILY_BUDGET_USD } from "./billing.js"
 import type { Access } from "./permissions.js"
 import { DEFAULT_FEEDS, DEFAULT_MAX_CALLS, FEEDS, MAX_CALLS, type Feed } from "./events.js"
 
@@ -12,10 +11,10 @@ export interface Options {
   readonly scopes: readonly string[]
   readonly clientSecret?: string
   readonly allowUntestedHost: boolean
-  /** The per-session spend budget a script gets, in USD. Every X call a script makes counts against it. */
-  readonly scriptBudgetUsd: number
-  /** The rolling 24-hour cap on all script spending, in USD, across sessions, jobs and reloads. */
-  readonly scriptDailyBudgetUsd: number
+  /** An opt-in per-session spend budget for scripts, in USD. Absent: no budget, X's own billing and limits apply. */
+  readonly scriptBudgetUsd?: number
+  /** An opt-in rolling 24-hour cap on all script spending, in USD, across sessions, jobs and reloads. Absent: no cap. */
+  readonly scriptDailyBudgetUsd?: number
   /** The generated permission block: every tool, reads with changes asking, or reads only. */
   readonly access: Access
   /** True only when the signed-in account owns the developer app, so Owned Read pricing applies. */
@@ -33,6 +32,8 @@ interface OptionsError {
   readonly message: string
   readonly next: string
 }
+
+const positiveUsd = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value > 0
 
 type ParsedOptions =
   | { readonly ok: true; readonly options: Options }
@@ -131,15 +132,16 @@ export function parseOptions(input: unknown): ParsedOptions {
     return fail("allowUntestedHost", "Must be true or false.", "Set it to true only to run on an OpenCode version outside the supported range.")
   }
 
-  // The budget bounds a runaway script. The default is $1.00; a huge value is nearly always a typo, so it is refused.
-  const scriptBudgetUsd = raw.scriptBudgetUsd ?? DEFAULT_SCRIPT_BUDGET_USD
-  if (typeof scriptBudgetUsd !== "number" || !Number.isFinite(scriptBudgetUsd) || scriptBudgetUsd <= 0 || scriptBudgetUsd > 1_000) {
-    return fail("scriptBudgetUsd", "Must be a number greater than 0 and at most 1000.", "Set the per-session spend budget in US dollars, for example 1.00.")
+  // Both budgets are opt-in: unset (or null) means none, and X's own billing and app spending limit apply. A number the
+  // user sets, however large, is their choice; only something that is not a positive amount of dollars is refused.
+  const scriptBudgetUsd = raw.scriptBudgetUsd ?? undefined
+  if (scriptBudgetUsd !== undefined && !positiveUsd(scriptBudgetUsd)) {
+    return fail("scriptBudgetUsd", "Must be a number greater than 0, or unset for no budget.", "Set the per-session spend budget in US dollars, for example 1.00, or remove it.")
   }
 
-  const scriptDailyBudgetUsd = raw.scriptDailyBudgetUsd ?? DEFAULT_SCRIPT_DAILY_BUDGET_USD
-  if (typeof scriptDailyBudgetUsd !== "number" || !Number.isFinite(scriptDailyBudgetUsd) || scriptDailyBudgetUsd <= 0 || scriptDailyBudgetUsd > 1_000) {
-    return fail("scriptDailyBudgetUsd", "Must be a number greater than 0 and at most 1000.", "Set the rolling 24-hour spend cap in US dollars, for example 1.00.")
+  const scriptDailyBudgetUsd = raw.scriptDailyBudgetUsd ?? undefined
+  if (scriptDailyBudgetUsd !== undefined && !positiveUsd(scriptDailyBudgetUsd)) {
+    return fail("scriptDailyBudgetUsd", "Must be a number greater than 0, or unset for no cap.", "Set the rolling 24-hour spend cap in US dollars, for example 5.00, or remove it.")
   }
 
   const accessValue = raw.access ?? "all"
@@ -175,8 +177,8 @@ export function parseOptions(input: unknown): ParsedOptions {
       scopes: [...scopes],
       ...(clientSecret === undefined ? {} : { clientSecret }),
       allowUntestedHost,
-      scriptBudgetUsd,
-      scriptDailyBudgetUsd,
+      ...(scriptBudgetUsd === undefined ? {} : { scriptBudgetUsd }),
+      ...(scriptDailyBudgetUsd === undefined ? {} : { scriptDailyBudgetUsd }),
       access,
       ownsXApp,
       feeds: [...feeds] as Feed[],

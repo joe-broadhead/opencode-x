@@ -151,8 +151,9 @@ opencode api post /api/rpc/x.posts.tools/search_posts_all -H "x-opencode-directo
   -d '{"input":{"sessionID":"ses_…","input":{"query":"from:example","max_results":10}}}'
 ```
 
-Every call is billed, and each script session has a `scriptBudgetUsd` budget, $1.00 by default, with a rolling
-`scriptDailyBudgetUsd` cap of $1.00 per 24 hours across all scripts. The ledger is an estimated spend, at most: it
+Every call is billed, and every result carries its cost line. Scripts have no budget by default: set
+`scriptBudgetUsd` (per session) or `scriptDailyBudgetUsd` (per rolling 24 hours, across all scripts) to opt in, and use
+your app's spending limit in X's Developer Console to cap the account. The ledger is an estimated spend, at most: it
 counts every returned resource again while X deduplicates within 24 hours, so the real bill is in X's Developer Console.
 See
 [Scripting](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md).
@@ -287,7 +288,7 @@ Run `/x-status` first. Its last line is the next step.
 | Tools: unknown | X added tools the plugin does not know yet. With `access: all` (the default) they run like any other tool; `ask-changes` asks for them and `read-only` denies them. A known tool missing from the count is normal: X may list fewer tools for a token with fewer scopes. |
 | Access: default rules missing or not added | Some agents lack the default rules (see the agents row), or OpenCode could not add them (see the OpenCode row). Follow the next step. |
 | Account: account name not reported | Nothing is wrong: status makes no X call, and OpenCode keeps no name on this sign-in. X answers follow the account you signed in as. |
-| Answers cost more than expected | Every call is billed per resource returned. A model read is capped to one page of ten, one widening, about $0.20 an answer, and each answer reports its actual cost; a script pays the same rates, so keep its result count small, never page in a loop, and keep its `scriptBudgetUsd` budget small. |
+| Answers cost more than expected | Every call is billed per resource returned. A model read is capped to one page of ten, one widening, about $0.20 an answer, and each answer reports its actual cost; a script pays the same rates, so keep its result count small, never page in a loop, and set `scriptBudgetUsd` if you want a cap. |
 | Posting asks first | `x_create_posts` is public. With `access: all` (the default) it runs without a prompt; with `ask-changes` answer the prompt, or run writes interactively. |
 | How much credit is left | Ask the model to call `x_get_usage_credits`; it returns the payer's developer-platform balance in USD. |
 | `429` | X's rate limit for that endpoint is used up. Wait for the reset X returns, and make fewer calls. |
@@ -312,7 +313,7 @@ Run `/x-status` first. Its last line is the next step.
 | `SKILLS_INVALID` | A skill file in the package is missing or broken. Reinstall the plugin. |
 | `SERVER_NOT_REGISTERED` | The plugin could not register the `x` server. Restart OpenCode. |
 | `RULES_NOT_ADDED` | The default permission rules could not be added, so X tools may run without asking. Restart OpenCode. |
-| `X_BUDGET_EXCEEDED` | The next script call's estimate does not fit its `scriptBudgetUsd` or the rolling `scriptDailyBudgetUsd`. Raise an option or wait for the window to roll. |
+| `X_BUDGET_EXCEEDED` | The next script call's estimate does not fit the opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` you set. Raise or remove the option, or wait for the window to roll. |
 | `X_PRICE_UNKNOWN` | The script called a method with no published price, so it was refused. Use a priced method. |
 
 A script's errors from the tools RPC have their own codes, listed in

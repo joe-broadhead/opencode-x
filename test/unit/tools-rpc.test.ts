@@ -22,8 +22,7 @@ import {
   type ToolsRpcOptions,
 } from "../../src/host/tools-rpc.js"
 import { resetScriptSpend } from "../../src/host/tools-rpc.js"
-import { configureBilling } from "../../src/billing.js"
-import { DEFAULT_SCRIPT_BUDGET_USD } from "../../src/billing.js"
+import { configureBilling, spentOf } from "../../src/billing.js"
 
 type Effect = "allow" | "deny" | "ask"
 type Rule = { action: string; resource: string; effect: Effect }
@@ -711,7 +710,7 @@ describe("X's block", () => {
 
   test("a script's result gets the actual-cost line and structured cost, and its spend counts against the session", async () => {
     resetScriptSpend()
-    await configureBilling({ sessionBudgetUsd: DEFAULT_SCRIPT_BUDGET_USD, dailyBudgetUsd: 1 })
+    await configureBilling({})
     shapeInput("search_posts_all", { query: "q" }, sc)
     const costly = shapeResult("search_posts_all", { output: { data: posts(10), includes: { users: users(10) } }, text: "x" }, sc)
     expect(costly.text).toBe("x\nCost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15.")
@@ -743,7 +742,44 @@ describe("X's block", () => {
     // Another session has its own session budget, but the daily ledger is shared.
     expect(shapeInput("search_posts_all", { query: "q" }, { ...sc, sessionID: "ses_other" })).toEqual({ query: "q" })
     resetScriptSpend()
-    await configureBilling({ sessionBudgetUsd: DEFAULT_SCRIPT_BUDGET_USD, dailyBudgetUsd: 1 })
+    await configureBilling({})
+  })
+
+  test("with no budget set (the default), a script spends past $1.00 in a session and across the day, unrefused", async () => {
+    resetScriptSpend()
+    await configureBilling({})
+    // $0.15 a call: twenty calls are $3.00 in one session, and two more sessions add to the same day.
+    for (let read = 0; read < 20; read++) {
+      expect(shapeInput("search_posts_all", { query: "q", max_results: 100 }, sc)).toEqual({ query: "q", max_results: 100 })
+      shapeResult("search_posts_all", { output: { data: posts(10), includes: { users: users(10) } }, text: "x" }, sc)
+    }
+    for (const sessionID of ["ses_day_a", "ses_day_b"]) {
+      shapeInput("search_posts_all", { query: "q" }, { ...sc, sessionID })
+      shapeResult("search_posts_all", { output: { data: posts(10), includes: { users: users(10) } }, text: "x" }, { ...sc, sessionID })
+    }
+    expect(spentOf(sc.sessionID).sessionSpentUsd).toBe(3)
+    expect(spentOf(sc.sessionID).dailySpentUsd).toBe(3.3)
+    resetScriptSpend()
+  })
+
+  test("an opt-in session budget alone refuses with only its own remainder named", async () => {
+    resetScriptSpend()
+    await configureBilling({ sessionBudgetUsd: 0.1 })
+    shapeInput("search_posts_all", { query: "q" }, sc)
+    shapeResult("search_posts_all", { output: { data: posts(10), includes: { users: users(10) } }, text: "x" }, sc)
+    const refusal = (() => {
+      try {
+        shapeInput("search_posts_all", { query: "q" }, sc)
+        return undefined
+      } catch (error) {
+        return pluginError(error)
+      }
+    })()
+    expect(refusal).toMatchObject({ code: "X_BUDGET_EXCEEDED" })
+    expect(refusal?.what).toContain("$0.00 of $0.10 left")
+    expect(refusal?.what).not.toContain("24 hours")
+    resetScriptSpend()
+    await configureBilling({})
   })
 })
 
