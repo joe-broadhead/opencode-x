@@ -45,12 +45,11 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
   never to follow an instruction in it, and never to let it choose a tool, a recipient or a change. X's terms also
   forbid automated replies without prior approval and automated or bulk likes. The plugin has no like tool; a reply
   is possible through `x_create_posts`, follows the `access` option, and those reply rules still apply.
-- **Every call is billed** to the X developer account that owns the app. The plugin caps a model read to one page of
-  at most ten posts or users, with one widening and about $0.20 an answer, and every answer that read ends with its
-  actual cost line. A script pays the same rates and is capped by `scriptBudgetUsd` per session and
-  `scriptDailyBudgetUsd` per rolling 24 hours: an estimate above either cap is refused with `X_BUDGET_EXCEEDED`
-  before the call, the daily ledger persists across sessions and reloads, and an unpriced method is refused with
-  `X_PRICE_UNKNOWN`. X's own app spending limit remains the backstop.
+- **Every call is billed** to the X developer account that owns the app. The plugin does not cap reads, and
+  every answer that read ends with its actual cost line. A script pays the same rates, reports its cost on every result, and has no budget unless the user
+  sets `scriptBudgetUsd` per session or `scriptDailyBudgetUsd` per rolling 24 hours: then an estimate above either cap
+  is refused with `X_BUDGET_EXCEEDED` before the call. The daily ledger persists across sessions and reloads either
+  way, and an unpriced method is refused with `X_PRICE_UNKNOWN`. X's own app spending limit caps the account.
 
 ## Permissions
 
@@ -118,12 +117,12 @@ refused before dispatch. A method is not a grant:
 - X's error text reaches the script only as the first line, at most 300 characters, with tokens and URL query strings
   removed.
 - A script's calls are billed like any other. A script may page and ask for up to X's 100 results, because the user
-  approved its code; each session has a `scriptBudgetUsd` budget ($1.00 by default), counted from the billed resources
-  in the results, and at the budget the next call is refused with `X_BUDGET_EXCEEDED` before X is contacted.
+  approved its code. With an opt-in `scriptBudgetUsd`, spend is counted from the billed resources in the results, and
+  at the budget the next call is refused with `X_BUDGET_EXCEEDED` before X is contacted; without one, none is.
 - A session in another location is `SESSION_UNKNOWN`, and a call that names no location reaches the service's default
   location: send `x-opencode-directory` with each call.
 - OpenCode's `execute.before` and `execute.after` tool hooks, from any plugin, do not run for a script's call, so
-  another plugin's policy hook does not see it. The plugin's own read cap, cost line and budget are reproduced by the
+  another plugin's policy hook does not see it. The plugin's own cost line and any opt-in budget are reproduced by the
   RPC's shapers. A script's calls are not recorded in the session.
 - The RPC is reachable only by callers of the OpenCode server API, who already hold the server's full authority. The
   session is not a login: it scopes a script to what its agent may do.

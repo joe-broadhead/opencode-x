@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Script budgets are opt-in. `scriptBudgetUsd` and `scriptDailyBudgetUsd` are unset by default, so a script has no
+  per-session or daily budget and nothing in the plugin refuses or clamps its calls for cost; X's own billing, rate
+  limits and the app's spending limit apply. A number you set works as before, the persisted daily ledger included,
+  and any positive amount is accepted: the 1000 ceiling that treated a large value as a typo is gone. Every result
+  still carries its actual cost line, and `/x-status` shows the estimated 24-hour spend, against a cap when one is set.
+- Model reads are not capped. The plugin no longer forces a page of at most ten or strips next-page tokens: a read's
+  `max_results` and pagination pass to X unchanged on the model path, in Code Mode and from scripts, and X validates
+  them against its own limits (scripts were clamped to 100, below some endpoints' own maximum). The skill and the
+  namespace text drop the page, per-answer spend and widening guidance. Every answer that read still ends with its
+  actual cost line.
+- `events.maxCalls` has no fixed ceiling. It still defaults to 4, must be at least 2 and at most
+  `Number.MAX_SAFE_INTEGER`; the 50 ceiling is gone. One `x_events_list` call stops a feed's walk when X hands back a
+  page token it already followed, so a looping token cannot keep billing.
+
 ## [0.0.0] - 2026-11-10
 <!-- kit-release: the GitHub release v0.0.0 -->
 

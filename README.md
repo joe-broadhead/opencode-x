@@ -32,9 +32,8 @@ Unofficial; not affiliated with X Corp.
   [X's pricing page](https://docs.x.com/x-api/getting-started/pricing) on 5 November 2026, are about $0.005 per post
   read, $0.010 per user read, $0.001 per read of your own posts, mentions or bookmarks **only when the account owns the
   app**, $0.005 per bookmark change,
-  and $0.015 per post created ($0.200 when it contains a URL). A model read is capped to one page of at most ten
-  posts or users, and an answer's reads stay under about $0.20, including one widening; every answer that read ends
-  with its actual cost, such as "Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15." A 100-post search costs about
+  and $0.015 per post created ($0.200 when it contains a URL). Reads are not capped by the plugin: the model fetches what
+  the question needs, and every answer that read ends with its actual cost, such as "Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15." A 100-post search costs about
   $0.50. X sets the prices and can change them.
 - The plugin can post, reply, quote and edit a Post (all public, and each follows the `access` option), read X, change your bookmarks and
   lists, and draft Articles. It also exposes X's DM, follow, block, mute, list-membership, moderator and live-video
@@ -151,8 +150,9 @@ opencode api post /api/rpc/x.posts.tools/search_posts_all -H "x-opencode-directo
   -d '{"input":{"sessionID":"ses_…","input":{"query":"from:example","max_results":10}}}'
 ```
 
-Every call is billed, and each script session has a `scriptBudgetUsd` budget, $1.00 by default, with a rolling
-`scriptDailyBudgetUsd` cap of $1.00 per 24 hours across all scripts. The ledger is an estimated spend, at most: it
+Every call is billed, and every result carries its cost line. Scripts have no budget by default: set
+`scriptBudgetUsd` (per session) or `scriptDailyBudgetUsd` (per rolling 24 hours, across all scripts) to opt in, and use
+your app's spending limit in X's Developer Console to cap the account. The ledger is an estimated spend, at most: it
 counts every returned resource again while X deduplicates within 24 hours, so the real bill is in X's Developer Console.
 See
 [Scripting](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md).
@@ -232,7 +232,7 @@ Set options with the object form of the plugin entry:
 | `ownsXApp` | `true` or `false` | `false` | Use the $0.001 Owned Read price for the account's own posts, mentions, bookmarks, followers and lists. Set it only if that account owns the developer app. |
 | `allowUntestedHost` | `true` or `false` | `false` | Starts on an OpenCode version outside `>=2.2.3 <2.3.0`, with a warning in status. |
 | `events.feeds` | `mentions`, `bookmarks`, `timeline` | `["mentions", "bookmarks"]` | What `x_events_list` lists for Memory. Your home timeline is the busiest and dearest feed, so it is listed only when you name it. |
-| `events.maxCalls` | `2`–`50` | `4` | The most billed X reads one `x_events_list` call makes, your account's lookup included. |
+| `events.maxCalls` | `2` or more | `4` | The most billed X reads one `x_events_list` call makes, your account's lookup included. |
 
 `{env:NAME}` is substituted when OpenCode loads the config, so the secret can stay in your environment instead of the
 file. An unset variable arrives as an empty string, which the plugin rejects with `OPTIONS_INVALID`. A variable
@@ -287,7 +287,7 @@ Run `/x-status` first. Its last line is the next step.
 | Tools: unknown | X added tools the plugin does not know yet. With `access: all` (the default) they run like any other tool; `ask-changes` asks for them and `read-only` denies them. A known tool missing from the count is normal: X may list fewer tools for a token with fewer scopes. |
 | Access: default rules missing or not added | Some agents lack the default rules (see the agents row), or OpenCode could not add them (see the OpenCode row). Follow the next step. |
 | Account: account name not reported | Nothing is wrong: status makes no X call, and OpenCode keeps no name on this sign-in. X answers follow the account you signed in as. |
-| Answers cost more than expected | Every call is billed per resource returned. A model read is capped to one page of ten, one widening, about $0.20 an answer, and each answer reports its actual cost; a script pays the same rates, so keep its result count small, never page in a loop, and keep its `scriptBudgetUsd` budget small. |
+| Answers cost more than expected | Every call is billed per resource returned. Each answer reports its actual cost, and a script pays the same rates. Set your app's spending limit in X's Developer Console, or `scriptBudgetUsd` for scripts, if you want a cap. |
 | Posting asks first | `x_create_posts` is public. With `access: all` (the default) it runs without a prompt; with `ask-changes` answer the prompt, or run writes interactively. |
 | How much credit is left | Ask the model to call `x_get_usage_credits`; it returns the payer's developer-platform balance in USD. |
 | `429` | X's rate limit for that endpoint is used up. Wait for the reset X returns, and make fewer calls. |
@@ -312,7 +312,7 @@ Run `/x-status` first. Its last line is the next step.
 | `SKILLS_INVALID` | A skill file in the package is missing or broken. Reinstall the plugin. |
 | `SERVER_NOT_REGISTERED` | The plugin could not register the `x` server. Restart OpenCode. |
 | `RULES_NOT_ADDED` | The default permission rules could not be added, so X tools may run without asking. Restart OpenCode. |
-| `X_BUDGET_EXCEEDED` | The next script call's estimate does not fit its `scriptBudgetUsd` or the rolling `scriptDailyBudgetUsd`. Raise an option or wait for the window to roll. |
+| `X_BUDGET_EXCEEDED` | The next script call's estimate does not fit the opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` you set. Raise or remove the option, or wait for the window to roll. |
 | `X_PRICE_UNKNOWN` | The script called a method with no published price, so it was refused. Use a priced method. |
 
 A script's errors from the tools RPC have their own codes, listed in

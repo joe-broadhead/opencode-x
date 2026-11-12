@@ -32,27 +32,30 @@ table, from [X's pay-per-usage pricing](https://docs.x.com/x-api/getting-started
   call, never run for free. Writes are priced at their request rate, including a Post at $0.015, or $0.200 with a URL.
 - **The estimate is conservative.** Before dispatch the tools RPC multiplies the page size (`max_results`, or 1) by the
   standard resource rate and adds any per-request price. The Owned Read rate is used only with `ownsXApp: true`; set
-  that only if the signed-in X account owns the developer app. If that estimate does not fit the session or the rolling daily budget,
+  that only if the signed-in X account owns the developer app. If you set a budget and that estimate does not fit it,
   the call is refused with `X_BUDGET_EXCEEDED`, the remaining amounts, and a next step; no X call is made.
-- **Two caps.** `scriptBudgetUsd` caps one session, **$1.00** by default. `scriptDailyBudgetUsd` caps all script
-  spending in a rolling 24 hours, **$1.00** by default, across sessions, scheduled jobs and reloads. `X_BUDGET` is the
-  old single code; it is now `X_BUDGET_EXCEEDED`. Raise either option, or wait for the window to roll.
+- **No budget by default; two opt-in caps.** Without options a script has no budget: X's own billing, rate limits and
+  your app's spending limit in X's Developer Console apply. `scriptBudgetUsd` caps one session and
+  `scriptDailyBudgetUsd` caps all script spending in a rolling 24 hours, across sessions, scheduled jobs and reloads;
+  any positive amount is accepted. Raise or remove
+  either option, or wait for the window to roll.
 - **The ledger is a conservative meter, not X's bill.** It is kept in the plugin's storage as amounts and timestamps
   only, with no content, so a reload does not forget the spend. It counts every returned resource again on each run,
   while X deduplicates the same resource within a 24-hour UTC window and may charge the Owned Read price; the meter
-  is therefore an upper bound ("estimated spend, at most"). X's Developer Console has the real bill. The pre-call
-  refusal uses this meter, so it can refuse a run that would have cost less, or nothing.
+  is therefore an upper bound ("estimated spend, at most"). X's Developer Console has the real bill. An opt-in cap's
+  pre-call refusal uses this meter, so it can refuse a run that would have cost less, or nothing.
 - **The script sees its cost.** Every result carries the actual cost line, computed from what X returned, and a
   structured `cost: { estimateUsd, actualUsd, sessionSpentUsd, dailySpentUsd }` beside the output. Where X reports no
   usage the actual is the estimate. Example: `Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15.`
-- **A script's page is not the model's page.** The model path keeps one page of ten; a script, whose code you approved,
-  may ask for up to X's maximum of 100 and for a next-page token. A loop is still a loop: 500 posts cost about $2.50,
-  and the budget, not the page size, bounds it; the estimate refuses the call that would cross a cap.
+- **Pages pass through.** A script, like the model, sends the `max_results` and next-page token it chooses, unchanged;
+  X validates them against its own limits. A loop is still a loop: 500 posts cost about $2.50,
+  and only an opt-in budget or X's app spending limit bounds it; with a budget set, the estimate refuses the call that
+  would cross it.
 - **Bookmarks need a daily cadence.** `get_users_bookmarks` has no `since_id`; every poll re-reads the newest page, and
   X charges a resource once in a 24-hour UTC window. Poll once a day, not every few minutes; a 15-minute schedule buys
   the same page many times and gains nothing.
 - A script goes through the tools RPC, which calls the tool executor directly: no `execute.before` or `execute.after`
-  hook runs, so it is not capped by the model's ten and gets no hook cost line. The tools RPC's own estimate and
+  hook runs, so it gets no hook cost line. The tools RPC's own estimate and
   `shapeResult` cost line replace them.
 
 ## Rate limits
@@ -167,7 +170,7 @@ standard output.
 | `SESSION_UNKNOWN` | OpenCode says the session does not exist in this location. Any other failure to look the session up is OpenCode's own error. |
 | `SESSION_AGENT_REQUIRED` | The session names no agent, or an agent that does not exist. |
 | `PERMISSION_DENIED` | The rules resolve to `ask` (a script cannot answer) or to `deny`. The message names the action; the next step names the rule to add or remove. |
-| `X_BUDGET_EXCEEDED` | The call's estimate does not fit the session's `scriptBudgetUsd` or the rolling `scriptDailyBudgetUsd`. No X call is made; the error gives the remaining amounts and the option to raise. |
+| `X_BUDGET_EXCEEDED` | The call's estimate does not fit the opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` you set. No X call is made; the error gives the remaining amounts and the option to raise. Without either option this never happens. |
 | `X_PRICE_UNKNOWN` | The method has no published price in the plugin's table. It is refused before any X call, never run for free. |
 | `SERVER_CONFLICT` | Your `opencode.json` defines its own `x` server at a URL other than X's. `/x-status` names both. |
 | `AUTH_REQUIRED`, `CONNECTING`, `CONNECTION_FAILED`, `DISABLED`, `NOT_REGISTERED` | The `x` server needs a sign-in, is still connecting, could not connect, is disabled, or is missing. `/x-status` gives the details. |
@@ -195,4 +198,4 @@ OpenCode itself answers `rpc.method_not_found` for a method that does not exist,
   that asks or denies. A saved "Always allow" does not authorize a script either.
 - Answer an approval prompt: an `ask` is refused.
 - Use a token or key: the plugin has none to give.
-- Read X without a bill, or past the session's budget.
+- Read X without a bill, or past a budget you set.

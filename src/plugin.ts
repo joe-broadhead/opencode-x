@@ -142,7 +142,7 @@ export function createXPlugin(seam: XSeam) {
           if (source && source.type !== "conflict") editor.namespace({ name: SERVER_NAME, description: NAMESPACE_DESCRIPTION })
           editor.add(eventsTool(events))
         })
-        // The read cap and the cost line, on the model path and in Code Mode. A conflicting server is not ours.
+        // The cost line, on the model path and in Code Mode; reads pass to X unchanged. A conflicting server is not ours.
         stopBilling = await registerBilling(ctx.tool, () => source === undefined || source.type !== "conflict", options.ownsXApp)
         await registerDefaultRules(ctx.agent, defaultRules(options.access), report("rules"))
         await registerSkills(ctx.skill, skills)
@@ -190,7 +190,7 @@ export function createXPlugin(seam: XSeam) {
         // Scripts call X's tools with no model, as a session and its agent: the known tools, under the session's rules.
         // A user's own server under the name is not this plugin's. Without a client and without a user entry there is
         // no server: a call gets the status's code and next step, read at each call, so a client saved in /connect
-        // applies at once. The budget bounds what one script session may spend.
+        // applies at once. Script budgets are opt-in: without them, X's own billing and limits apply.
         await configureBilling({ storage: ctx.storage, sessionBudgetUsd: options.scriptBudgetUsd, dailyBudgetUsd: options.scriptDailyBudgetUsd, ownsXApp: options.ownsXApp })
         stopTools = await registerToolsRpc(ctx, {
           methods: [...METHODS, eventsMethod(events)],

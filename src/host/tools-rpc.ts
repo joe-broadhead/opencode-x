@@ -32,7 +32,7 @@ import type { Plugin } from "@opencode/plugin"
 import { Rpc } from "@opencode/plugin/rpc"
 
 // >>> PLUGIN-SPECIFIC >>>
-import { assertBudget, BudgetExceededError, estimateCall, PriceUnknownError, recordCall, rememberEstimate, resetBilling, scriptCostOfCall, spentOf, takeEstimate, widenRead } from "../billing.js"
+import { assertBudget, BudgetExceededError, estimateCall, PriceUnknownError, recordCall, rememberEstimate, resetBilling, scriptCostOfCall, spentOf, takeEstimate } from "../billing.js"
 import { PLUGIN_ID as X_PLUGIN_ID, SERVER_NAME } from "../constants.js"
 import { DENY_TOOLS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../x-tools.js"
 
@@ -58,14 +58,12 @@ export function resetScriptSpend(): void {
 }
 
 /**
- * What the model path's `execute.before` hook does to an MCP call's arguments, which the executor skips: the model
- * path caps a read at ten results and drops the next-page token, while a script, whose code the user approved, gets
- * X's own maximum page and the pagination it asks for. It also prices the call and refuses it before dispatch when the
- * estimate does not fit the session or the rolling daily cap.
+ * A script call's input, as on the model path: passed to X unchanged, page size and next-page token included, since X
+ * validates them against its own limits. It prices the call and, only when the user set a script budget, refuses it
+ * before dispatch when the estimate does not fit the session or the rolling daily cap.
  */
 export function shapeInput(method: string, input: unknown, call: ShapeCall, owns?: boolean): unknown {
-  // Widen first: the budget prices the page the script actually asks for, up to X's maximum.
-  widenRead(method, input)
+  // The input passes to X unchanged, page size and next-page token included; the estimate prices the page asked for.
   const estimate = estimateCall(method, input, owns)
   assertBudget(call.sessionID, estimate.estimateUsd)
   rememberEstimate(call.sessionID, estimate)
@@ -114,10 +112,13 @@ export function pluginError(error: unknown): Failure | undefined {
     }
   }
   if (error instanceof BudgetExceededError) {
+    const left: string[] = []
+    if (error.sessionBudgetUsd !== undefined) left.push(`the session has $${Math.max(0, error.sessionBudgetUsd - error.sessionSpentUsd).toFixed(2)} of $${error.sessionBudgetUsd.toFixed(2)} left`)
+    if (error.dailyBudgetUsd !== undefined) left.push(`the last 24 hours have $${Math.max(0, error.dailyBudgetUsd - error.dailySpentUsd).toFixed(2)} of $${error.dailyBudgetUsd.toFixed(2)} left`)
     return {
       code: "X_BUDGET_EXCEEDED",
-      what: `this call is estimated at $${error.estimateUsd.toFixed(2)}; the session has $${Math.max(0, error.sessionBudgetUsd - error.sessionSpentUsd).toFixed(2)} of $${error.sessionBudgetUsd.toFixed(2)} left and the last 24 hours have $${Math.max(0, error.dailyBudgetUsd - error.dailySpentUsd).toFixed(2)} of $${error.dailyBudgetUsd.toFixed(2)} left`,
-      next: `Raise "scriptBudgetUsd" or "scriptDailyBudgetUsd" in this plugin's options, or wait for the 24-hour window to roll; each call is billed.`,
+      what: `this call is estimated at $${error.estimateUsd.toFixed(2)}; ${left.join(" and ")}`,
+      next: `Raise or remove "scriptBudgetUsd" or "scriptDailyBudgetUsd" in this plugin's options (both are opt-in), or wait for the 24-hour window to roll; each call is billed.`,
     }
   }
   if (error instanceof Error) {

@@ -76,7 +76,7 @@ reads and denies every other tool. A user's later rules still win. This is the o
 Set this only if the signed-in X account owns the developer app. When true, the Owned-Read-eligible endpoints (your
 posts, mentions, likes, bookmarks, followers, following, blocking and lists) use X's $0.001 Owned Read price, and the
 cost `basis` is `"owned"`. When false, estimates and actuals use the standard price ($0.005 a post or list, $0.010 a
-user or follow), so the budget is never exceeded; the line says "at most" and `basis` is `"conservative"`. X
+user or follow), so an opt-in budget is never exceeded; the line says "at most" and `basis` is `"conservative"`. X
 deduplicates a resource within a 24-hour UTC window, so a repeated read can cost less than shown.
 
 ```json
@@ -85,15 +85,15 @@ deduplicates a resource within a 24-hour UTC window, so a repeated read can cost
 
 ### `scriptBudgetUsd`
 
-- Type: a number greater than 0 and at most 1000.
-- Default: `1.00`.
+- Type: a number greater than 0, or unset.
+- Default: unset, so a script session has no budget; X's own billing, rate limits and app spending limit apply.
 
-The per-session spend budget for scripts. Before each call the tools RPC estimates the page size times the method's
-published rate, plus any per-request price, and refuses a call that would not fit with `X_BUDGET_EXCEEDED`, naming the
-remaining amount and the option to raise. No X call is made for a refused estimate. A read costs about $0.005 a post
-and $0.010 an author, so the default is about six pages of ten posts with their authors. Raise it for a script that
-legitimately pages, and keep it small otherwise: the budget bounds a runaway script, and X's own app spending limit
-stays the backstop.
+An opt-in per-session spend budget for scripts. When it is set, before each call the tools RPC estimates the page size
+times the method's published rate, plus any per-request price, and refuses a call that would not fit with
+`X_BUDGET_EXCEEDED`, naming the remaining amount and the option to raise. No X call is made for a refused estimate. A
+read costs about $0.005 a post and $0.010 an author, so $1.00 is about six pages of ten posts with their authors. Any
+positive amount is accepted, however large; only a value that is not a positive number is rejected. To cap the
+account itself, set the app's spending limit in X's Developer Console.
 
 ```json
 { "scriptBudgetUsd": 2.5 }
@@ -101,15 +101,16 @@ stays the backstop.
 
 ### `scriptDailyBudgetUsd`
 
-- Type: a number greater than 0 and at most 1000.
-- Default: `1.00`.
+- Type: a number greater than 0, or unset.
+- Default: unset, so scripts have no daily cap.
 
-The rolling cap on all script spending in any 24 hours, across sessions, scheduled jobs and reloads. The tools RPC
-keeps the ledger in the plugin's storage as amounts and timestamps only, with no content, and loads it at setup, so a
+An opt-in rolling cap on all script spending in any 24 hours, across sessions, scheduled jobs and reloads. The tools
+RPC keeps the ledger in the plugin's storage as amounts and timestamps only, with no content, and loads it at setup, so a
 reload does not forget the spend. It is an **estimated spend, at most**: it counts every returned resource again,
 while X deduplicates the same resource within a 24-hour UTC window and may charge the Owned Read price. X's Developer
-Console has the real bill. A call whose estimate would cross the daily cap is refused with `X_BUDGET_EXCEEDED` before
-dispatch. `/x-status` shows the estimate against this cap.
+Console has the real bill. When the cap is set, a call whose estimate would cross it is refused with
+`X_BUDGET_EXCEEDED` before dispatch. The ledger is kept either way, and `/x-status` shows the estimate, against this
+cap when it is set.
 
 ```json
 { "scriptDailyBudgetUsd": 5 }
@@ -141,7 +142,7 @@ To narrow what the model may do in X, use permission rules; see [Permissions](#p
 ### `events`
 
 - `feeds`: a non-empty list of `mentions`, `bookmarks` and `timeline`, each once. Default `["mentions", "bookmarks"]`.
-- `maxCalls`: a whole number from 2 to 50. Default 4.
+- `maxCalls`: a whole number of at least 2. Default 4. A walk stops early when X repeats a page token.
 
 What `x_events_list` lists for Memory's collector, and the most billed X reads one call of it makes, the account
 lookup included. See [Events list](#events-list).
@@ -179,11 +180,10 @@ Each member runs `/connect` and chooses X, then presses `o` or Enter. Status sho
 
 **The consequences, plainly:**
 
-- Every member's calls bill the team's X developer account. A model read is capped to one page of at most ten posts
-  or users, one widening, about $0.20 an answer, and the answer ends with its actual cost line; a script is not capped,
-  but each script session stops at its `scriptBudgetUsd` budget ($1.00 by default) and all scripts together stop at
-  `scriptDailyBudgetUsd` ($1.00 per rolling 24 hours), so the app's spending limit is the
-  backstop for many sessions.
+- Every member's calls bill the team's X developer account. The plugin does not cap a model read; each answer that
+  read ends with its actual cost line, and a script has no
+  budget unless the admin sets `scriptBudgetUsd` (per session) or `scriptDailyBudgetUsd` (per rolling 24 hours), so
+  the app's spending limit in X's Developer Console is what caps many sessions.
 - The owned-reads discount (about $0.001 a post) applies only when the authenticated user owns the app. Other members'
   timeline, mention and bookmark reads bill at the full rate.
 - X describes pay-per-use as for "applications with limited end-users". A larger team may need X's Enterprise plan.
@@ -610,7 +610,7 @@ events_list({ since?, cursor?, limit?, account?, source? })
   turned on later, listing starts 24 hours ago.
 - **Limits**: `limit` is 1 to 500 (100 by default), and a result stays within 900 KB.
 - **Permissions**: it asserts `x_events_list`, then each read goes through OpenCode's own executor with its own rules.
-  The model path's read cap does not apply to these reads; the call cap does. Every result carries
+  The call cap bounds these reads. Every result carries
   `trust: "untrusted"`.
 
 ## Errors
@@ -634,7 +634,7 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `SKILLS_INVALID` | Setup: a skill file is missing or broken. The plugin still starts; status shows the problem. | Reinstall the plugin. |
 | `SERVER_NOT_REGISTERED` | Setup: the `x` server could not be registered. Status shows the problem. | Restart OpenCode. |
 | `RULES_NOT_ADDED` | Setup: the default permission rules could not be added, so X tools may run without asking. Status shows the problem. | Restart OpenCode. |
-| `X_BUDGET_EXCEEDED` | The tools RPC: the next call's estimate does not fit the session's `scriptBudgetUsd` or the rolling `scriptDailyBudgetUsd`. No X call is made. | Raise `scriptBudgetUsd` or `scriptDailyBudgetUsd`, or wait for the 24-hour window to roll; each call is billed. |
+| `X_BUDGET_EXCEEDED` | The tools RPC: the next call's estimate does not fit the opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` you set. No X call is made. Without either option this never happens. | Raise or remove `scriptBudgetUsd` or `scriptDailyBudgetUsd`, or wait for the 24-hour window to roll; each call is billed. |
 | `X_PRICE_UNKNOWN` | The tools RPC: the method has no published price in the plugin's table. No X call is made. | Use a priced method, or add its price to the plugin's table before a script calls it. |
 
 For example:

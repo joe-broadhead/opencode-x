@@ -194,6 +194,36 @@ describe("x_events_list", () => {
     expect(host.calls.some((call) => call.input["until_id"] !== undefined)).toBe(true)
   })
 
+  test("a page token X keeps handing back ends each feed's walk, even with a large call cap", async () => {
+    const host = x()
+    const loop = (value: unknown) => ({ output: value, content: [{ type: "text", text: JSON.stringify(value) }] })
+    const tools = await (host.tool.list as unknown as () => Promise<{ id: string; execute: (input: Record<string, unknown>) => Promise<unknown> }[]>)()
+    const looping = tools.map((entry) =>
+      entry.id === "x_get_users_me"
+        ? entry
+        : {
+            id: entry.id,
+            execute: async (input: Record<string, unknown>) => {
+              host.calls.push({ tool: entry.id, input })
+              // The first bookmarks listing (ids only, no expansions) notes one bookmark; after that every feed answers an
+              // empty page and the same token for ever.
+              if (entry.id === "x_get_users_bookmarks" && input["expansions"] === undefined) return loop({ data: [post("2026-11-02T12:00:00Z", 0, "Known")], meta: { result_count: 1 } })
+              return loop({ meta: { result_count: 0, next_token: "same-token" } })
+            },
+          },
+    )
+    const tool = eventsTool(options({ ...host, tool: { list: (async () => looping) as never } }, { maxCalls: 10_000 }))
+    const first = await tool.execute({ since: SINCE }, context)
+    // Mentions and the timeline each stop on the repeated token: one read, then one that hands it back.
+    expect(host.calls.filter((call) => call.tool === "x_get_users_mentions")).toHaveLength(2)
+    expect(host.calls.filter((call) => call.tool === "x_get_users_timeline")).toHaveLength(2)
+    const before = host.calls.filter((call) => call.tool === "x_get_users_bookmarks").length
+    await tool.execute({ cursor: first.output.cursor }, context)
+    // The bookmarks walk, now with a known bookmark, also stops when the token comes back.
+    expect(host.calls.filter((call) => call.tool === "x_get_users_bookmarks").length - before).toBe(2)
+    expect(host.calls.length).toBeLessThan(20)
+  })
+
   test("lists a post that is both a mention and in the timeline once", async () => {
     const both = fixture()
     both.timeline.push(both.mentions[2]!)

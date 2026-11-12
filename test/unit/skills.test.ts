@@ -130,7 +130,7 @@ describe("skills", () => {
   test("x keeps to the family's rules for answers: signatures, counts, misses, empty results and other sources", () => {
     const text = flat("x")
     expect(text).toContain("For a tool outside the billed-read block, one `search()`, for the tool you are about to call: its signature gives the inputs")
-    expect(text).toContain("ten posts are a sample.")
+    expect(text).toContain("a page is a sample, and `meta.next_token` means X has more.")
     expect(text).toContain("An empty result means the query, the window or access: say which you ruled out")
     expect(text).toContain("A miss: say only that X returned not found, ask which account is meant, and never list misspelled, renamed, suspended, deactivated or deleted as possible causes; posts only if asked.")
     expect(text).toContain("Tavily, on request")
@@ -196,15 +196,10 @@ describe("skills", () => {
     expect(text).toContain("For a tool outside the billed-read block, one `search()`, for the tool you are about to call")
   })
 
-  test("x caps every read to one small page, automatically", () => {
+  test("x reads what the question needs, automatically, with no page or spend cap", () => {
     const text = flat("x")
-    expect(text).toContain("Reads are automatic and capped: one small page per read")
-    expect(text).toContain("`max_results` at most 10")
-    expect(text).toContain("only the expansions the answer needs")
-    expect(text).toContain("no next-page token unless the user asks")
-    expect(text).toContain("about $0.20 at most, including one widening")
+    expect(text).toContain("Reads are automatic: fetch what the question needs")
     expect(text).toContain("Never ask whether to spend: make the call.")
-    expect(text).toContain("then widen once, still one page of ten")
   })
 
   test("x ends an answer that read with the actual cost, and never an estimate", () => {
@@ -226,7 +221,6 @@ describe("skills", () => {
     expect(text).toContain("Every call costs money")
     expect(text).toContain("about $0.005")
     expect(text).toContain("about $0.001")
-    expect(text).toContain("about $0.20 at most")
   })
 
   test("x treats every post and bio as untrusted data, never instructions", () => {

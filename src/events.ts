@@ -49,7 +49,8 @@ export type Feed = (typeof FEEDS)[number]
 export const DEFAULT_FEEDS: readonly Feed[] = ["mentions", "bookmarks"]
 /** Reads per call, the owner's included: enough for the owner and one page of each default feed and one more. */
 export const DEFAULT_MAX_CALLS = 4
-export const MAX_CALLS = { min: 2, max: 50 } as const
+/** At least the owner lookup and one feed read; above that, the user's choice up to a safe integer. */
+export const MAX_CALLS = { min: 2 } as const
 
 /** X's largest page; a bookmarks page is smaller, so a whole page always fits in one result. */
 const PAGE_SIZE = 100
@@ -299,6 +300,8 @@ async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Pro
   if (budget.calls <= 0 || budget.events <= 0) return { state, more: true }
   const found = new Map<string, Post>()
   let token: string | undefined
+  // Every page token this call followed: a token X hands back again leads nowhere new, so it ends the walk.
+  const followed = new Set<string>()
   let complete = false
   while (budget.calls > 0) {
     const input = {
@@ -314,11 +317,12 @@ async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Pro
       const after = state.s === undefined ? post.created >= (state.t ?? 0) : BigInt(post.id) > BigInt(state.s)
       if (after && (state.u === undefined || BigInt(post.id) < BigInt(state.u))) found.set(post.id, post)
     }
-    if (page.next === undefined) {
+    if (page.next === undefined || followed.has(page.next)) {
       complete = true
       break
     }
     token = page.next
+    followed.add(token)
   }
   const posts = [...found.values()].sort(byId)
   if (!complete) {
@@ -357,6 +361,8 @@ async function bookmarkFeed(listing: Listing, state: BookmarkState): Promise<{ s
   const known = new Set(state.k)
   let token = state.r
   let newest = state.n
+  // A page token X hands back again, within this call, leads nowhere new: it ends the walk like a last page.
+  const followed = new Set<string>(token === undefined ? [] : [token])
   while (budget.calls > 0 && budget.events > 0) {
     // A page never holds more than the call may still list, so a listed page is always whole.
     const size = Math.min(BOOKMARK_PAGE, budget.events)
@@ -366,12 +372,13 @@ async function bookmarkFeed(listing: Listing, state: BookmarkState): Promise<{ s
     const stop = page.posts.findIndex((post) => known.has(post.id))
     const fresh = stop === -1 ? page.posts : page.posts.slice(0, stop)
     if (!commit(budget, fresh.map((post) => postEvent(listing.account, "bookmarks", post)))) return { state, more: true }
-    if (stop !== -1 || page.next === undefined) {
+    if (stop !== -1 || page.next === undefined || followed.has(page.next)) {
       // Done: everything newer than the known bookmarks is listed; the newest become the known ones.
       const k = [...(newest ?? []), ...state.k!].filter((id, index, all) => all.indexOf(id) === index).slice(0, KNOWN_BOOKMARKS)
       return { state: { k }, more: false }
     }
     token = page.next
+    followed.add(token)
     state = { k: state.k!, r: token, ...(newest === undefined ? {} : { n: newest }) }
   }
   return { state, more: true }
