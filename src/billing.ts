@@ -231,6 +231,7 @@ export const flushBilling = () => writing
 
 const recordDaily = (usd: number) => {
   if (usd <= 0) return
+  ledger = prune(ledger)
   ledger.push({ at: Date.now(), usd: exact(usd) })
   void save()
 }

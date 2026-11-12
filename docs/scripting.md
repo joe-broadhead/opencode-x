@@ -37,7 +37,7 @@ table, from [X's pay-per-usage pricing](https://docs.x.com/x-api/getting-started
 - **No budget by default; two opt-in caps.** Without options a script has no budget: X's own billing, rate limits and
   your app's spending limit in X's Developer Console apply. `scriptBudgetUsd` caps one session and
   `scriptDailyBudgetUsd` caps all script spending in a rolling 24 hours, across sessions, scheduled jobs and reloads;
-  any positive amount is accepted. `X_BUDGET` is the old single code; it is now `X_BUDGET_EXCEEDED`. Raise or remove
+  any positive amount is accepted. Raise or remove
   either option, or wait for the window to roll.
 - **The ledger is a conservative meter, not X's bill.** It is kept in the plugin's storage as amounts and timestamps
   only, with no content, so a reload does not forget the spend. It counts every returned resource again on each run,

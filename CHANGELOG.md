@@ -18,7 +18,9 @@ All notable changes to this project are documented in this file. It follows
   them against its own limits (scripts were clamped to 100, below some endpoints' own maximum). The skill and the
   namespace text drop the page, per-answer spend and widening guidance. Every answer that read still ends with its
   actual cost line.
-- `events.maxCalls` has no upper bound. It still defaults to 4 and must be at least 2; the 50 ceiling is gone.
+- `events.maxCalls` has no fixed ceiling. It still defaults to 4, must be at least 2 and at most
+  `Number.MAX_SAFE_INTEGER`; the 50 ceiling is gone. One `x_events_list` call stops a feed's walk when X hands back a
+  page token it already followed, so a looping token cannot keep billing.
 
 ## [0.0.0] - 2026-11-10
 <!-- kit-release: the GitHub release v0.0.0 -->

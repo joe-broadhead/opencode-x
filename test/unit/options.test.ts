@@ -69,8 +69,9 @@ describe("parseOptions", () => {
     [{ events: { feeds: [] } }, "events.feeds", "Must be a non-empty list of mentions, bookmarks, timeline."],
     [{ events: { feeds: ["likes"] } }, "events.feeds", "Must be a non-empty list of mentions, bookmarks, timeline."],
     [{ events: { feeds: ["mentions", "mentions"] } }, "events.feeds", "Lists a feed more than once."],
-    [{ events: { maxCalls: 1 } }, "events.maxCalls", "Must be a whole number of at least 2."],
-    [{ events: { maxCalls: 2.5 } }, "events.maxCalls", "Must be a whole number of at least 2."],
+    [{ events: { maxCalls: 1 } }, "events.maxCalls", "Must be a whole number from 2 to 9007199254740991."],
+    [{ events: { maxCalls: 2.5 } }, "events.maxCalls", "Must be a whole number from 2 to 9007199254740991."],
+    [{ events: { maxCalls: 1e300 } }, "events.maxCalls", "Must be a whole number from 2 to 9007199254740991."],
   ])("rejects %j with the field, the message and a next step", (input, field, message) => {
     const parsed = parseOptions(input)
     expect(parsed.ok).toBe(false)
