@@ -73,6 +73,21 @@ user can save their own app in `/connect` → **X app**, before signing in.
 
 Jelly folds the declared sign-in into this plugin's one card, which shows it as Connected, Not signed in or Sign in again (expired or revoked), and starts, renews and signs out of it. An agent's `jelly_connection_request`, or a tool result that names this plugin's "Run /connect and choose …" next step, opens the same card. The plugin still signs in through OpenCode, as it does without Jelly; the declaration only tells Jelly which of the engine's integrations and servers are this plugin's.
 
+## Settings
+
+Jelly draws a form from `jelly.contributes.settings` and writes each value into the plugin's options:
+
+- `access` declares its three values as `choices`, with Jelly's own labels: **Allowed** (`all`, the default), **Ask
+  before changes** (`ask-changes`) and **Read only** (`read-only`).
+- `scriptBudgetUsd` (Script budget per session) and `scriptDailyBudgetUsd` (Script budget per 24 hours) are amounts in
+  US dollars, in whole cents from $0.01. The options parser takes any amount above 0; Jelly's setting contract cannot
+  say "above 0", so the declaration starts at one cent, which is narrower than the parser and never wider. Neither has a
+  default: a budget left unsaved is no budget, and X's own billing and app spending limit apply.
+
+Choices and bounds need a Jelly that includes app#1301: an older Jelly turns down a setting that declares them.
+`test/unit/jelly.test.ts` checks the settings against Jelly's setting contract, restated in
+`test/support/jelly-settings.ts`, and checks each declared value and bound against the options parser.
+
 ## Versions
 
 Jelly's curated catalogue pins an exact version, so publish each release under a new version: a review in Jelly

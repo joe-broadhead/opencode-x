@@ -729,8 +729,41 @@
           "key": "access",
           "label": "Access",
           "type": "string",
+          "choices": [
+            {
+              "value": "all",
+              "label": "Allowed",
+              "description": "Every tool runs without asking, reads and changes alike."
+            },
+            {
+              "value": "ask-changes",
+              "label": "Ask before changes",
+              "description": "Reads run without asking. Each change asks you first."
+            },
+            {
+              "value": "read-only",
+              "label": "Read only",
+              "description": "Reads run. Changes never run."
+            }
+          ],
           "default": "all",
           "description": "all, ask-changes or read-only. Generates default rules for agents with a base allow rule."
+        },
+        {
+          "key": "scriptBudgetUsd",
+          "label": "Script budget per session (USD)",
+          "type": "number",
+          "min": 0.01,
+          "step": 0.01,
+          "description": "An opt-in spend budget for each script session, in US dollars. A call whose estimate would not fit is refused before it reaches X. Leave it unsaved for no budget: X's own billing and app spending limit apply."
+        },
+        {
+          "key": "scriptDailyBudgetUsd",
+          "label": "Script budget per 24 hours (USD)",
+          "type": "number",
+          "min": 0.01,
+          "step": 0.01,
+          "description": "An opt-in cap on all script spending in any 24 hours, in US dollars, across sessions, jobs and reloads. It counts estimated spend. Leave it unsaved for no cap."
         }
       ]
     }
