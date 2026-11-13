@@ -6,7 +6,7 @@ import { defaultRules, evaluate } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { parseOptions } from "../../src/options.js"
 import { type Declaration, type DeclaredTool, declarationProblems, docProblems, readPackage } from "../support/jelly-kit.js"
-import { ACCESS_CHOICES, type DeclaredSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
+import { ACCESS_CHOICES, type PluginSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
 
 /**
  * The `jelly` section of package.json, which Jelly reads without loading the plugin. Jelly's agents have no base allow
@@ -84,7 +84,7 @@ describe("the jelly declaration", () => {
 })
 
 describe("the jelly settings", () => {
-  const { settings } = jelly.contributes as { settings: DeclaredSetting[] }
+  const { settings } = jelly.contributes as { settings: PluginSetting[] }
   const setting = (key: string) => settings.find((item) => item.key === key)!
   const takes = (options: Record<string, unknown>) => parseOptions(options).ok
 
