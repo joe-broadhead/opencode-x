@@ -43,7 +43,7 @@ Unofficial; not affiliated with X Corp.
 ## Install
 
 ```sh
-opencode plugin add github:joe-broadhead/opencode-x#v0.0.0
+opencode plugin add github:joe-broadhead/opencode-x#v0.0.1
 ```
 
 Run `opencode reload`, or restart OpenCode. Then run `/x-status`: it shows `not configured` until you save your X
@@ -58,7 +58,7 @@ Each release has its own tag, and a Git install does not update by itself. To mo
 Or add the plugin to `opencode.json` instead, with the same spec:
 
 ```json
-{ "plugins": [{ "package": "github:joe-broadhead/opencode-x#v0.0.0" }] }
+{ "plugins": [{ "package": "github:joe-broadhead/opencode-x#v0.0.1" }] }
 ```
 
 The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
@@ -212,7 +212,7 @@ Set options with the object form of the plugin entry:
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.0",
+      "package": "github:joe-broadhead/opencode-x#v0.0.1",
       "options": {
         "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" }
       }
@@ -253,7 +253,7 @@ on macOS, or `/etc/opencode/opencode.json` on Linux. Members then only run `/con
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.0",
+      "package": "github:joe-broadhead/opencode-x#v0.0.1",
       "options": { "oauth": { "client_id": "YOUR_TEAM_APP_CLIENT_ID" } }
     }
   ]
@@ -338,6 +338,10 @@ A script's errors from the tools RPC have their own codes, listed in
 - **In Jelly, a tool X adds is not asked about.** Jelly applies each declared tool's effect and nothing else, so an
   undeclared tool, a write included, runs without asking until a release of this plugin declares it. A Jelly admin
   can set it to ask.
+- **The plugin does not cap spending.** Reads pass to X as the model or a script asks, with no page or result cap,
+  and scripts have no budget unless you set `scriptBudgetUsd` or `scriptDailyBudgetUsd`. Every answer that read ends
+  with its actual cost line and `/x-status` shows the estimated 24-hour spend; X's Developer Console has the real bill,
+  and the app's spending limit there caps the account.
 - **X's prices are X's.** The rates above are from X's pricing page on 5 November 2026, and can change without
   notice.
 
@@ -351,7 +355,7 @@ Sign out while the plugin is still installed: once it is removed, OpenCode no lo
 1. Sign out: `opencode mcp logout x`. Right after OpenCode starts or reloads, it can answer
    `MCP server not found: x` for a few seconds; wait, then run it again.
 2. Check: `opencode auth list` no longer lists **X**.
-3. Remove the plugin: `opencode plugin remove github:joe-broadhead/opencode-x#v0.0.0`, then `opencode reload`.
+3. Remove the plugin: `opencode plugin remove github:joe-broadhead/opencode-x#v0.0.1`, then `opencode reload`.
    `opencode mcp list` no longer lists `x`.
 4. Remove the **X app** entry: `opencode auth logout x-app` from a terminal, or in `/connect`. Remove any X rules you
    copied into your agents' own `permissions`.
