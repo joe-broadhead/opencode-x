@@ -76,9 +76,9 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
 - **The tools RPC (v2).** `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block
   between the `PLUGIN-SPECIFIC` markers here; change the rest in every plugin at once.
-  `scripts/check-copies.mjs` holds it, and the declaration kit `test/support/jelly-kit.ts`, equal to the copy every
-  plugin carries. Its methods are every known tool, from `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS` and `DENY_TOOLS`,
-  each with its class, and never an unknown tool. A rule must allow a method before a script can run it: an `ask` is
+  `scripts/check-copies.mjs` holds it, the declaration kit `test/support/jelly-kit.ts` and Jelly's setting rules
+  `test/support/jelly-settings.ts`, equal to the copies every plugin carries. Its methods are every known tool, from
+  `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS` and `DENY_TOOLS`, each with its class, and never an unknown tool. A rule must allow a method before a script can run it: an `ask` is
   refused, and a saved "Always allow" is not a grant. Neither path caps a read: the model's arguments and the RPC's
   `shapeInput` pass page size and pagination to X unchanged, and `shapeResult` always appends the cost line and counts the session's spend; only an
   opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` refuses. Keep the RPC id `x.posts.tools` and its method names stable: scripts call them by name.

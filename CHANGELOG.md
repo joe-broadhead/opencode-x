@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.2] - 2026-11-13
+
+### Added
+
+- The `jelly` settings declare their choices: `access` offers Jelly's three choices, **Allowed**, **Ask before
+  changes** and **Read only**, and the opt-in script budgets `scriptBudgetUsd` and `scriptDailyBudgetUsd` are declared
+  as US dollar amounts in whole cents from $0.01, with no default, so an unsaved budget is still no budget (needs a
+  jelly that includes app#1301).
+
 ## [0.0.1] - 2026-11-13
 
 ### Changed
