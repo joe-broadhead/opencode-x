@@ -14,7 +14,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
 import type { AddressInfo } from "node:net"
 import { SCOPES } from "../../src/constants.js"
-import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { SENSITIVE_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 
 const schema = { type: "object", properties: { query: { type: "string" } } }
 /** A tool the plugin has never seen. */
@@ -33,7 +33,7 @@ const TOOLS = [
 const CATALOG = [
   ...READ_TOOLS.map((name) => tool(name, true)),
   ...[...WRITE_TOOLS, ...PUBLIC_TOOLS].map((name) => tool(name, false)),
-  ...DENY_TOOLS.map((name) => tool(name, false)),
+  ...SENSITIVE_TOOLS.map((name) => tool(name, false)),
   { ...NEW_TOOL, inputSchema: schema },
 ]
 

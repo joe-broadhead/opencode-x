@@ -2,7 +2,7 @@ import type { Plugin, Rpc } from "@opencode/plugin"
 import { DISPLAY_NAME, ENDPOINT, PLUGIN_ID, SCOPES, SERVER_NAME, TESTED_HOSTS } from "./constants.js"
 import { EVENTS_LIST } from "./host/events-list.js"
 import { isSupportedHost, type HostCheck } from "./host-version.js"
-import { classify, DENY_TOOLS, PUBLIC_TOOLS, WRITE_TOOLS } from "./x-tools.js"
+import { classify, SENSITIVE_TOOLS, PUBLIC_TOOLS, WRITE_TOOLS } from "./x-tools.js"
 import { defaultRules, unguardedAgents, type Access, type Rule } from "./permissions.js"
 import { cut, oneLine, shortReason } from "./redact.js"
 import { clientMode } from "./server.js"
@@ -290,8 +290,8 @@ const list = (names: readonly string[]) => (names.length < 2 ? names.join("") : 
  */
 const ACCESS_TEXT: Record<Access, string> = {
   all: "every X tool is allowed by default, writes included",
-  "ask-changes": `reads run without asking; every other X tool asks (${WRITE_TOOLS.length + PUBLIC_TOOLS.length + DENY_TOOLS.length} tools)`,
-  "read-only": `reads run without asking; every other X tool is denied (${WRITE_TOOLS.length + PUBLIC_TOOLS.length + DENY_TOOLS.length} tools)`,
+  "ask-changes": `reads run without asking; every other X tool asks (${WRITE_TOOLS.length + PUBLIC_TOOLS.length + SENSITIVE_TOOLS.length} tools)`,
+  "read-only": `reads run without asking; every other X tool is denied (${WRITE_TOOLS.length + PUBLIC_TOOLS.length + SENSITIVE_TOOLS.length} tools)`,
 }
 const POSTURE = (access: Access) => `${ACCESS_TEXT[access]}; X bills every tool call to the X developer account that owns the app`
 

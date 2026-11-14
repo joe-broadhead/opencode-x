@@ -107,7 +107,7 @@ check, and never save a token, a client secret or X content in this repository.
 
 `src/x-tools.ts` is the one record of the X tools the plugin knows: `READ_TOOLS` run without a prompt and are the
 tools RPC's methods; `WRITE_TOOLS` are private writes that
-ask; `PUBLIC_TOOLS` reach other people and ask; `DENY_TOOLS` are off; `DENY_PATTERNS` is a safety net for a future
+ask; `PUBLIC_TOOLS` reach other people and ask; `SENSITIVE_TOOLS` are off; `DENY_PATTERNS` is a safety net for a future
 tool of a denied effect; and `PARAMETERS` holds each tool's input parameters. The default rules, the tools RPC,
 status's unknown and denied tools, the fake server in the host and pack tests, and the checks of `jelly.tools`, the
 docs and the skills all derive from it. X's hosted server is closed and unversioned, and may add, rename or remove
@@ -163,7 +163,7 @@ line with no local path) when X changes its tools.
    user's own account and reaches nobody to `WRITE_TOOLS`. Add a tool that posts, replies, quotes, reposts, publishes,
    mentions or messages anyone to `PUBLIC_TOOLS`. Add a tool that sends a DM or chat message, follows or unfollows,
    blocks or mutes, deletes a post, changes list membership, changes a moderator role, schedules a call, goes live,
-   manages a stream source, changes account settings, or sends data to X's team to `DENY_TOOLS`. Leave a tool out if
+   manages a stream source, changes account settings, or sends data to X's team to `SENSITIVE_TOOLS`. Leave a tool out if
    you are not sure: it then asks before every call,
    and scripts cannot call it.
 4. Update `PARAMETERS` from the schemas, `jelly.tools` in `package.json`, and any skill text that names a changed tool.

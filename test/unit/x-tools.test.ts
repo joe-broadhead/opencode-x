@@ -2,10 +2,10 @@
 // derives from it. These tests pin every one of the 100 to its list and its intended default rule.
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
-import { classify, DENY_TOOLS, PARAMETERS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { classify, SENSITIVE_TOOLS, PARAMETERS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
 
-const ALL = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
+const ALL = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOLS]
 const LIVE = (JSON.parse(readFileSync(new URL("./x-live-tools.json", import.meta.url), "utf8")) as { tools: { name: string }[] }).tools.map((tool) => tool.name)
 const base: Rule = { action: "*", resource: "*", effect: "allow" }
 const effectOf = (name: string) => evaluate([base, ...defaultRules()], `x_${name}`)
@@ -24,19 +24,19 @@ describe("X's live tool lists", () => {
     expect(READ_TOOLS).toEqual(expect.arrayContaining(["get_source", "list_sources"]))
     expect(WRITE_TOOLS).toHaveLength(8)
     expect(PUBLIC_TOOLS).toEqual(["create_posts"])
-    expect(DENY_TOOLS).toHaveLength(40)
+    expect(SENSITIVE_TOOLS).toHaveLength(40)
   })
 
   test("classify each tool by its list, and everything else as unknown", () => {
     for (const tool of READ_TOOLS) expect(classify(tool)).toBe("read")
     for (const tool of WRITE_TOOLS) expect(classify(tool)).toBe("write")
     for (const tool of PUBLIC_TOOLS) expect(classify(tool)).toBe("public")
-    for (const tool of DENY_TOOLS) expect(classify(tool)).toBe("denied")
+    for (const tool of SENSITIVE_TOOLS) expect(classify(tool)).toBe("sensitive")
     for (const tool of ["shiny_new_tool", "", "x_search_posts_all", "SEARCH_POSTS_ALL", "describe", "article_publish"]) expect(classify(tool)).toBe("unknown")
   })
 
   test("every tool is allowed by default, writes and off tools included", () => {
-    for (const tool of [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]) expect({ tool, effect: effectOf(tool) }).toEqual({ tool, effect: "allow" })
+    for (const tool of [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOLS]) expect({ tool, effect: effectOf(tool) }).toEqual({ tool, effect: "allow" })
   })
 
   test("reads only read: get_ or search_, and no change verb", () => {
@@ -97,7 +97,7 @@ describe("X's live tool lists", () => {
       "update_source",
       "delete_source",
     ]) {
-      expect({ name, denied: DENY_TOOLS.includes(name) }).toEqual({ name, denied: true })
+      expect({ name, denied: SENSITIVE_TOOLS.includes(name) }).toEqual({ name, denied: true })
     }
   })
 

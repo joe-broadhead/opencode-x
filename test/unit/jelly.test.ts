@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { DISPLAY_NAME, SERVER_NAME } from "../../src/constants.js"
-import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { SENSITIVE_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { METHODS } from "../../src/host/tools-rpc.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
@@ -28,7 +28,7 @@ const jelly = pkg.jelly as Declaration & {
 }
 const byPermission = new Map(jelly.tools.map((tool) => [tool.permission, tool]))
 // Every live tool, and the plugin's own x_events_list.
-const known = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS, "events_list"].map((tool) => `${SERVER_NAME}_${tool}`)
+const known = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOLS, "events_list"].map((tool) => `${SERVER_NAME}_${tool}`)
 
 describe("the jelly declaration", () => {
   test("follows the plugin authors' standard, with the effects the plugin's own default rules give", () => {
@@ -38,7 +38,7 @@ describe("the jelly declaration", () => {
   test("declares every live tool once, with the all-allow effect the default rules give it", () => {
     for (const tool of READ_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
     for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: false })
-    for (const tool of DENY_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow" })
+    for (const tool of SENSITIVE_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow" })
     for (const method of METHODS) expect(byPermission.get(`x_${method.name}`)?.readOnly, method.name).toBe(method.class === "read")
     // Memory's collector runs x_events_list unattended, so it never asks.
     expect(byPermission.get("x_events_list")).toEqual({ name: "x.events_list", permission: "x_events_list", effect: "allow", readOnly: true })

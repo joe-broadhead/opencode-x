@@ -80,11 +80,12 @@ export const PUBLIC_TOOLS: readonly string[] = [
 ]
 
 /**
- * From the live list: DMs and private chat conversations (reads included), follows, blocks, mutes, list membership,
- * moderator roles, scheduled calls, and live video with its ingest sources. They are allowed with the rest under
- * `access: all`; `ask-changes` makes them ask and `read-only` denies them.
+ * Privacy-sensitive tools, from the live list: DMs and private chat conversations (reads included), follows, blocks,
+ * mutes, list membership, moderator roles, scheduled calls, and live video with its ingest sources. They were once off;
+ * now they are allowed with the rest under `access: all`, `ask-changes` makes them ask and `read-only` denies them.
+ * Never remove a name.
  */
-export const DENY_TOOLS: readonly string[] = [
+export const SENSITIVE_TOOLS: readonly string[] = [
   "accept_chat_message_request",
   "add_chat_moderator",
   "add_conversation_keys",
@@ -245,12 +246,12 @@ export const PARAMETERS: Readonly<Record<string, readonly string[]>> = {
   "users_id_unblock": ["source_user_id*:string", "target_user_id*:string"],
 }
 
-type ToolClass = "read" | "write" | "public" | "denied" | "unknown"
+type ToolClass = "read" | "write" | "public" | "sensitive" | "unknown"
 
 export function classify(name: string): ToolClass {
   if (READ_TOOLS.includes(name)) return "read"
   if (WRITE_TOOLS.includes(name)) return "write"
   if (PUBLIC_TOOLS.includes(name)) return "public"
-  if (DENY_TOOLS.includes(name)) return "denied"
+  if (SENSITIVE_TOOLS.includes(name)) return "sensitive"
   return "unknown"
 }

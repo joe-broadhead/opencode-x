@@ -34,7 +34,7 @@ import { Rpc } from "@opencode/plugin/rpc"
 // >>> PLUGIN-SPECIFIC >>>
 import { assertBudget, BudgetExceededError, estimateCall, PriceUnknownError, recordCall, rememberEstimate, resetBilling, scriptCostOfCall, spentOf, takeEstimate } from "../billing.js"
 import { PLUGIN_ID as X_PLUGIN_ID, SERVER_NAME } from "../constants.js"
-import { DENY_TOOLS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../x-tools.js"
+import { SENSITIVE_TOOLS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../x-tools.js"
 
 /** The plugin's id. The RPC id is `<PLUGIN_ID>.tools`. */
 export const PLUGIN_ID = X_PLUGIN_ID
@@ -49,7 +49,7 @@ export const METHODS: readonly MethodSpec[] = [
   ...READ_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "read" })),
   ...WRITE_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "write" })),
   ...PUBLIC_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "send" })),
-  ...DENY_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: PRIVATE_READ_TOOLS.includes(name) ? "read" : "destructive" })),
+  ...SENSITIVE_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: PRIVATE_READ_TOOLS.includes(name) ? "read" : "destructive" })),
 ]
 
 /** Forgets every session's recorded spend and the daily ledger. The tests use it. */

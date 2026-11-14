@@ -378,7 +378,7 @@ into an agent that gets no block of its own:
 With the default, an agent can post, reply, quote, edit, bookmark, create or change lists, draft an Article, send a
 DM, follow, block, mute, change list membership, moderate a chat and go live on the user's real account without asking.
 `READ_TOOLS` in `src/x-tools.ts` lists the 51 reads; `WRITE_TOOLS` the 8 private writes; `PUBLIC_TOOLS` the one public
-write, `create_posts`; `DENY_TOOLS` the 40 tools that are now allowed with the rest, but were once off. A tool X adds
+write, `create_posts`; `SENSITIVE_TOOLS` the 40 privacy-sensitive tools, now allowed with the rest, that were once off. A tool X adds
 later matches `x_*` and is allowed with `all`.
 
 `x_create_posts` is public: anyone can read the Post, and it appears on the user's profile and in followers'
