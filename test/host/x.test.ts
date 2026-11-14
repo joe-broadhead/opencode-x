@@ -639,6 +639,60 @@ describe("a server that asks for a sign-in", () => {
   })
 })
 
+// An upgrade that adds a default scope: the token X granted before lacks it. OpenCode stores the granted scope with the
+// credential, and the plugin compares it with the scopes it asks for, so the person is told to sign in again rather
+// than meeting a 403 from the tools that need it.
+describe("a sign-in from before media.write", () => {
+  let host: Host
+  beforeAll(async () => {
+    host = await startHost({ oauth: true, options: appOptions() })
+  })
+  afterAll(() => host?.close())
+
+  const marks = async () => {
+    const { data: servers } = await host.client.mcp.list({ location: host.location })
+    const integrationID = servers.find((item) => item.name === "x")?.integrationID
+    if (!integrationID) return []
+    const { data } = await host.client.integration.get({ integrationID, location: host.location })
+    return ((data as unknown as { connections?: { status?: { message?: string } }[] }).connections ?? []).map((item) => item.status?.message)
+  }
+  const connected = () =>
+    until("the server is connected", async () => {
+      const { data } = await host.client.mcp.list({ location: host.location })
+      return data.find((item) => item.name === "x")?.status.status === "connected"
+    })
+  const LACKS = "X's sign-in lacks the scopes this version asks for: media.write. Choose this account to sign in again."
+
+  test("is sign-in required, names media.write and marks the /connect account; a new sign-in clears it", async () => {
+    await xTools(host)
+    host.fake.granted = SCOPES.filter((scope) => scope !== "media.write").join(" ")
+    host.fake.challenge = true
+    await signIn(host)
+    await until("the sign-in stores a token", async () => host.fake.tokens.length === 1)
+    host.fake.challenge = false
+    await connected()
+    expect(await until("/x-status reports the missing scope", async () => {
+      const output = await statusRpc(host)
+      return output.state === "sign_in_required" ? output : undefined
+    })).toMatchObject({ state: "sign_in_required", missingScopes: ["media.write"] })
+    expect(await until("/connect marks the account", async () => ((await marks()).includes(LACKS) ? true : undefined))).toBe(true)
+    const text = await status(host, await session(host))
+    expect(text).toContain("- Connection: sign-in required (")
+    expect(text).toContain("(not granted to this sign-in: media.write)")
+    expect(text).toContain("- Next step: X's sign-in lacks `media.write`, which this version asks for.")
+    expect(text).not.toMatch(/fake-access|fake-refresh/)
+    // The person signs in once more, and X grants every scope the plugin asks for.
+    host.fake.granted = SCOPES.join(" ")
+    host.fake.challenge = true
+    await signIn(host)
+    await until("the new sign-in stores a token", async () => host.fake.tokens.length === 2)
+    host.fake.challenge = false
+    await connected()
+    expect(await until("status is connected again", async () => ((await statusRpc(host)).state === "connected" ? true : undefined))).toBe(true)
+    expect(await until("/connect clears the mark", async () => ((await marks()).includes(LACKS) ? undefined : true))).toBe(true)
+  })
+})
+
 // The plugin registers the server with the user's own app as a static client. X has no registration endpoint, so the
 // sign-in must not try to register one, must use the pinned callback, and must ask for the pinned scopes.
 describe("the sign-in OpenCode starts", () => {

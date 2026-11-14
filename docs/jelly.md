@@ -36,8 +36,8 @@ person's own choice replaces it.
 - The other 6 `readOnly` tools are X's DM conversation and public-key reads. They reach private messages, and they run
   like the rest. Opening one message request is not read-only: X marks the messages delivered and updates the unread badge.
 - Changes: bookmarks, lists, an Article draft, a media upload (`x_media_upload`, which returns an id for a later Post
-  or DM and needs the `media.write` scope, not among the default scopes) and the public `x_create_posts`, plus X's DM,
-  follow, block, mute, list-membership, moderator and live-video tools. All of them run without asking under the default, on the user's real
+  or DM) and the public `x_create_posts`, plus X's DM, follow, block, mute, list-membership, moderator and live-video
+  tools. All of them run without asking under the default, on the user's real
   X account; `x_create_posts` is **public**: anyone can read the Post, and it can reply or quote only when the user asks
   for that one.
 - No like and no repost tool: X's MCP exposes neither.
@@ -73,7 +73,9 @@ A feed of posts would put other people's words on a dashboard and call billed to
 
 `jelly.signIns` declares the X app client ID, then `x`, for X's MCP server `x`, which signs in with OpenCode's MCP
 OAuth. Its `scopes` are the scopes the plugin requests by default (`SCOPES` in `src/constants.ts`, sorted, as
-Jelly requires); a deployment that sets its own `oauth.scopes` requests those instead. An X app supplies the client: an organisation can set a team app's public client ID in managed config, or the
+Jelly requires); a deployment that sets its own `oauth.scopes` requests those instead. When the scopes X granted the active sign-in
+lack one of them, as after an upgrade that adds `media.write`, the plugin marks that account as needing a new sign-in,
+the same mark it sets when X stops accepting the token, and its status says "sign-in required" and names the scope. An X app supplies the client: an organisation can set a team app's public client ID in managed config, or the
 user can save their own app in `/connect` → **X app**, before signing in.
 
 Jelly folds the declared sign-in into this plugin's one card, which shows it as Connected, Not signed in or Sign in again (expired or revoked), and starts, renews and signs out of it. An agent's `jelly_connection_request`, or a tool result that names this plugin's "Run /connect and choose …" next step, opens the same card. The plugin still signs in through OpenCode, as it does without Jelly; the declaration only tells Jelly which of the engine's integrations and servers are this plugin's.

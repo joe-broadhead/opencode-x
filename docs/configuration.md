@@ -38,7 +38,7 @@ so it needs the app's OAuth 2.0 client. The values go in the plugin options (man
 | `client_secret` | A non-empty string, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out for a Native App, a public client with PKCE and no secret; X issued it a refresh token in the live test. Needs `client_id`. |
 | `redirect_uri` | An `http:` loopback URL with an explicit port and a path, or an `https:` URL | `http://127.0.0.1:8766/callback` | X matches it exactly. Register the same URL in the app's **User authentication settings**. |
 | `callback_port` | `1`–`65535` | none | Only, and always, with an `https:` redirect: the local port a proxy forwards the callback to. With a loopback redirect, OpenCode listens on the redirect's own port. |
-| `scopes` | A non-empty list of X OAuth 2.0 scopes | `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write offline.access` | `offline.access` is what makes X issue a refresh token. Dropping a group's scope makes those tools fail with `403`, or removes them from the list. |
+| `scopes` | A non-empty list of X OAuth 2.0 scopes | `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write media.write offline.access` | `offline.access` is what makes X issue a refresh token. Dropping a group's scope makes those tools fail with `403`, or removes them from the list. |
 
 The plugin never shows the client secret: status and the RPC name the client ID, whether a secret is set, and where it
 came from. The secret lives in OpenCode's credential store, or in managed config.
@@ -157,7 +157,7 @@ no secret, and no per-member app.
 1. In [console.x.com](https://console.x.com), create an app and open **User authentication settings**. Set OAuth 2.0
    on, choose **Native App** (a public client: client ID only, no secret), and register **both** callbacks:
    `http://127.0.0.1:8766/callback` and `http://localhost:8766/callback`.
-2. Add the scopes `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write offline.access`.
+2. Add the scopes `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write media.write offline.access`.
 3. Move the app to **Pay-per-use → Production**. Without it, X answers `client-not-enrolled`.
 4. Buy **credits** and set a **spending limit**. Every member's calls draw on them.
 
@@ -204,7 +204,7 @@ If your config defines no server named `x`, and the plugin has a client, it regi
     "client_id": "YOUR_X_CLIENT_ID",
     "client_secret": "{env:X_CLIENT_SECRET}",
     "redirect_uri": "http://127.0.0.1:8766/callback",
-    "scope": "tweet.read users.read bookmark.read bookmark.write tweet.write offline.access"
+    "scope": "tweet.read users.read bookmark.read bookmark.write tweet.write media.write offline.access"
   }
 }
 ```

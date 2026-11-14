@@ -71,6 +71,8 @@ export interface FakeMcp {
    * its tokens are revoked. The sign-in server and the model API keep answering.
    */
   challenge: boolean
+  /** The `scope` the token endpoint grants: every pinned scope unless a test sets an older set. */
+  granted: string
   /** The server's origin; `${origin}/v1` is the model API and `${origin}/i/oauth2` X's authorization endpoint. */
   readonly origin: string
   readonly model: {
@@ -158,7 +160,7 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
   }
   const model = { script: [] as ScriptedCall[], requests: [] as unknown[] }
   // Filled once the server listens; the request handler reads `challenge`, `url` and `origin` from it.
-  const fake = { challenge: false } as FakeMcp
+  const fake = { challenge: false, granted: X_SCOPES } as FakeMcp
   /**
    * One streamed chat completion. A request that offers tools is an agent turn: after n tool results the model makes
    * the n-th scripted call, then answers "Done.". Any other request, such as a title, gets text.
@@ -219,7 +221,7 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
         token_type: "Bearer",
         expires_in: 3600,
         ...(options.refreshTokens === false ? {} : { refresh_token: `fake-refresh-${tokens.length}` }),
-        scope: X_SCOPES,
+        scope: fake.granted,
       })
     }
     return json(404, { error: "not_found" })

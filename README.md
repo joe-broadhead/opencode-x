@@ -19,7 +19,7 @@ X is a trademark of X Corp.; this unofficial plugin is not endorsed by them.
 
   ```text
   tweet.read users.read follows.read like.read block.read list.read list.write
-  space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write offline.access
+  space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write media.write offline.access
   http://127.0.0.1:8766/callback
   ```
 
@@ -229,7 +229,7 @@ Set options with the object form of the plugin entry:
 | `oauth.client_secret` | Your X app's client secret, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out for a Native App (public client); X issued it a refresh token in the live test. |
 | `oauth.redirect_uri` | A URL registered in the app | `http://127.0.0.1:8766/callback` | Must match X's registered callback exactly. |
 | `oauth.callback_port` | `1`–`65535` | none | Only with an `https:` redirect: the local port a proxy forwards to. |
-| `oauth.scopes` | X OAuth 2.0 scopes | `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write offline.access` | Dropping a group's scope makes those tools fail with `403` or removes them; dropping `offline.access` means no refresh token. |
+| `oauth.scopes` | X OAuth 2.0 scopes | `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write media.write offline.access` | Dropping a group's scope makes those tools fail with `403` or removes them; dropping `offline.access` means no refresh token. |
 | `access` | `all`, `ask-changes` or `read-only` | `all` | The generated permission block: everything, reads with changes asking, or reads only. |
 | `ownsXApp` | `true` or `false` | `false` | Use the $0.001 Owned Read price for the account's own posts, mentions, bookmarks, followers and lists. Set it only if that account owns the developer app. |
 | `allowUntestedHost` | `true` or `false` | `false` | Starts on an OpenCode version outside `>=2.2.3 <2.3.0`, with a warning in status. |
@@ -325,11 +325,12 @@ A script's errors from the tools RPC have their own codes, listed in
 - **The tool table was checked against X's live list on 2026-11-06.** X publishes no tool annotations, so each
   tool's class comes from its name, description and schema. X may add, rename or remove tools; an unknown one is allowed with `access: all`
   before it runs, and a known one can be missing for a token with fewer scopes.
-- **`x_media_upload` is declared, but the sign-in does not request its scope.** Code Mode's catalogue of X's tools
-  listed it on 2026-11-14 (names and inputs only; OpenCode's sign-in to X was refused that day, so there is no annotated
-  capture). It uploads a file and returns its id, and X asks for the `media.write` scope, which is not among the default
-  `oauth.scopes`, so X refuses the call unless you add `media.write` to `oauth.scopes` (and to the app) and sign in
-  again. The chat media tools need the same scope.
+- **A sign-in from before an upgrade can lack a new default scope.** This version's default sign-in asks for
+  `media.write`, which `x_media_upload` and the chat media tools need. X records the scopes it granted with the
+  sign-in, and the plugin compares them with the ones it asks for: when one is missing, `/x-status` and the status RPC
+  say "sign-in required" and name it, and `/connect` marks the X account "sign in again". Add the scope to the X app
+  if it lacks it, then sign in once more. `x_media_upload` was listed by Code Mode's catalogue of X's tools on
+  2026-11-14, names and inputs only, because OpenCode's sign-in to X was refused that day.
 - **A public app refreshes.** X issued a Native App (public client) a refresh token on 2026-11-06, and OpenCode
   refreshed it about two hours later; `offline.access` is still required.
 - **There is no delete or Article-publish tool.** A Post published by mistake is removed in the X app; an Article
