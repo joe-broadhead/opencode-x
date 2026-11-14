@@ -8,7 +8,7 @@ All notable changes to this project are documented in this file. It follows
 
 ### Changed
 
-- The icon is now X's own logo, the path x.com serves in its 24×24 viewBox, unmodified, in place of the family's Neutral slate tile; `opencode.vendor.mark` is `true`.
+- The icon is now X's own logo, the path x.com serves in its 24×24 viewBox, unmodified, on a white rounded holding tile, in place of the family's Neutral slate tile; `opencode.vendor.mark` is `true`.
 
 ## [0.0.2] - 2026-11-13
 

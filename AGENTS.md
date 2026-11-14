@@ -71,7 +71,7 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   `test/unit/jelly.test.ts` runs the shared declaration kit, `test/support/jelly-kit.ts`, against Jelly's plugin
   authors' standard, and keeps the section in step with the tool lists and the default rules.
 - **The icon** `assets/icon.svg` is X's own logo, the path x.com serves in its own 24×24 viewBox, unchanged, in black,
-  with the PNGs rendered from it. `opencode.vendor.mark` is `true`, so the README carries the trademark line. Do not
+  centred on a white rounded holding tile (48×48) so it stays visible on dark backgrounds, with the PNGs rendered from it. `opencode.vendor.mark` is `true`, so the README carries the trademark line. Do not
   recolour, redraw or combine it. It uses only the drawing elements Jelly's icon cleaner keeps, and no `<title>`: the
   `jelly.title` is the accessible name.
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.

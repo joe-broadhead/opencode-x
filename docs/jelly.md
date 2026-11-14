@@ -22,7 +22,7 @@ its `mimeType` and a relative `src` inside the package. `opencode.icons[0].src` 
 
 `opencode.vendor` is `{ "id": "x", "name": "X", "domain": "x.com", "mark": true }`. `mark: true` says the icon is
 the vendor's own mark: the X logo x.com serves in its own 24×24 viewBox, its path unchanged and its default black fill
-written out. The README carries the trademark line.
+written out, centred on a white rounded holding tile so it stays visible on dark backgrounds. The README carries the trademark line.
 
 ## Tools and permissions
 
