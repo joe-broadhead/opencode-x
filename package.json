@@ -63,7 +63,8 @@
     "vendor": {
       "id": "x",
       "name": "X",
-      "domain": "x.com"
+      "domain": "x.com",
+      "mark": true
     }
   },
   "scripts": {

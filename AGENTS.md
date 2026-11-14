@@ -70,9 +70,10 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   key inside a tool, sign-in or `contributes` entry. The summary names what the plugin reaches and states no policy.
   `test/unit/jelly.test.ts` runs the shared declaration kit, `test/support/jelly-kit.ts`, against Jelly's plugin
   authors' standard, and keeps the section in step with the tool lists and the default rules.
-- **The icon** `assets/icon.svg` is a Neutral slate tile with a spine, three nodes and three rules: no X logo, no "𝕏"
-  glyph and no brand black, because the plugin is unofficial. It uses only the drawing elements Jelly's icon cleaner
-  keeps, and no `<title>`: the `jelly.title` is the accessible name.
+- **The icon** `assets/icon.svg` is X's own logo, the path x.com serves in its own 24×24 viewBox, unchanged, in black,
+  with the PNGs rendered from it. `opencode.vendor.mark` is `true`, so the README carries the trademark line. Do not
+  recolour, redraw or combine it. It uses only the drawing elements Jelly's icon cleaner keeps, and no `<title>`: the
+  `jelly.title` is the accessible name.
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
 - **The tools RPC (v2).** `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block
   between the `PLUGIN-SPECIFIC` markers here; change the rest in every plugin at once.
