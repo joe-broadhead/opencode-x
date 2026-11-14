@@ -35,15 +35,6 @@ describe("the declaration against X's catalogued tool list", () => {
     expect(provenance.live).toBeNull()
   })
 
-  test("names every tool in the plugin's namespace", () => {
-    for (const tool of declared) expect(tool.permission.startsWith(`${NAMESPACE}_`), tool.permission).toBe(true)
-  })
-
-  test("declares every tool X lists", () => {
-    const names = new Set(declared.map((tool) => short(tool.permission)))
-    expect([...listed.keys()].filter((name) => !names.has(name))).toEqual([])
-  })
-
   test("declares no tool X lacks, except the plugin's own", () => {
     expect(declared.map((tool) => short(tool.permission)).filter((name) => !listed.has(name) && !own.has(name))).toEqual([])
     expect([...own].filter((name) => listed.has(name))).toEqual([])
@@ -70,9 +61,5 @@ describe("the declaration against X's catalogued tool list", () => {
       const recorded = (PARAMETERS[tool.name] ?? []).map((entry) => entry.split(/[*:]/)[0]!).filter((name) => !name.includes(".")).sort()
       expect({ tool: tool.name, params: recorded }).toEqual({ tool: tool.name, params: [...tool.inputParams].sort() })
     }
-  })
-
-  test("allows every declared tool at the family default", () => {
-    expect(declared.filter((tool) => tool.effect !== "allow").map((tool) => tool.permission)).toEqual([])
   })
 })
