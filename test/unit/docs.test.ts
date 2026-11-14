@@ -1,5 +1,6 @@
 // The docs and skills must match the code: tool names, counts, error codes, the uninstall order and the Jelly guide.
 // Every tool count they state is checked against src/x-tools.ts, so a change there cannot leave a stale number behind.
+import { VERSION } from "../../src/version.js"
 import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
@@ -249,7 +250,7 @@ describe("docs", () => {
     const uninstall = /## Uninstall(.*?)## Links/.exec(text("README.md"))?.[1] ?? ""
     const logout = uninstall.indexOf("opencode mcp logout x")
     const list = uninstall.indexOf("opencode auth list")
-    const remove = uninstall.indexOf("opencode plugin remove github:joe-broadhead/opencode-x#v0.0.2")
+    const remove = uninstall.indexOf(`opencode plugin remove github:joe-broadhead/opencode-x#v${VERSION}`)
     expect(logout).toBeGreaterThanOrEqual(0)
     expect(list).toBeGreaterThan(logout)
     expect(remove).toBeGreaterThan(list)
