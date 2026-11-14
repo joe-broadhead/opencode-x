@@ -13,6 +13,10 @@ function fake(initial: { server?: string; integrationID?: string } = {}) {
     /** The host's name for each integration before plugin transforms run. */
     hostName: "x",
     connection: undefined as Connection | undefined,
+    /** The `scope` OpenCode stored with the credential, as X granted it. */
+    granted: undefined as string | undefined,
+    /** Accounts other than the active one, such as the one an earlier sign-in left. */
+    others: [] as Connection[],
   }
   const transforms: ((editor: Editor) => void)[] = []
   const reported: unknown[] = []
@@ -42,16 +46,18 @@ function fake(initial: { server?: string; integrationID?: string } = {}) {
         data: {
           id: state.integrationID,
           name: name(),
-          connections: state.connection
-            ? [{ type: "credential", id: state.connection.id, label: state.connection.label, method: state.connection.method, ...(state.connection.status ? { status: state.connection.status } : {}) }]
-            : [],
+          connections: [...(state.connection ? [state.connection] : []), ...state.others].map((item) => ({ type: "credential", id: item.id, label: item.label, method: item.method, ...(item.status ? { status: item.status } : {}) })),
         },
       }),
       connection: {
         active: async () => state.connection,
-        status: async (input: { status: Connection["status"] }) => {
-          reported.push(input.status)
-          if (state.connection) state.connection = { ...state.connection, ...(input.status ? { status: input.status } : { status: undefined }) }
+        resolve: async () => (state.connection ? { type: "oauth", access: "secret", refresh: "secret", expires: 0, metadata: state.granted === undefined ? {} : { scope: state.granted } } : undefined),
+        status: async (input: { connection: { id: string }; status: Connection["status"] }) => {
+          const apply = (item: Connection): Connection => (item.id === input.connection.id ? { ...item, status: input.status } : item)
+          if (state.connection?.id === input.connection.id) reported.push(input.status)
+          else reported.push({ account: input.connection.id, status: input.status })
+          if (state.connection) state.connection = apply(state.connection)
+          state.others = state.others.map(apply)
         },
       },
     },
@@ -126,6 +132,52 @@ describe("watchIntegration", () => {
     view.emit()
     await view.settle()
     expect(view.reported).toHaveLength(2)
+    await stop()
+  })
+
+  test("marks a connected account whose granted scopes lack one the plugin asks for, and clears it once granted", async () => {
+    const requested = ["tweet.read", "media.write", "offline.access"]
+    const view = fake()
+    view.state.connection = { type: "credential", id: "c1", label: "Example Recruiter", method: "oauth" }
+    view.state.granted = "tweet.read offline.access"
+    const stop = watchIntegration(view.ctx, () => true, () => requested)
+    await view.settle()
+    const lacks = { status: "needs_auth", message: "X's sign-in lacks the scopes this version asks for: media.write. Choose this account to sign in again." }
+    expect(view.reported).toEqual([lacks])
+    // The person signs in again and X grants the new scope: the mark is the plugin's own, so it clears it.
+    view.state.granted = "tweet.read media.write offline.access"
+    view.emit()
+    await view.settle()
+    expect(view.reported).toEqual([lacks, undefined])
+    await stop()
+  })
+
+  test("claims nothing about scopes when the grant is unknown, or for a server that is not the plugin's own", async () => {
+    const view = fake()
+    view.state.connection = { type: "credential", id: "c1", label: "Example Recruiter", method: "oauth" }
+    const stop = watchIntegration(view.ctx, () => true, () => ["media.write"])
+    await view.settle()
+    view.state.granted = "tweet.read"
+    const adopted = watchIntegration(view.ctx, () => true, () => undefined)
+    await view.settle()
+    await adopted()
+    await stop()
+    expect(view.reported).toEqual([])
+  })
+
+  test("clears its own mark on an account an earlier sign-in left, and no other plugin's", async () => {
+    const view = fake()
+    const lacks = { status: "needs_auth" as const, message: "X's sign-in lacks the scopes this version asks for: media.write. Choose this account to sign in again." }
+    view.state.connection = { type: "credential", id: "c2", label: "X 2", method: "oauth" }
+    view.state.granted = "tweet.read media.write"
+    view.state.others = [
+      { type: "credential", id: "c1", label: "X", method: "oauth", status: lacks },
+      { type: "credential", id: "c0", label: "X 0", method: "oauth", status: { status: "needs_auth", message: "Another plugin's problem." } },
+    ]
+    const stop = watchIntegration(view.ctx, () => true, () => ["tweet.read", "media.write"])
+    await view.settle()
+    expect(view.reported).toEqual([{ account: "c1", status: undefined }])
+    expect(view.state.others.map((item) => item.status?.message)).toEqual([undefined, "Another plugin's problem."])
     await stop()
   })
 })

@@ -10,6 +10,7 @@ import { APP_NAME, type ClientState } from "./connect.js"
 import type { Options } from "./options.js"
 import { VERSION } from "./version.js"
 import { billingStatus } from "./billing.js"
+import { missingScopes, readGranted } from "./scopes.js"
 
 export { shortReason }
 
@@ -40,6 +41,8 @@ export interface StatusFacts {
   readonly source?: ServerSource
   /** The label OpenCode keeps on the active sign-in, if it has one. */
   readonly account?: string
+  /** The scopes X granted the active sign-in, as OpenCode stored them with the credential; undefined when unknown. */
+  readonly granted?: readonly string[]
   /** The client the plugin would sign in with, from the options or the /connect X app entry. */
   readonly client?: ClientState
   /** The options in force, for the Callback and Scopes rows; absent when setup stopped before them. */
@@ -90,6 +93,11 @@ export interface Status {
   readonly callbackPort?: number
   /** The scopes OpenCode requests, `offline.access` included. */
   readonly scopes?: readonly string[]
+  /**
+   * The requested scopes X did not grant the active sign-in, as after an upgrade that asks for a new one. Present only
+   * when some are missing; the state is then `sign_in_required`.
+   */
+  readonly missingScopes?: readonly string[]
   /** How many X tools OpenCode lists and the default rules let run or ask: the listed ones that are not denied. */
   readonly tools: number
   /** The listed tools that the default rules deny, by their safe plain names, at most 20; `deniedCount` is exact. */
@@ -158,11 +166,16 @@ const NO_TOOLS = `X lists no tools for this app. Check that the app is in Pay-pe
 
 export function buildStatus(facts: StatusFacts): Status {
   const client = facts.client?.client
+  // An adopted entry is the user's own, used unchanged: its client, callback and scopes are not the plugin's to claim.
+  const own = facts.source?.type !== "adopted"
+  // A connected sign-in X granted fewer scopes than the plugin asks for needs a new sign-in before those tools work.
+  const missingScope = facts.server?.status === "connected" && own && facts.options ? missingScopes(facts.options.scopes, facts.granted) : []
   const state: State = facts.setup
     ? facts.setup.code === "HOST_UNTESTED" ? "host_untested" : "not_configured"
     : facts.source?.type === "conflict" ? "conflict"
-      : facts.server ? STATE_OF[facts.server.status]
-        : "not_configured"
+      : missingScope.length ? "sign_in_required"
+        : facts.server ? STATE_OF[facts.server.status]
+          : "not_configured"
   const missing = facts.source === undefined && facts.server === undefined && client === undefined && facts.setup === undefined
   const access = facts.options?.access ?? "all"
   // x_events_list is the plugin's own tool in the server's namespace, not one X lists.
@@ -174,8 +187,6 @@ export function buildStatus(facts: StatusFacts): Status {
   const shadowed = shadowedOf(facts)
   const account = facts.account ? cut(oneLine(facts.account), ACCOUNT_LIMIT) : ""
   const setup = facts.setup
-  // An adopted entry is the user's own, used unchanged: its client and callback are not the plugin's to claim.
-  const own = facts.source?.type !== "adopted"
   const status = {
     version: VERSION,
     state,
@@ -185,6 +196,7 @@ export function buildStatus(facts: StatusFacts): Status {
     ...(account ? { account } : {}),
     ...(client && own ? { client: { id: client.id, mode: clientMode(client), source: client.source } } : {}),
     ...(facts.options && own ? { callback: facts.options.redirectUri, ...(facts.options.callbackPort === undefined ? {} : { callbackPort: facts.options.callbackPort }), scopes: facts.options.scopes } : {}),
+    ...(missingScope.length ? { missingScopes: missingScope } : {}),
     tools: listed.length - denied.length,
     // Names are server content: strip controls and bidi, keep only plain tool names, and cap the printed list.
     deniedTools: [...new Set(denied.map((name) => oneLine(name)).filter((name) => SAFE_NAME.test(name)))].slice(0, LISTED_UNKNOWN),
@@ -227,7 +239,9 @@ function nextStepOf(status: Omit<Status, "nextStep">, setupNext: string | undefi
     case "connecting":
       return "X is still connecting. Run /x-status again in a few seconds."
     case "sign_in_required":
-      return SIGN_IN
+      return status.missingScopes
+        ? `X's sign-in lacks ${list(status.missingScopes.map((scope) => `\`${scope}\``))}, which this version asks for. Add ${status.missingScopes.length > 1 ? "them" : "it"} to the X app's scopes if it lacks ${status.missingScopes.length > 1 ? "them" : "it"}, then sign in again: ${SIGN_IN}`
+        : SIGN_IN
     case "failed":
       // X's server signs in only with OAuth, so an entry of the user's own with `oauth: false` cannot connect.
       if (source?.type === "adopted" && source.signIn === "own") {
@@ -343,7 +357,10 @@ function rows(status: Status): { readonly label: string; readonly value: string 
     out.push({ label: "Client", value: `${client.id} (${app}; ${CLIENT_SOURCE[client.source]})` })
   }
   if (status.callback !== undefined) out.push({ label: "Callback", value: callbackRow(status.callback, status.callbackPort) })
-  if (status.scopes !== undefined) out.push({ label: "Scopes", value: status.scopes.join(" ") })
+  if (status.scopes !== undefined) {
+    const missing = status.missingScopes ? ` (not granted to this sign-in: ${status.missingScopes.join(" ")})` : ""
+    out.push({ label: "Scopes", value: `${status.scopes.join(" ")}${missing}` })
+  }
   out.push(
     { label: "Tools", value: toolsText(status) },
     { label: "Agents without default rules", value: agents.length ? `${agents.join(", ")}\n${agentRulesText(status.access ?? "all")}` : "none" },
@@ -375,7 +392,7 @@ export interface StatusContext {
   readonly agent: Pick<Plugin.Context["agent"], "list">
   readonly tool: Pick<Plugin.Context["tool"], "list">
   readonly skill: Pick<Plugin.Context["skill"], "list">
-  readonly integration: { readonly connection: Pick<Plugin.Context["integration"]["connection"], "active"> }
+  readonly integration: { readonly connection: Pick<Plugin.Context["integration"]["connection"], "active" | "resolve"> }
 }
 
 /** When the server's status last changed, or the watcher started, in milliseconds since the epoch. */
@@ -403,6 +420,8 @@ export async function readStatus(
   ])
   const server = servers.data.find((entry) => entry.name === SERVER_NAME)
   const connection = server?.integrationID ? await ctx.integration.connection.active(server.integrationID).catch(() => undefined) : undefined
+  // Only the granted `scope` OpenCode stored with the credential is kept; the credential itself goes no further.
+  const granted = connection?.type === "credential" ? await readGranted((item: typeof connection) => ctx.integration.connection.resolve(item), connection) : undefined
   const { skills: own, listing, ...rest } = facts
   const settling = listing !== undefined && Date.now() - listing.changedAt() < LISTING_MS
   return buildStatus({
@@ -410,6 +429,7 @@ export async function readStatus(
     billing: billingStatus(),
     ...(server ? { server: server.status } : {}),
     ...(connection?.type === "credential" && connection.label ? { account: connection.label } : {}),
+    ...(granted ? { granted } : {}),
     tools: tools.filter((tool) => tool.options?.namespace === SERVER_NAME).map((tool) => tool.name),
     settling,
     agents: agents.data,
@@ -462,6 +482,7 @@ export const StatusRpc = {
           callback: { type: "string" },
           callbackPort: { type: "integer", minimum: 1, maximum: 65535 },
           scopes: strings,
+          missingScopes: strings,
           tools: count,
           deniedTools: strings,
           deniedCount: count,
