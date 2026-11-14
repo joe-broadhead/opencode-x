@@ -8,8 +8,7 @@ Jelly names the plugin **X** (`jelly.title`), with the package name and version 
 that name it shows the one line in `jelly.summary`, and beside it the mark in `jelly.icon`
 (`assets/icon.svg`, shipped in the package): Jelly reads that file once, when it records the
 plugin, and keeps it only if it is a clean SVG of drawing elements, with no script, style, link
-or outside reference. The mark is the family's **Neutral slate** tile — a spine with three nodes
-and three rules, drawn by us — and not X's logo or letterform. Jelly's declaration contracts drop
+or outside reference. The mark is X's own logo, as x.com draws it. Jelly's declaration contracts drop
 a top-level key they don't know, and refuse an unknown key inside a tool, sign-in or `contributes`
 entry, so the section uses only the keys Jelly reads.
 
@@ -21,10 +20,9 @@ its `mimeType` and a relative `src` inside the package. `opencode.icons[0].src` 
 `jelly.icon`, so the two declarations cannot drift. `exports` exposes the three files as
 `./icon.svg`, `./icon-128.png` and `./icon-256.png`, and all three ship in the tarball.
 
-`opencode.vendor` is `{ "id": "x", "name": "X", "domain": "x.com" }`. A display app that has
-decided to show X's official logo reads the domain and fetches it from X's own site, under X's
-terms; the official mark never passes through this package, its tarball or a CDN. The package
-carries no vendor marks, colours or letterforms: only our own Neutral slate tile.
+`opencode.vendor` is `{ "id": "x", "name": "X", "domain": "x.com", "mark": true }`. `mark: true` says the icon is
+the vendor's own mark: the X logo x.com serves in its own 24×24 viewBox, its path unchanged and its default black fill
+written out, centred on a white rounded holding tile so it stays visible on dark backgrounds. The README carries the trademark line.
 
 ## Tools and permissions
 

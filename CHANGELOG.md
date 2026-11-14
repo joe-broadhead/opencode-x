@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The icon is now X's own logo, the path x.com serves in its 24×24 viewBox, unmodified, on a white rounded holding tile, in place of the family's Neutral slate tile; `opencode.vendor.mark` is `true`.
+
 ## [0.0.2] - 2026-11-13
 
 ### Added
