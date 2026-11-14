@@ -315,7 +315,7 @@ Run `/x-status` first. Its last line is the next step.
 | `SERVER_NOT_REGISTERED` | The plugin could not register the `x` server. Restart OpenCode. |
 | `RULES_NOT_ADDED` | The default permission rules could not be added, so X tools may run without asking. Restart OpenCode. |
 | `X_BUDGET_EXCEEDED` | The next script call's estimate does not fit the opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` you set. Raise or remove the option, or wait for the window to roll. |
-| `X_PRICE_UNKNOWN` | The script called a method with no published price, so it was refused. Use a priced method. |
+| `X_PRICE_UNKNOWN` | A script budget is set, and the script called a method X publishes no price for (`media_upload` or a chat media method), so it was refused. Use a priced method, or remove the budget. |
 
 A script's errors from the tools RPC have their own codes, listed in
 [Scripting](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md#errors).
@@ -331,6 +331,9 @@ A script's errors from the tools RPC have their own codes, listed in
   say "sign-in required" and name it, and `/connect` marks the X account "sign in again". Add the scope to the X app
   if it lacks it, then sign in once more. `x_media_upload` was listed by Code Mode's catalogue of X's tools on
   2026-11-14, names and inputs only, because OpenCode's sign-in to X was refused that day.
+- **Media uploads have no published price.** X's pricing page gives none for `x_media_upload` or the chat media tools,
+  so the plugin does not guess one: a script with a budget set is refused them (`X_PRICE_UNKNOWN`), and without a
+  budget their cost line says the price is unknown. X's Developer Console has the real bill.
 - **A public app refreshes.** X issued a Native App (public client) a refresh token on 2026-11-06, and OpenCode
   refreshed it about two hours later; `offline.access` is still required.
 - **There is no delete or Article-publish tool.** A Post published by mistake is removed in the X app; an Article

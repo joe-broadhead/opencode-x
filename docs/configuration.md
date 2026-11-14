@@ -635,7 +635,7 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `SERVER_NOT_REGISTERED` | Setup: the `x` server could not be registered. Status shows the problem. | Restart OpenCode. |
 | `RULES_NOT_ADDED` | Setup: the default permission rules could not be added, so X tools may run without asking. Status shows the problem. | Restart OpenCode. |
 | `X_BUDGET_EXCEEDED` | The tools RPC: the next call's estimate does not fit the opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` you set. No X call is made. Without either option this never happens. | Raise or remove `scriptBudgetUsd` or `scriptDailyBudgetUsd`, or wait for the 24-hour window to roll; each call is billed. |
-| `X_PRICE_UNKNOWN` | The tools RPC: the method has no published price in the plugin's table. No X call is made. | Use a priced method, or add its price to the plugin's table before a script calls it. |
+| `X_PRICE_UNKNOWN` | The tools RPC, with a script budget set: X publishes no price for the method (`media_upload` and the chat media methods), so its cost cannot be checked against the budget. No X call is made. | Use a priced method, or remove `scriptBudgetUsd` and `scriptDailyBudgetUsd` to run it under X's own billing. |
 
 For example:
 

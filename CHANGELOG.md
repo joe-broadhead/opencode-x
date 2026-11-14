@@ -20,6 +20,11 @@ All notable changes to this project are documented in this file. It follows
   once more after updating. `/x-status` and the status RPC then say "sign-in required" and name the missing scope, and
   `/connect` marks the X account to sign in again, whenever the scopes X granted the sign-in lack one the plugin asks
   for.
+- `media_upload` and the chat media methods (`chat_media_download`, `chat_media_upload_initialize`,
+  `chat_media_upload_append`, `chat_media_upload_finalize`) have no price row: X's pricing page gives them none, and
+  the chat media rows were guesses. With a script budget set, a script's call to one is refused with
+  `X_PRICE_UNKNOWN`; without one it runs, and its cost line says the price is unknown (`estimateUsd` and `actualUsd`
+  null, `basis: "unknown"`). Every script result's `cost` now carries `basis`.
 - `DENY_TOOLS` is now `SENSITIVE_TOOLS`, and their class `sensitive`: the 40 privacy-sensitive tools have been allowed
   with the rest at `access: all` since 0.0.2, and the old name said otherwise. `docs/jelly.md` no longer says Jelly
   applies the declaration "instead" of a base rule while also saying a declared `allow` changes nothing.

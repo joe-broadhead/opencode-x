@@ -28,8 +28,13 @@ the developer app**, a bookmark change about $0.005, and a recent count about $0
 endpoints bill at the standard $0.005 a post or list and $0.010 a user or follow. Lists, Spaces, Communities, news and DM resources have their own rates in the plugin's price
 table, from [X's pay-per-usage pricing](https://docs.x.com/x-api/getting-started/pricing) read on 2026-11-08.
 
-- **Every billable method is priced.** A method with no published price is refused with `X_PRICE_UNKNOWN` before any X
-  call, never run for free. Writes are priced at their request rate, including a Post at $0.015, or $0.200 with a URL.
+- **Methods X publishes a price for are priced.** Writes are priced at their request rate, including a Post at $0.015,
+  or $0.200 with a URL. X's pricing page gives no price for `media_upload` and the chat media methods
+  (`chat_media_download`, `chat_media_upload_initialize`, `chat_media_upload_append`, `chat_media_upload_finalize`), so
+  the table has no guessed row for them: with a budget set, a call to one is refused with `X_PRICE_UNKNOWN` before any X
+  call, because its cost cannot be checked against the budget; without one it runs, and its cost line says the price
+  is unknown (`Cost: unknown: …`, with `estimateUsd` and `actualUsd` null and `basis: "unknown"`), and the estimated
+  spend does not include it.
 - **The estimate is conservative.** Before dispatch the tools RPC multiplies the page size (`max_results`, or 1) by the
   standard resource rate and adds any per-request price. The Owned Read rate is used only with `ownsXApp: true`; set
   that only if the signed-in X account owns the developer app. If you set a budget and that estimate does not fit it,
@@ -45,7 +50,7 @@ table, from [X's pay-per-usage pricing](https://docs.x.com/x-api/getting-started
   is therefore an upper bound ("estimated spend, at most"). X's Developer Console has the real bill. An opt-in cap's
   pre-call refusal uses this meter, so it can refuse a run that would have cost less, or nothing.
 - **The script sees its cost.** Every result carries the actual cost line, computed from what X returned, and a
-  structured `cost: { estimateUsd, actualUsd, sessionSpentUsd, dailySpentUsd }` beside the output. Where X reports no
+  structured `cost: { estimateUsd, actualUsd, sessionSpentUsd, dailySpentUsd, basis }` beside the output. Where X reports no
   usage the actual is the estimate. Example: `Cost: 10 posts ($0.05) + 10 authors ($0.10) = $0.15.`
 - **Pages pass through.** A script, like the model, sends the `max_results` and next-page token it chooses, unchanged;
   X validates them against its own limits. A loop is still a loop: 500 posts cost about $2.50,
@@ -155,7 +160,7 @@ opencode api post /api/rpc/x.posts.tools/describe -H "x-opencode-directory:$PWD"
 resolved `permission` (`allow`, `ask` or `deny`). That is how a script self-checks before it writes a call.
 
 A result comes back as `{ output?, text }`: the tool's structured content when it has any, and its text parts joined by
-newlines. This plugin also puts `cost: { estimateUsd, actualUsd, sessionSpentUsd, dailySpentUsd }` inside `output`. Jobs' bridge returns `output` when present, so a Jobs script receives the cost with it. X content in it, such as posts, bios and Article text, is untrusted data
+newlines. This plugin also puts `cost: { estimateUsd, actualUsd, sessionSpentUsd, dailySpentUsd, basis }` inside `output`. Jobs' bridge returns `output` when present, so a Jobs script receives the cost with it. X content in it, such as posts, bios and Article text, is untrusted data
 written by other people: keep what a script writes where the people it is about would expect it, and only as long as
 you need it.
 
@@ -171,7 +176,7 @@ standard output.
 | `SESSION_AGENT_REQUIRED` | The session names no agent, or an agent that does not exist. |
 | `PERMISSION_DENIED` | The rules resolve to `ask` (a script cannot answer) or to `deny`. The message names the action; the next step names the rule to add or remove. |
 | `X_BUDGET_EXCEEDED` | The call's estimate does not fit the opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` you set. No X call is made; the error gives the remaining amounts and the option to raise. Without either option this never happens. |
-| `X_PRICE_UNKNOWN` | The method has no published price in the plugin's table. It is refused before any X call, never run for free. |
+| `X_PRICE_UNKNOWN` | A script budget is set, and X publishes no price for the method, so its cost cannot be checked against the budget. It is refused before any X call. |
 | `SERVER_CONFLICT` | Your `opencode.json` defines its own `x` server at a URL other than X's. `/x-status` names both. |
 | `AUTH_REQUIRED`, `CONNECTING`, `CONNECTION_FAILED`, `DISABLED`, `NOT_REGISTERED` | The `x` server needs a sign-in, is still connecting, could not connect, is disabled, or is missing. `/x-status` gives the details. |
 | `CLIENT_ID_MISSING`, `CLIENT_ID_INVALID` | No X app client ID is set, or the saved one is unusable. The next step is the `/connect` X app entry. |

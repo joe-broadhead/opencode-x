@@ -300,6 +300,12 @@ export function estimateCall(method: string, input: unknown, owns = ownsXApp): C
   return { method, pageSize, estimateUsd: exact(pageSize * rateFor(price, owns)), price }
 }
 
+/** Whether the user set a script budget: a session budget, a daily cap, or both. */
+export const hasBudget = () => sessionBudgetUsd !== undefined || dailyBudgetUsd !== undefined
+
+/** The cost line of a call to a method X publishes no price for: no estimate, and not in the estimated spend. */
+export const unpricedLine = (method: string) => `Cost: unknown: X publishes no price for ${method}, so it is not in the estimated spend.`
+
 /** Refuses before dispatch when the estimate does not fit a cap the user set. With neither set, it never refuses. */
 export function assertBudget(sessionID: string, estimateUsd: number) {
   if (sessionBudgetUsd === undefined && dailyBudgetUsd === undefined) return

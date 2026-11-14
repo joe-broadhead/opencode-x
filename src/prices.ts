@@ -1,7 +1,7 @@
 /**
  * X's pay-per-usage rates, as published at
- * https://docs.x.com/x-api/getting-started/pricing (read 2026-11-08). A method with no row is refused by the script
- * path with X_PRICE_UNKNOWN rather than run for free.
+ * https://docs.x.com/x-api/getting-started/pricing (read 2026-11-08). A method with no row has no published price: a
+ * script with a budget set gets X_PRICE_UNKNOWN for it, and without a budget its cost line says the price is unknown.
  */
 export const PRICE_SOURCE = "https://docs.x.com/x-api/getting-started/pricing"
 export const PRICE_AS_OF = "2026-11-08"
@@ -97,8 +97,6 @@ export const PRICES: Readonly<Record<string, MethodPrice>> = {
   create_users_bookmark: request(0.005),
   create_users_bookmark_folder: request(0.005),
   delete_users_bookmark: request(0.005),
-  // The pricing page names no upload category; $0.005 a request, as for the chat uploads below (read 2026-11-14).
-  media_upload: request(0.005),
   pin_list: request(0.005),
   unpin_list: request(0.005),
   update_lists: request(0.005),
@@ -132,12 +130,15 @@ export const PRICES: Readonly<Record<string, MethodPrice>> = {
   delete_source: request(0.005),
   update_source: request(0.005),
   go_live_scheduled_broadcast: request(0.005),
-  chat_media_download: request(0.005),
-  chat_media_upload_append: request(0.005),
-  chat_media_upload_finalize: request(0.005),
-  chat_media_upload_initialize: request(0.005),
   add_conversation_keys: request(0.015),
 }
+
+/**
+ * Known methods X's pricing page gives no price for: media uploads and chat media. They have no row, never a guessed
+ * one. With a script budget set, a script's call is refused with X_PRICE_UNKNOWN, because its cost cannot be checked
+ * against the budget; without one it runs, and its cost line says the price is unknown.
+ */
+export const UNPRICED: readonly string[] = ["chat_media_download", "chat_media_upload_append", "chat_media_upload_finalize", "chat_media_upload_initialize", "media_upload"]
 
 /** The method's published price, or undefined when the table has no row. */
 export const priceOf = (method: string): MethodPrice | undefined => PRICES[method]

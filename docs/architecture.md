@@ -24,7 +24,7 @@ runtime dependencies.
 | `src/status.ts` | The status model and text, `/x-status`, and the status RPC method |
 | `src/redact.ts` | Redaction for everything status shows: URL credentials, queries and token shapes removed, one line, controls and bidi characters stripped, cut by whole characters |
 | `src/skills.ts` | Loading and registering the skills |
-| `src/prices.ts` | X's pay-per-usage table, one row per known method, with its source and date; an unpriced method is refused |
+| `src/prices.ts` | X's pay-per-usage table, one row per known method X prices, with its source and date; `UNPRICED` lists the known methods it gives no price for (media uploads and chat media), which have no guessed row |
 | `src/billing.ts` | The model path's cost line, and the script path's estimates, both caps, the rolling daily ledger in plugin storage, and the structured `cost` |
 | `src/host/tools-rpc.ts` | The tools RPC for scripts, `x.posts.tools`; a copy of a module shared by several plugins, with X's part in one marked block |
 | `src/tui.ts` | The terminal UI part: the plugin `x.posts.tui` and the `/x` dialog |
