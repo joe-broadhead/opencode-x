@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.3] - 2026-11-14
 
 ### Added
 
@@ -28,7 +28,8 @@ All notable changes to this project are documented in this file. It follows
 - `DENY_TOOLS` is now `SENSITIVE_TOOLS`, and their class `sensitive`: the 40 privacy-sensitive tools have been allowed
   with the rest at `access: all` since 0.0.2, and the old name said otherwise. `docs/jelly.md` no longer says Jelly
   applies the declaration "instead" of a base rule while also saying a declared `allow` changes nothing.
-
+- `package.json` is `"private": true`: the plugin installs from its GitHub release tag
+  (`github:joe-broadhead/opencode-x#v<version>`), never from npm.
 - The icon is now X's own logo, the path x.com serves in its 24×24 viewBox, unmodified, on a white rounded holding tile, in place of the family's Neutral slate tile; `opencode.vendor.mark` is `true`.
 
 ## [0.0.2] - 2026-11-13
