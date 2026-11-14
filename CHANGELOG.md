@@ -9,14 +9,17 @@ All notable changes to this project are documented in this file. It follows
 ### Added
 
 - `x_media_upload`, which X now lists, is known and declared to Jelly as a write (`readOnly: false`, effect `allow`):
-  it uploads a file and returns its id for a Post or DM. It needs the `media.write` scope, which the default
-  `oauth.scopes` do not request. `create_posts`' new `clip` input is recorded.
+  it uploads a file and returns its id for a Post or DM. `create_posts`' new `clip` input is recorded.
 - Jelly's `x` sign-in declares its `scopes`: the plugin's default `oauth.scopes`, sorted.
 - `test/unit/live-tools.test.ts` checks `jelly.tools` against X's tool list as Code Mode's catalogue showed it on
   2026-11-14 (`test/fixtures/live-tools.json`, names and inputs only, because OpenCode's sign-in to X was refused).
 
 ### Changed
 
+- The default X sign-in now asks for `media.write`, so `media_upload` works: if you are already signed in to X, sign in
+  once more after updating. `/x-status` and the status RPC then say "sign-in required" and name the missing scope, and
+  `/connect` marks the X account to sign in again, whenever the scopes X granted the sign-in lack one the plugin asks
+  for.
 - `DENY_TOOLS` is now `SENSITIVE_TOOLS`, and their class `sensitive`: the 40 privacy-sensitive tools have been allowed
   with the rest at `access: all` since 0.0.2, and the old name said otherwise. `docs/jelly.md` no longer says Jelly
   applies the declaration "instead" of a base rule while also saying a declared `allow` changes nothing.
