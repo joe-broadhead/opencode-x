@@ -438,6 +438,12 @@
         "readOnly": false
       },
       {
+        "name": "x.media_upload",
+        "permission": "x_media_upload",
+        "effect": "allow",
+        "readOnly": false
+      },
+      {
         "name": "x.pin_list",
         "permission": "x_pin_list",
         "effect": "allow",
@@ -719,6 +725,22 @@
         "id": "x",
         "label": "X",
         "server": "x",
+        "scopes": [
+          "block.read",
+          "bookmark.read",
+          "bookmark.write",
+          "broadcast.read",
+          "calls.read",
+          "follows.read",
+          "like.read",
+          "list.read",
+          "list.write",
+          "offline.access",
+          "space.read",
+          "tweet.read",
+          "tweet.write",
+          "users.read"
+        ],
         "after": "app"
       }
     ],

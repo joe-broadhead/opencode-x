@@ -1,10 +1,11 @@
 // Every fact the plugin keeps about X's tools: the live list captured from a signed-in OpenCode on 2026-11-06,
-// classified by name, description and schema. The names, without the `x_` server prefix, are the explicit tool lists
-// below. The default rules, the tools RPC's methods,
+// classified by name, description and schema, plus `media_upload`, which Code Mode's catalogue of X's tools lists on
+// 2026-11-14 (`test/fixtures/live-tools.json`, names and input parameters only). The names, without the `x_` server
+// prefix, are the explicit tool lists below. The default rules, the tools RPC's methods,
 // status's unknown and denied tools and the tests all derive from these lists; `jelly.tools` in package.json and the
 // skills' tool names are checked against them. Keep this file free of runtime imports.
 //
-// The live list has no annotations, so each class is X's own description of the tool. X may list fewer tools for a
+// Neither list has annotations, so each class is X's own description of the tool. X may list fewer tools for a
 // token with fewer scopes, so a known tool missing from a live list is normal and never reported.
 
 /** Reads that run without asking: they only return data, and send nothing to anyone. */
@@ -62,13 +63,17 @@ export const READ_TOOLS: readonly string[] = [
   "search_users",
 ]
 
-/** Private writes: bookmarks, a private Article draft, and the user's own lists. Under `access: all` they run unasked. */
+/**
+ * Private writes: bookmarks, a private Article draft, the user's own lists, and `media_upload`, which uploads a file to
+ * X and returns its id for a later Post or DM (it publishes nothing by itself). Under `access: all` they run unasked.
+ */
 export const WRITE_TOOLS: readonly string[] = [
   "article_create_draft",
   "create_lists",
   "create_users_bookmark",
   "create_users_bookmark_folder",
   "delete_users_bookmark",
+  "media_upload",
   "pin_list",
   "unpin_list",
   "update_lists",
@@ -139,7 +144,8 @@ export const PRIVATE_READ_TOOLS: readonly string[] = [
 ]
 
 /**
- * Each known tool's input parameters, as `name:type`, with `*` after a required name, from the live list's schemas.
+ * Each known tool's input parameters, as `name:type`, with `*` after a required name, from the live list's schemas;
+ * `media_upload`'s, and `create_posts`' `clip`, from the 2026-11-14 catalogue's signatures.
  * The drift script compares them with a saved list; the skills test lets a skill write a literal call only with
  * parameters recorded here.
  */
@@ -156,7 +162,7 @@ export const PARAMETERS: Readonly<Record<string, readonly string[]>> = {
   "chat_media_upload_finalize": ["conversation_id*:string", "id*:string", "media_hash_key*:string", "message_id:string", "num_parts*:string", "ttl_msec:string"],
   "chat_media_upload_initialize": ["conversation_id*:string", "total_bytes*:integer"],
   "create_lists": ["description:string", "name*:string", "private:boolean"],
-  "create_posts": ["card_uri:string", "community_id:string", "direct_message_deep_link:string", "edit_options:object", "for_super_followers_only:boolean", "geo:object", "made_with_ai:boolean", "media:object", "nullcast:boolean", "paid_partnership:boolean", "poll:object", "quote_tweet_id:string", "reply:object", "reply_settings:string", "share_with_followers:boolean", "text:string"],
+  "create_posts": ["card_uri:string", "clip:object", "community_id:string", "direct_message_deep_link:string", "edit_options:object", "for_super_followers_only:boolean", "geo:object", "made_with_ai:boolean", "media:object", "nullcast:boolean", "paid_partnership:boolean", "poll:object", "quote_tweet_id:string", "reply:object", "reply_settings:string", "share_with_followers:boolean", "text:string"],
   "create_scheduled_broadcast": ["available_for_replay:boolean", "chat_option:string", "description:string", "is_locked:boolean", "locale:string", "manual_publish:boolean", "recurrence:object", "scheduled_end_ms:string", "scheduled_start_ms*:string", "source_id*:string", "telecast_id:string", "thumbnail_media_id:string", "title:string"],
   "create_source": ["name*:string", "region*:string"],
   "create_users_bookmark": ["folder_id:string", "id*:string", "tweet_id:string", "tweet_ids:array<string>"],
@@ -219,6 +225,7 @@ export const PARAMETERS: Readonly<Record<string, readonly string[]>> = {
   "list_scheduled_broadcasts": ["max_results:integer", "newest_start_time:string", "oldest_start_time:string", "pagination_token:string"],
   "list_scheduled_calls": ["call.fields:string", "end_time:string", "expansions:string", "max_results:integer", "scheduled_call.fields:string", "start_time:string", "user.fields:string"],
   "list_sources": [],
+  "media_upload": ["additional_owners:string", "media*:string", "media_category*:string"],
   "mark_chat_conversation_read": ["action_signatures:array<object>", "id*:string"],
   "mark_chat_conversation_unread": ["id*:string"],
   "mute_broadcast_chat_user": ["end_at_ms:string", "id*:string", "message_id:string", "user_id*:string"],

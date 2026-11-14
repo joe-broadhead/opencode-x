@@ -325,6 +325,11 @@ A script's errors from the tools RPC have their own codes, listed in
 - **The tool table was checked against X's live list on 2026-11-06.** X publishes no tool annotations, so each
   tool's class comes from its name, description and schema. X may add, rename or remove tools; an unknown one is allowed with `access: all`
   before it runs, and a known one can be missing for a token with fewer scopes.
+- **`x_media_upload` is declared, but the sign-in does not request its scope.** Code Mode's catalogue of X's tools
+  listed it on 2026-11-14 (names and inputs only; OpenCode's sign-in to X was refused that day, so there is no annotated
+  capture). It uploads a file and returns its id, and X asks for the `media.write` scope, which is not among the default
+  `oauth.scopes`, so X refuses the call unless you add `media.write` to `oauth.scopes` (and to the app) and sign in
+  again. The chat media tools need the same scope.
 - **A public app refreshes.** X issued a Native App (public client) a refresh token on 2026-11-06, and OpenCode
   refreshed it about two hours later; `offline.access` is still required.
 - **There is no delete or Article-publish tool.** A Post published by mistake is removed in the X app; an Article

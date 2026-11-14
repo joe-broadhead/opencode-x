@@ -1,28 +1,35 @@
-// The live list captured from a signed-in OpenCode on 2026-11-06 is the one record of X's tools; everything else
-// derives from it. These tests pin every one of the 100 to its list and its intended default rule.
+// The live list captured from a signed-in OpenCode on 2026-11-06, plus `media_upload` from Code Mode's catalogue of
+// 2026-11-14, is the one record of X's tools; everything else derives from it. These tests pin every one of the 101 to
+// its list and its intended default rule.
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { classify, SENSITIVE_TOOLS, PARAMETERS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
 
 const ALL = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOLS]
-const LIVE = (JSON.parse(readFileSync(new URL("./x-live-tools.json", import.meta.url), "utf8")) as { tools: { name: string }[] }).tools.map((tool) => tool.name)
+const names = (file: string) => (JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8")) as { tools: { name: string }[] }).tools.map((tool) => tool.name)
+// The 2026-11-06 capture with schemas, and the one tool the 2026-11-14 catalogue adds to it.
+const CAPTURED = names("./x-live-tools.json")
+const CATALOGUED = names("../fixtures/live-tools.json")
+const LIVE = [...new Set([...CAPTURED, ...CATALOGUED])]
 const base: Rule = { action: "*", resource: "*", effect: "allow" }
 const effectOf = (name: string) => evaluate([base, ...defaultRules()], `x_${name}`)
 
 describe("X's live tool lists", () => {
-  test("account for exactly the 100 tools in the captured list, each once and without the server prefix", () => {
-    expect(ALL).toHaveLength(100)
+  test("account for exactly the 101 tools in the captured and catalogued lists, each once and without the server prefix", () => {
+    expect(CATALOGUED.filter((name) => !CAPTURED.includes(name))).toEqual(["media_upload"])
+    expect(CAPTURED.filter((name) => !CATALOGUED.includes(name))).toEqual([])
+    expect(ALL).toHaveLength(101)
     expect(new Set(ALL).size).toBe(ALL.length)
     expect([...ALL].sort()).toEqual([...LIVE].sort())
     for (const name of ALL) expect(name).toMatch(/^[a-z][a-z0-9_]{0,63}$/)
     expect(ALL.filter((name) => name.startsWith("x_"))).toEqual([])
   })
 
-  test("count 51 reads that run, 8 private writes, 1 public write and 40 off", () => {
+  test("count 51 reads, 9 private writes, 1 public write and 40 privacy-sensitive tools", () => {
     expect(READ_TOOLS).toHaveLength(51)
     expect(READ_TOOLS).toEqual(expect.arrayContaining(["get_source", "list_sources"]))
-    expect(WRITE_TOOLS).toHaveLength(8)
+    expect(WRITE_TOOLS).toHaveLength(9)
     expect(PUBLIC_TOOLS).toEqual(["create_posts"])
     expect(SENSITIVE_TOOLS).toHaveLength(40)
   })
@@ -54,7 +61,7 @@ describe("X's live tool lists", () => {
     expect(WRITE_TOOLS).toContain("article_create_draft")
   })
 
-  test("the off list holds the DMs and private chat, follows, blocks, mutes, list membership, moderators, calls and live video", () => {
+  test("the privacy-sensitive list holds the DMs and private chat, follows, blocks, mutes, list membership, moderators, calls and live video", () => {
     for (const name of [
       "send_chat_message",
       "send_chat_typing_indicator",

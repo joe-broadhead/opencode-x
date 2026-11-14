@@ -295,7 +295,7 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
       // Config-only agents get no default rules: their own rules decide, after the host's defaults.
       agents: { locked: { permissions: [rule("x_*", "deny")] }, careful: { permissions: [rule(`x_${READ_A}`, "ask")] } },
     })
-    // Every known tool except the 40 off ones, and the fake's new one, which is the only unknown.
+    // Every known tool, and the fake's new one, which is the only unknown.
     const tools = READ_TOOLS.length + WRITE_TOOLS.length + PUBLIC_TOOLS.length + SENSITIVE_TOOLS.length + 1
     await host.until(`x is connected with its ${tools} tools`, async () => {
       const output = await status()

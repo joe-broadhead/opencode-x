@@ -8,7 +8,7 @@ server. It uses the tools RPC, `x.posts.tools`, through `opencode api` or an Ope
 | one per known X tool, named after it: `search_posts_all`, `get_users_me`, `create_users_bookmark`, `create_posts` and the others | `x_<method>` |
 | `describe` | none: lists every method with its class, its permission action, whether OpenCode lists its tool now, and its input as JSON Schema; given a session, it also gives each method's `permission` |
 
-The methods are exactly the tools this plugin knows (`METHODS` in `src/host/tools-rpc.ts`): the 51 reads, the 8 private
+The methods are exactly the tools this plugin knows (`METHODS` in `src/host/tools-rpc.ts`): the 51 reads, the 9 private
 writes, the public `create_posts`, and the 40 tools that were once off and now follow the same `access` block. A tool X adds later is not a method until
 the plugin classifies it, so a script never reaches one.
 

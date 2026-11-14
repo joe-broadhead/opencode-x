@@ -70,7 +70,7 @@ const hidden = (rules: readonly Rule[], action: string) => {
 const xTools = (host: Host) =>
   until("X's tools are registered", async () => {
     const ids = (await host.probe().tool.list()).map((tool) => tool.id).filter((id) => id.startsWith("x_"))
-    return ids.length === 16 && ids.sort()
+    return ids.length === 17 && ids.sort()
   })
 
 async function status(host: Host, sessionID: string) {
@@ -253,11 +253,11 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     const sessionID = await scriptSession(host)
     const described = await rpcDescribe(host, sessionID)
     const methods = described.methods as { name: string; class: string; permission?: string }[]
-    // The 100 known tools, and the plugin's own events_list, a read.
-    expect(methods).toHaveLength(101)
+    // The 101 known tools, and the plugin's own events_list, a read.
+    expect(methods).toHaveLength(102)
     const counts: Record<string, number> = {}
     for (const method of methods) counts[method.class!] = (counts[method.class!] ?? 0) + 1
-    expect(counts).toEqual({ read: 58, write: 8, send: 1, destructive: 34 })
+    expect(counts).toEqual({ read: 58, write: 9, send: 1, destructive: 34 })
     const permission = Object.fromEntries(methods.map((method) => [method.name, method.permission]))
     expect(permission.search_posts_all).toBe("allow")
     expect(permission.create_users_bookmark).toBe("ask")
@@ -328,8 +328,8 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     const text = await status(host, await session(host))
     expect(text).toContain(`- Connection: connected (${host.fake.url}, registered by this plugin)`)
     expect(text).toContain("- Account: account name not reported by X's MCP\n")
-    expect(text).toContain("- Access: reads run without asking; every other X tool asks (49 tools); X bills every tool call to the X developer account that owns the app; default rules missing in the agents listed below\n")
-    expect(text).toContain("- Tools: 15 available, 1 unknown: shiny_new_tool (unknown tools ask before running)\n")
+    expect(text).toContain("- Access: reads run without asking; every other X tool asks (50 tools); X bills every tool call to the X developer account that owns the app; default rules missing in the agents listed below\n")
+    expect(text).toContain("- Tools: 16 available, 1 unknown: shiny_new_tool (unknown tools ask before running)\n")
     expect(text).toContain(`- Client: client-1 (configured app, confidential; set in plugin options)\n`)
     expect(text).toContain(`- Callback: ${REDIRECT_URI} (register exactly this URL in the app's User authentication settings)\n`)
     expect(text).toContain(`- Scopes: ${SCOPES.join(" ")}\n`)
@@ -342,7 +342,7 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     expect(host.fake.calls.length).toBe(before)
     const output = await statusRpc(host)
     expect(host.fake.calls.length).toBe(before)
-    expect(output).toMatchObject({ state: "connected", tools: 15, deniedTools: [], deniedCount: 0, unknownCount: 1, listing: false, access: "ask-changes", unguardedAgents: ["reviewer"], client: { id: "client-1", mode: "confidential", source: "options" } })
+    expect(output).toMatchObject({ state: "connected", tools: 16, deniedTools: [], deniedCount: 0, unknownCount: 1, listing: false, access: "ask-changes", unguardedAgents: ["reviewer"], client: { id: "client-1", mode: "confidential", source: "options" } })
     expect(JSON.stringify(output)).not.toContain("secret-1")
     expect(output).not.toHaveProperty("account")
   })
@@ -704,7 +704,7 @@ describe("an X app client saved in /connect", () => {
     expect(server.integrationID).toBeString()
     expect(await status()).toMatchObject({ client: { id: "CONNECT_CLIENT_ID", mode: "confidential", source: "connect" }, callback: REDIRECT_URI })
     // The registered entry carries the client and never shows it in status.
-    expect(await xTools(host)).toHaveLength(16)
+    expect(await xTools(host)).toHaveLength(17)
     expect(JSON.stringify(await status())).not.toContain("secret-2")
   })
 })
@@ -899,7 +899,7 @@ describe("a boot with an existing X sign-in", () => {
       await until("the client registers the server", async () => (await first!.client.mcp.list({ location: first!.location })).data.some((server) => server.name === "x"))
       await signIn(first)
       await until("the sign-in connects", async () => (await first!.client.mcp.list({ location: first!.location })).data.find((server) => server.name === "x")?.status.status === "connected")
-      expect(await xTools(first)).toHaveLength(16)
+      expect(await xTools(first)).toHaveLength(17)
       await first.close()
       first = undefined
 
@@ -908,7 +908,7 @@ describe("a boot with an existing X sign-in", () => {
       await Bun.sleep(2000)
       const servers = (await second.client.mcp.list({ location: second.location })).data
       expect(servers.some((server) => server.name === "x")).toBe(true)
-      expect((await second.probe().tool.list()).filter((tool) => tool.id.startsWith("x_")).length).toBe(16)
+      expect((await second.probe().tool.list()).filter((tool) => tool.id.startsWith("x_")).length).toBe(17)
     } finally {
       await second?.close().catch(() => undefined)
       await first?.close().catch(() => undefined)

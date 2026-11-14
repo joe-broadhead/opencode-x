@@ -35,6 +35,9 @@ around a decline with another tool, a shell command, a link or a screenshot.
   in the X app. Say the title, and keep the returned id.
 - `create_lists`, `update_lists`, `pin_list` and `unpin_list`: the user's lists. A list is public unless `private` is
   true in the schema; say which it is. Pinning shows it on the user's profile.
+- `media_upload`: uploads a file and returns its id, which `create_posts` attaches in `media.media_ids`. Nothing is
+  public until that Post. It needs the `media.write` scope, which the default sign-in does not request: if X refuses
+  it, say so, and post without the media only if the user agrees.
 
 Each call is billed to the X developer account that owns the app (yours, or your team's): about $0.005 for a bookmark
 or list change, and a post create at $0.015, or $0.200 with a link.

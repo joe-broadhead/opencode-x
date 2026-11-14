@@ -318,7 +318,7 @@ describe("buildStatus", () => {
   })
 
   test("the writes the Access row covers are the lists', not a fixed sentence", () => {
-    expect(WRITE_TOOLS.length).toBe(8)
+    expect(WRITE_TOOLS.length).toBe(9)
     expect(PUBLIC_TOOLS).toEqual(["create_posts"])
   })
 })

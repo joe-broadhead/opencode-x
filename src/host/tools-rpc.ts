@@ -40,8 +40,8 @@ import { SENSITIVE_TOOLS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TO
 export const PLUGIN_ID = X_PLUGIN_ID
 
 /**
- * Every known X tool, by its upstream name, with its class: the 51 reads, the 8 private writes, the public
- * `create_posts` (a send, because it reaches everyone), and the 40 privacy-restricted tools for DMs, follows, mutes
+ * Every known X tool, by its upstream name, with its class: the 51 reads, the 9 private writes, the public
+ * `create_posts` (a send, because it reaches everyone), and the 40 privacy-sensitive tools for DMs, follows, mutes
  * and live video (six reads and 34 destructive actions). The class is what `describe` reports and what an approval
  * shows; the rules, not the class, decide whether a call runs. A tool X adds later is not a method.
  */

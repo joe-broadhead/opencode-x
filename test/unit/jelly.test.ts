@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { DISPLAY_NAME, SERVER_NAME } from "../../src/constants.js"
+import { DISPLAY_NAME, SCOPES, SERVER_NAME } from "../../src/constants.js"
 import { SENSITIVE_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { METHODS } from "../../src/host/tools-rpc.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
@@ -9,9 +9,8 @@ import { type Declaration, type DeclaredTool, declarationProblems, docProblems, 
 import { ACCESS_CHOICES, type PluginSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
 
 /**
- * The `jelly` section of package.json, which Jelly reads without loading the plugin. Jelly's agents have no base allow
- * rule, so this plugin's own rules never reach them: Jelly writes each declared "ask" or "deny" as that tool's default.
- * The shared kit checks the declaration against Jelly's plugin authors' standard; the tests below add what only X
+ * The `jelly` section of package.json, which Jelly reads without loading the plugin. Every declared effect is the one
+ * the plugin's own `access: all` block gives, which is `allow`. The shared kit checks the declaration against Jelly's plugin authors' standard; the tests below add what only X
  * declares.
  */
 
@@ -51,7 +50,7 @@ describe("the jelly declaration", () => {
     expect(jelly.skills).toEqual([...SKILL_NAMES])
     expect(jelly.signIns).toEqual([
       { id: "app", label: "X app client ID", integration: "x-app", presetBy: "oauth.client_id" },
-      { id: SERVER_NAME, label: DISPLAY_NAME, server: SERVER_NAME, after: "app" },
+      { id: SERVER_NAME, label: DISPLAY_NAME, server: SERVER_NAME, scopes: [...SCOPES].sort(), after: "app" },
     ])
     expect(jelly.rpc).toEqual([])
     expect(jelly.views).toEqual([])

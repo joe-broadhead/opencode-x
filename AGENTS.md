@@ -52,7 +52,8 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
 - **`src/x-tools.ts` is the one record of X's tools**, and has no runtime imports. `SENSITIVE_TOOLS` is the 40 privacy-sensitive live tools (DMs, follows, blocks, mutes, list membership, moderators, calls and live video) that are allowed with the rest and were once off; never remove a name.
   Everything else derives from it;
   `jelly.tools` and the skills are checked against it. Its names are the live list captured on 2026-11-06, with no
-  annotations, and `PARAMETERS` comes from its input schemas: reconciling is a change to that file,
+  annotations, plus `media_upload` from Code Mode's catalogue of 2026-11-14 (`test/fixtures/live-tools.json`), and
+  `PARAMETERS` comes from their input schemas: reconciling is a change to that file,
   `test/unit/x-live-tools.json`, `jelly.tools` and the skills, which `npm run drift` guides. `src/constants.ts` has no
   imports at all: `scripts/check.mjs` loads it with Node's type stripping.
 - **Every call is billed.** Docs, skills, status and the namespace text say so plainly. The skills let the model fetch

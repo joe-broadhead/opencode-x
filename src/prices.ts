@@ -97,6 +97,8 @@ export const PRICES: Readonly<Record<string, MethodPrice>> = {
   create_users_bookmark: request(0.005),
   create_users_bookmark_folder: request(0.005),
   delete_users_bookmark: request(0.005),
+  // The pricing page names no upload category; $0.005 a request, as for the chat uploads below (read 2026-11-14).
+  media_upload: request(0.005),
   pin_list: request(0.005),
   unpin_list: request(0.005),
   update_lists: request(0.005),
