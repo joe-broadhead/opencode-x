@@ -1,0 +1,24 @@
+{
+  "captures": [
+    {
+      "fixture": "live-tools.json",
+      "evidence": "catalog",
+      "listedAt": "2026-11-14",
+      "server": "x",
+      "endpoint": null,
+      "source": "scripts/capture-tools.mjs, Code Mode catalogue (OpenCode's sign-in to X was refused)",
+      "host": "2.2.6",
+      "protocol": null,
+      "count": 101,
+      "annotations": "none",
+      "schemas": "not recorded",
+      "digest": {
+        "algorithm": "sha256",
+        "of": "canonical JSON of the recorded tools, sorted by name",
+        "value": "f827e9995cac8171da38c145faf8d851e8c36e3ad6d374a096d50eba613cd83d"
+      }
+    }
+  ],
+  "live": null,
+  "note": "Digests are for drift detection, not a security signature. live names the newest live-observed capture, which the release gate requires to be at most 14 days old."
+}
