@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { billingStatus, configureBilling, costOf, estimateCall, flushBilling, recordModelCost, resetBilling, scriptCostOfCall } from "../../src/billing.js"
-import { PRICES, PRICE_AS_OF, PRICE_SOURCE, priceOf } from "../../src/prices.js"
+import { PRICES, PRICE_AS_OF, PRICE_SOURCE, priceOf, UNPRICED } from "../../src/prices.js"
 import { METHODS, pluginError, resetScriptSpend, shapeInput, shapeResult } from "../../src/host/tools-rpc.js"
 
 const storage = () => {
@@ -16,9 +16,11 @@ const fresh = async (input: { sessionBudgetUsd?: number; dailyBudgetUsd?: number
 }
 
 describe("the price table", () => {
-  test("has one row for every known method, and no unknown row", () => {
-    const names = METHODS.map((method) => method.name).sort()
-    expect(Object.keys(PRICES).sort()).toEqual(names)
+  test("has one row for every known method X prices, none for the media methods it does not, and no unknown row", () => {
+    const names = METHODS.map((method) => method.name)
+    for (const name of UNPRICED) expect(names).toContain(name)
+    expect(Object.keys(PRICES).filter((name) => UNPRICED.includes(name))).toEqual([])
+    expect(Object.keys(PRICES).sort()).toEqual(names.filter((name) => !UNPRICED.includes(name)).sort())
     expect(PRICE_SOURCE).toContain("docs.x.com")
     expect(PRICE_AS_OF).toBe("2026-11-08")
   })
@@ -33,14 +35,29 @@ describe("the price table", () => {
     expect(estimateCall("get_posts_counts_recent", { query: "q" }).estimateUsd).toBe(0.005)
   })
 
-  test("refuses an unpriced method with X_PRICE_UNKNOWN", () => {
-    expect(priceOf("not_a_tool")).toBeUndefined()
-    expect(() => estimateCall("not_a_tool", {})).toThrow("no published X price")
+  test("with a script budget set, refuses a method X publishes no price for with X_PRICE_UNKNOWN", async () => {
+    await fresh({ sessionBudgetUsd: 5 })
+    expect(priceOf("media_upload")).toBeUndefined()
+    expect(() => estimateCall("media_upload", {})).toThrow("no published X price")
+    let refused: unknown
     try {
-      shapeInput("not_a_tool", {}, call())
+      shapeInput("media_upload", { media: "AAAA", media_category: "tweet_image" }, call())
     } catch (error) {
-      expect(pluginError(error)?.code).toBe("X_PRICE_UNKNOWN")
+      refused = error
     }
+    expect(pluginError(refused)).toMatchObject({ code: "X_PRICE_UNKNOWN", what: "media_upload has no published X price, so with a script budget set it is refused: its cost cannot be checked against the budget" })
+  })
+
+  test("without a budget, runs it and says the price is unknown instead of an estimate", async () => {
+    await fresh()
+    for (const method of UNPRICED) {
+      const input = { id: "1" }
+      expect(shapeInput(method, input, call())).toBe(input)
+      const shaped = shapeResult(method, { text: "done", output: { id: "m1" } } as never, call()) as { text: string; output: { cost: Record<string, unknown> } }
+      expect(shaped.text).toBe(`done\nCost: unknown: X publishes no price for ${method}, so it is not in the estimated spend.`)
+      expect(shaped.output.cost).toEqual({ estimateUsd: null, actualUsd: null, sessionSpentUsd: 0, dailySpentUsd: 0, basis: "unknown" })
+    }
+    expect(billingStatus().dailySpentUsd).toBe(0)
   })
 })
 

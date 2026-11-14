@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS, DENY_TOOLS } from "../../src/x-tools.js"
+import { PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS, SENSITIVE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, evaluate, hasDefaultRules, insertRules, registerDefaultRules, unguardedAgents, type Rule } from "../../src/permissions.js"
 import { agentEditor, allow, builtInAgents, transforms, type AgentEditor, type FakeAgent } from "./fake.js"
 
@@ -17,13 +17,13 @@ describe("defaultRules", () => {
     const rules = [allow("*"), ...defaultRules("ask-changes")]
     expect(rules[1]).toEqual({ action: "x_*", resource: "*", effect: "ask" })
     for (const tool of READ_TOOLS) expect({ tool, effect: evaluate(rules, `x_${tool}`) }).toEqual({ tool, effect: "allow" })
-    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS, "shiny_new_tool"]) expect({ tool, effect: evaluate(rules, `x_${tool}`) }).toEqual({ tool, effect: "ask" })
+    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOLS, "shiny_new_tool"]) expect({ tool, effect: evaluate(rules, `x_${tool}`) }).toEqual({ tool, effect: "ask" })
   })
 
   test("read-only allows the reads and denies every other tool", () => {
     const rules = [allow("*"), ...defaultRules("read-only")]
     for (const tool of READ_TOOLS) expect({ tool, effect: evaluate(rules, `x_${tool}`) }).toEqual({ tool, effect: "allow" })
-    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS, "shiny_new_tool"]) expect({ tool, effect: evaluate(rules, `x_${tool}`) }).toEqual({ tool, effect: "deny" })
+    for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOLS, "shiny_new_tool"]) expect({ tool, effect: evaluate(rules, `x_${tool}`) }).toEqual({ tool, effect: "deny" })
   })
 
   test("a user's later rule still wins, both ways", () => {

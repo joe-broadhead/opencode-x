@@ -26,19 +26,18 @@ written out, centred on a white rounded holding tile so it stays visible on dark
 
 ## Tools and permissions
 
-101 tools are declared (58 read-only), and every declared effect is `allow`: the 51 reads and the 6 DM and public-key
-reads, the 8 private writes, the public `x_create_posts`, and the 34 other changes that were once off. `jelly.tools`
-follows `src/x-tools.ts`, so each declared tool has the effect the plugin's own `access: all` block gives it. Jelly's
-agents have no base "allow everything" rule, so this plugin's own default rules, which it puts after that rule, never
-reach them; the declaration is what Jelly applies instead. A declared `allow` changes nothing in Jelly, and a person's
-own choice replaces it.
+102 tools are declared (58 read-only), and every declared effect is `allow`: the 51 reads and the 6 DM and public-key
+reads, the 9 private writes, the public `x_create_posts`, and the 34 other changes that were once off. `jelly.tools`
+follows `src/x-tools.ts`, so each declared tool has the effect the plugin's own `access: all` block gives it, and a
+person's own choice replaces it.
 
 - Reads: 51 of the tools return data and run without asking: posts, profiles, timelines, mentions, bookmarks, lists,
   Spaces, Communities, news, trends, your own broadcast's chat and moderators, and the usage balance.
 - The other 6 `readOnly` tools are X's DM conversation and public-key reads. They reach private messages, and they run
   like the rest. Opening one message request is not read-only: X marks the messages delivered and updates the unread badge.
-- Changes: bookmarks, lists, an Article draft and the public `x_create_posts`, plus X's DM, follow, block, mute,
-  list-membership, moderator and live-video tools. All of them run without asking under the default, on the user's real
+- Changes: bookmarks, lists, an Article draft, a media upload (`x_media_upload`, which returns an id for a later Post
+  or DM) and the public `x_create_posts`, plus X's DM, follow, block, mute, list-membership, moderator and live-video
+  tools. All of them run without asking under the default, on the user's real
   X account; `x_create_posts` is **public**: anyone can read the Post, and it can reply or quote only when the user asks
   for that one.
 - No like and no repost tool: X's MCP exposes neither.
@@ -47,6 +46,13 @@ A tool X adds later, a write included, is not declared, so in Jelly it is not as
 even if it changes something, until a new version of this plugin declares it. Keep `jelly.tools` in step with
 `src/x-tools.ts`; `test/unit/jelly.test.ts` checks the list against it, and each declared effect against the plugin's
 own default rules.
+
+`test/unit/live-tools.test.ts` checks the declaration against X's tool list as Code Mode's catalogue showed it on 14
+November 2026, in `test/fixtures/live-tools.json` (`provenance.json` says how): every listed tool is declared, every
+declared tool is listed or is the plugin's own `x_events_list` (`test/fixtures/tool-registry.json`), and every effect is
+`allow`. That list has names and input parameters only: OpenCode's sign-in to X was refused that day, so there is no
+live capture with X's `readOnlyHint`s, and each `readOnly` is the class in `src/x-tools.ts`, from X's own description
+of the tool.
 
 The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page
 against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit, and the shared part of the tools
@@ -66,7 +72,10 @@ A feed of posts would put other people's words on a dashboard and call billed to
 ## Signing in
 
 `jelly.signIns` declares the X app client ID, then `x`, for X's MCP server `x`, which signs in with OpenCode's MCP
-OAuth. An X app supplies the client: an organisation can set a team app's public client ID in managed config, or the
+OAuth. Its `scopes` are the scopes the plugin requests by default (`SCOPES` in `src/constants.ts`, sorted, as
+Jelly requires); a deployment that sets its own `oauth.scopes` requests those instead. When the scopes X granted the active sign-in
+lack one of them, as after an upgrade that adds `media.write`, the plugin marks that account as needing a new sign-in,
+the same mark it sets when X stops accepting the token, and its status says "sign-in required" and names the scope. An X app supplies the client: an organisation can set a team app's public client ID in managed config, or the
 user can save their own app in `/connect` → **X app**, before signing in.
 
 Jelly folds the declared sign-in into this plugin's one card, which shows it as Connected, Not signed in or Sign in again (expired or revoked), and starts, renews and signs out of it. An agent's `jelly_connection_request`, or a tool result that names this plugin's "Run /connect and choose …" next step, opens the same card. The plugin still signs in through OpenCode, as it does without Jelly; the declaration only tells Jelly which of the engine's integrations and servers are this plugin's.

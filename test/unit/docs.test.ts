@@ -1,10 +1,11 @@
 // The docs and skills must match the code: tool names, counts, error codes, the uninstall order and the Jelly guide.
 // Every tool count they state is checked against src/x-tools.ts, so a change there cannot leave a stale number behind.
+import { VERSION } from "../../src/version.js"
 import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { SENSITIVE_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules } from "../../src/permissions.js"
 import { NAMESPACE_DESCRIPTION, PLUGIN_CODES, RPC_CODES, TESTED_HOSTS } from "../../src/constants.js"
 
@@ -19,7 +20,7 @@ const FILES = [
   ...readdirSync(join(ROOT, "docs")).map((name) => `docs/${name}`),
   ...readdirSync(join(ROOT, "skills")).map((name) => `skills/${name}/SKILL.md`),
 ]
-const KNOWN = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS]
+const KNOWN = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOLS]
 const text = (file: string) => readFileSync(join(ROOT, file), "utf8").replace(/\s+/g, " ")
 // Every code the plugin raises, from the one typed table in src/constants.ts.
 const CODES: readonly string[] = PLUGIN_CODES
@@ -249,7 +250,7 @@ describe("docs", () => {
     const uninstall = /## Uninstall(.*?)## Links/.exec(text("README.md"))?.[1] ?? ""
     const logout = uninstall.indexOf("opencode mcp logout x")
     const list = uninstall.indexOf("opencode auth list")
-    const remove = uninstall.indexOf("opencode plugin remove github:joe-broadhead/opencode-x#v0.0.2")
+    const remove = uninstall.indexOf(`opencode plugin remove github:joe-broadhead/opencode-x#v${VERSION}`)
     expect(logout).toBeGreaterThanOrEqual(0)
     expect(list).toBeGreaterThan(logout)
     expect(remove).toBeGreaterThan(list)

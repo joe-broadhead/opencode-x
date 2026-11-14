@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-x",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "description": "Unofficial OpenCode plugin for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, post, and draft long-form Articles, through X's official MCP server",
   "keywords": [
@@ -438,6 +438,12 @@
         "readOnly": false
       },
       {
+        "name": "x.media_upload",
+        "permission": "x_media_upload",
+        "effect": "allow",
+        "readOnly": false
+      },
+      {
         "name": "x.pin_list",
         "permission": "x_pin_list",
         "effect": "allow",
@@ -719,6 +725,23 @@
         "id": "x",
         "label": "X",
         "server": "x",
+        "scopes": [
+          "block.read",
+          "bookmark.read",
+          "bookmark.write",
+          "broadcast.read",
+          "calls.read",
+          "follows.read",
+          "like.read",
+          "list.read",
+          "list.write",
+          "media.write",
+          "offline.access",
+          "space.read",
+          "tweet.read",
+          "tweet.write",
+          "users.read"
+        ],
         "after": "app"
       }
     ],

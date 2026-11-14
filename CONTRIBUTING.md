@@ -105,10 +105,11 @@ check, and never save a token, a client secret or X content in this repository.
 
 ## X's tools
 
-`src/x-tools.ts` is the one record of the X tools the plugin knows: `READ_TOOLS` run without a prompt and are the
-tools RPC's methods; `WRITE_TOOLS` are private writes that
-ask; `PUBLIC_TOOLS` reach other people and ask; `DENY_TOOLS` are off; `DENY_PATTERNS` is a safety net for a future
-tool of a denied effect; and `PARAMETERS` holds each tool's input parameters. The default rules, the tools RPC,
+`src/x-tools.ts` is the one record of the X tools the plugin knows: `READ_TOOLS` are the reads;
+`WRITE_TOOLS` are private writes; `PUBLIC_TOOLS` reach other people; `SENSITIVE_TOOLS` are the privacy-sensitive DM,
+follow, block, mute, list-membership, moderator, call and live-video tools, which were once off; and `PARAMETERS` holds
+each tool's input parameters. With the default `access: all` every one of them runs without asking; `ask-changes`
+asks for every tool that is not a read, and `read-only` denies it. The default rules, the tools RPC,
 status's unknown and denied tools, the fake server in the host and pack tests, and the checks of `jelly.tools`, the
 docs and the skills all derive from it. X's hosted server is closed and unversioned, and may add, rename or remove
 tools without notice.
@@ -117,7 +118,9 @@ The names and classes come from the **live list** captured from a signed-in Open
 (`ctx.tool.list()`), recorded in `test/unit/x-live-tools.json`: 100 tools with input and output schemas. The capture
 carries **no annotations**, so each class comes from X's name, description and schema, and `PARAMETERS` is filled
 from the input schemas. X may list fewer tools for a token with fewer scopes, so a known tool missing from one list is
-not drift.
+not drift. `media_upload` is the one tool added since: Code Mode's catalogue of X's tools lists it on 2026-11-14,
+recorded with names and input parameters only (no annotations, no schemas) in `test/fixtures/live-tools.json`, because
+OpenCode's sign-in to X was refused that day; `test/unit/live-tools.test.ts` checks `jelly.tools` against it.
 
 ### Drift check
 
@@ -163,9 +166,9 @@ line with no local path) when X changes its tools.
    user's own account and reaches nobody to `WRITE_TOOLS`. Add a tool that posts, replies, quotes, reposts, publishes,
    mentions or messages anyone to `PUBLIC_TOOLS`. Add a tool that sends a DM or chat message, follows or unfollows,
    blocks or mutes, deletes a post, changes list membership, changes a moderator role, schedules a call, goes live,
-   manages a stream source, changes account settings, or sends data to X's team to `DENY_TOOLS`. Leave a tool out if
-   you are not sure: it then asks before every call,
-   and scripts cannot call it.
+   manages a stream source, changes account settings, or sends data to X's team to `SENSITIVE_TOOLS`. Leave a tool out if
+   you are not sure: it then follows the `x_*` rule like any other tool (it runs at `all`, asks at `ask-changes` and
+   is denied at `read-only`), but it is not declared to Jelly and scripts cannot call it.
 4. Update `PARAMETERS` from the schemas, `jelly.tools` in `package.json`, and any skill text that names a changed tool.
    With parameters recorded, a skill may give a literal call such as `search_posts_all({ … })`, and the skills test
    checks its keys against `PARAMETERS`. Run `npm run check`: the Jelly test fails if `jelly.tools` differs from the
@@ -292,5 +295,5 @@ Each release has its own tag, and a Git install does not update by itself. To mo
 Or add the plugin to `opencode.json` instead, with the same spec:
 
 ```json
-{ "plugins": [{ "package": "github:joe-broadhead/opencode-x#v0.0.2" }] }
+{ "plugins": [{ "package": "github:joe-broadhead/opencode-x#v0.0.3" }] }
 ```

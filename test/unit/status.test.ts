@@ -318,15 +318,15 @@ describe("buildStatus", () => {
   })
 
   test("the writes the Access row covers are the lists', not a fixed sentence", () => {
-    expect(WRITE_TOOLS.length).toBe(8)
+    expect(WRITE_TOOLS.length).toBe(9)
     expect(PUBLIC_TOOLS).toEqual(["create_posts"])
   })
 })
 
-function statusContext(server: string, skills: Promise<unknown> = Promise.resolve({ data: [] }), connection: Promise<unknown> = Promise.resolve({ type: "credential", id: "c1", label: "Example account", method: "oauth" })) {
+function statusContext(server: string, skills: Promise<unknown> = Promise.resolve({ data: [] }), connection: Promise<unknown> = Promise.resolve({ type: "credential", id: "c1", label: "Example account", method: "oauth" }), granted?: string) {
   const ctx = {
     mcp: { list: async () => ({ data: [{ name: "github", status: { status: "connected" } }, { name: "x", status: { status: server }, integrationID: "mcp_fake" }] }) },
-    integration: { connection: { active: async (id: string) => (id === "mcp_fake" ? connection : undefined) } },
+    integration: { connection: { active: async (id: string) => (id === "mcp_fake" ? connection : undefined), resolve: async () => ({ type: "oauth", metadata: granted === undefined ? {} : { scope: granted } }) } },
     agent: { list: async () => ({ data: [guarded, { id: "reviewer", permissions: [allow("*")] }] }) },
     tool: {
       list: async () => [
@@ -340,6 +340,36 @@ function statusContext(server: string, skills: Promise<unknown> = Promise.resolv
   }
   return ctx as unknown as StatusContext
 }
+
+describe("a sign-in from before media.write", () => {
+  const OLD = SCOPES.filter((scope) => scope !== "media.write")
+
+  test("is sign-in required, names the missing scope, and says to sign in again", () => {
+    const status = buildStatus({ ...base, granted: OLD })
+    expect(status).toMatchObject({ state: "sign_in_required", missingScopes: ["media.write"] })
+    expect(status.nextStep).toBe("X's sign-in lacks `media.write`, which this version asks for. Add it to the X app's scopes if it lacks it, then sign in again: Run `/connect` and choose X, then press `o` or Enter to open the link (in a terminal, `opencode mcp auth x` opens it automatically).")
+    const text = formatStatus(status)
+    expect(text).toContain("- Connection: sign-in required (")
+    expect(text).toContain(`- Scopes: ${SCOPES.join(" ")} (not granted to this sign-in: media.write)\n`)
+  })
+
+  test("a full grant, an unknown grant, or the user's own adopted entry is connected", () => {
+    for (const facts of [{ ...base, granted: [...SCOPES] }, base, { ...base, granted: OLD, source: { type: "adopted" as const, url: URL, signIn: "oauth" as const } }]) {
+      const status = buildStatus(facts)
+      expect(status.state).toBe("connected")
+      expect(status).not.toHaveProperty("missingScopes")
+    }
+  })
+
+  test("readStatus reads the granted scope OpenCode stored with the credential, and the RPC schema names the field", async () => {
+    const facts = { source: { type: "plugin" as const, url: URL, signIn: "oauth" as const }, client: CLIENT, options: OPTS, host, problems: [] }
+    const old = await readStatus(statusContext("connected", undefined, undefined, OLD.join(" ")), facts)
+    expect(old).toMatchObject({ state: "sign_in_required", missingScopes: ["media.write"] })
+    expect(await readStatus(statusContext("connected", undefined, undefined, SCOPES.join(" ")), facts)).toMatchObject({ state: "connected" })
+    expect(await readStatus(statusContext("connected"), facts)).toMatchObject({ state: "connected" })
+    expect(StatusRpc.methods.status.output.properties).toHaveProperty("missingScopes")
+  })
+})
 
 describe("readStatus", () => {
   test("reads the connection, the sign-in's label, tools and agents through public APIs", async () => {

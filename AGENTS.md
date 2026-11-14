@@ -49,10 +49,11 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
 - **A class is what the tool does.** A reversible, private delete stays a `write`: `delete_users_bookmark` removes the
   user's own bookmark and is class `write`, not `destructive`, which is for an irreversible effect or one that reaches
   another person.
-- **`src/x-tools.ts` is the one record of X's tools**, and has no runtime imports. `DENY_TOOLS` is the 40 live tools that are allowed with the rest and were once off; never remove a name.
+- **`src/x-tools.ts` is the one record of X's tools**, and has no runtime imports. `SENSITIVE_TOOLS` is the 40 privacy-sensitive live tools (DMs, follows, blocks, mutes, list membership, moderators, calls and live video) that are allowed with the rest and were once off; never remove a name.
   Everything else derives from it;
   `jelly.tools` and the skills are checked against it. Its names are the live list captured on 2026-11-06, with no
-  annotations, and `PARAMETERS` comes from its input schemas: reconciling is a change to that file,
+  annotations, plus `media_upload` from Code Mode's catalogue of 2026-11-14 (`test/fixtures/live-tools.json`), and
+  `PARAMETERS` comes from their input schemas: reconciling is a change to that file,
   `test/unit/x-live-tools.json`, `jelly.tools` and the skills, which `npm run drift` guides. `src/constants.ts` has no
   imports at all: `scripts/check.mjs` loads it with Node's type stripping.
 - **Every call is billed.** Docs, skills, status and the namespace text say so plainly. The skills let the model fetch
@@ -79,7 +80,7 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   between the `PLUGIN-SPECIFIC` markers here; change the rest in every plugin at once.
   `scripts/check-copies.mjs` holds it, the declaration kit `test/support/jelly-kit.ts` and Jelly's setting rules
   `test/support/jelly-settings.ts`, equal to the copies every plugin carries. Its methods are every known tool, from
-  `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS` and `DENY_TOOLS`, each with its class, and never an unknown tool. A rule must allow a method before a script can run it: an `ask` is
+  `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS` and `SENSITIVE_TOOLS`, each with its class, and never an unknown tool. A rule must allow a method before a script can run it: an `ask` is
   refused, and a saved "Always allow" is not a grant. Neither path caps a read: the model's arguments and the RPC's
   `shapeInput` pass page size and pagination to X unchanged, and `shapeResult` always appends the cost line and counts the session's spend; only an
   opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` refuses. Keep the RPC id `x.posts.tools` and its method names stable: scripts call them by name.

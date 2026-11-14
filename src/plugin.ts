@@ -204,7 +204,7 @@ export function createXPlugin(seam: XSeam) {
                 : { code: client.invalid ? "CLIENT_ID_INVALID" : "CLIENT_ID_MISSING", next: clientNextStep() },
           },
         })
-        stopWatch = watchIntegration(ctx, ownedServer)
+        stopWatch = watchIntegration(ctx, ownedServer, () => (source?.type === "plugin" ? options.scopes : undefined))
       }
 
       const read = () =>

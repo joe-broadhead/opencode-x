@@ -1,5 +1,6 @@
 import type { Plugin } from "@opencode/plugin"
 import { DISPLAY_NAME, SERVER_NAME } from "./constants.js"
+import { missingScopes, readGranted, SCOPES_AGAIN_PREFIX, scopesAgain } from "./scopes.js"
 
 export interface IntegrationContext {
   readonly mcp: Pick<Plugin.Context["mcp"], "list">
@@ -12,18 +13,22 @@ type Registration = Awaited<ReturnType<Plugin.Context["integration"]["transform"
 /** What `/connect` shows on the account while X's server needs a new sign-in. */
 const SIGN_IN_AGAIN = "X needs a new sign-in. Choose this account to sign in again."
 
+/** Whether a status on an account is one this plugin set. */
+const ours = (status: { readonly message: string } | undefined) => status !== undefined && (status.message === SIGN_IN_AGAIN || status.message.startsWith(SCOPES_AGAIN_PREFIX))
+
 const STARTUP_POLL_MS = 250
 const STARTUP_WINDOW_MS = 10_000
 const RESUBSCRIBE_MS = 5_000
 
 /**
  * Keeps the `/connect` entry of the `x` server named "X", and marks its account "Sign in required" while the server
- * needs a new sign-in. The host registers the server's integration after plugin setup, and again under the server name
+ * needs a new sign-in, or while the scopes X granted that sign-in lack one of `requested()` (the plugin's own server's
+ * scopes; undefined for another entry). The host registers the server's integration after plugin setup, and again under the server name
  * whenever the MCP config reloads, so the rename is registered once the integration exists, and again each time the
  * host's name comes back. Events trigger a check; the first seconds are also polled, because a subscription has no
  * start acknowledgement. `owned` is false while `x` is another server, which keeps its own name.
  */
-export function watchIntegration(ctx: IntegrationContext, owned: () => boolean) {
+export function watchIntegration(ctx: IntegrationContext, owned: () => boolean, requested: () => readonly string[] | undefined = () => undefined) {
   const stopped = new AbortController()
   let registration: Registration | undefined
 
@@ -43,13 +48,29 @@ export function watchIntegration(ctx: IntegrationContext, owned: () => boolean) 
     if (connection?.type !== "credential") return
     // `active` returns the credential alone; the status the plugin sets is projected by `get`. Read it there, so the
     // mark it wrote is the one it clears, and another plugin's or the host's message is left alone.
-    const shown = (await ctx.integration.get({ integrationID: id })).data.connections?.find((item) => item.type === "credential" && item.id === connection.id)
+    const connections = (await ctx.integration.get({ integrationID: id })).data.connections ?? []
+    const shown = connections.find((item) => item.type === "credential" && item.id === connection.id)
     const status = shown?.type === "credential" ? shown.status : undefined
-    const reported = status?.message === SIGN_IN_AGAIN
-    if (server.status.status === "needs_auth" && !status) {
-      await ctx.integration.connection.status({ integrationID: id, connection, status: { status: "needs_auth", message: SIGN_IN_AGAIN } })
-    } else if (server.status.status === "connected" && reported) {
-      await ctx.integration.connection.status({ integrationID: id, connection, status: undefined })
+    const reported = ours(status)
+    // A new sign-in adds a new account and leaves the old one: the plugin's mark on an account no longer in use goes.
+    for (const other of connections) {
+      if (other.type !== "credential" || other.id === connection.id || !ours(other.status)) continue
+      const { status: _status, ...info } = other
+      await ctx.integration.connection.status({ integrationID: id, connection: info, status: undefined })
+    }
+    // The mark this check wants: null leaves the account as it is, while the server is connecting, failed or disabled.
+    let wanted: string | undefined | null = null
+    if (server.status.status === "needs_auth") wanted = SIGN_IN_AGAIN
+    else if (server.status.status === "connected") {
+      const scopes = requested()
+      const missing = scopes ? missingScopes(scopes, await readGranted((item: typeof connection) => ctx.integration.connection.resolve(item), connection)) : []
+      wanted = missing.length ? scopesAgain(missing) : undefined
+    }
+    if (wanted === null) return
+    if (wanted === undefined) {
+      if (reported) await ctx.integration.connection.status({ integrationID: id, connection, status: undefined })
+    } else if (!status || (reported && status.message !== wanted)) {
+      await ctx.integration.connection.status({ integrationID: id, connection, status: { status: "needs_auth", message: wanted } })
     }
   }
 

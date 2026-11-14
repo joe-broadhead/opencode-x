@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { DISPLAY_NAME, SERVER_NAME } from "../../src/constants.js"
-import { DENY_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { DISPLAY_NAME, SCOPES, SERVER_NAME } from "../../src/constants.js"
+import { SENSITIVE_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { METHODS } from "../../src/host/tools-rpc.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
@@ -9,9 +9,8 @@ import { type Declaration, type DeclaredTool, declarationProblems, docProblems, 
 import { ACCESS_CHOICES, type PluginSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
 
 /**
- * The `jelly` section of package.json, which Jelly reads without loading the plugin. Jelly's agents have no base allow
- * rule, so this plugin's own rules never reach them: Jelly writes each declared "ask" or "deny" as that tool's default.
- * The shared kit checks the declaration against Jelly's plugin authors' standard; the tests below add what only X
+ * The `jelly` section of package.json, which Jelly reads without loading the plugin. Every declared effect is the one
+ * the plugin's own `access: all` block gives, which is `allow`. The shared kit checks the declaration against Jelly's plugin authors' standard; the tests below add what only X
  * declares.
  */
 
@@ -28,7 +27,7 @@ const jelly = pkg.jelly as Declaration & {
 }
 const byPermission = new Map(jelly.tools.map((tool) => [tool.permission, tool]))
 // Every live tool, and the plugin's own x_events_list.
-const known = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...DENY_TOOLS, "events_list"].map((tool) => `${SERVER_NAME}_${tool}`)
+const known = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOLS, "events_list"].map((tool) => `${SERVER_NAME}_${tool}`)
 
 describe("the jelly declaration", () => {
   test("follows the plugin authors' standard, with the effects the plugin's own default rules give", () => {
@@ -38,7 +37,7 @@ describe("the jelly declaration", () => {
   test("declares every live tool once, with the all-allow effect the default rules give it", () => {
     for (const tool of READ_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
     for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: false })
-    for (const tool of DENY_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow" })
+    for (const tool of SENSITIVE_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow" })
     for (const method of METHODS) expect(byPermission.get(`x_${method.name}`)?.readOnly, method.name).toBe(method.class === "read")
     // Memory's collector runs x_events_list unattended, so it never asks.
     expect(byPermission.get("x_events_list")).toEqual({ name: "x.events_list", permission: "x_events_list", effect: "allow", readOnly: true })
@@ -51,7 +50,7 @@ describe("the jelly declaration", () => {
     expect(jelly.skills).toEqual([...SKILL_NAMES])
     expect(jelly.signIns).toEqual([
       { id: "app", label: "X app client ID", integration: "x-app", presetBy: "oauth.client_id" },
-      { id: SERVER_NAME, label: DISPLAY_NAME, server: SERVER_NAME, after: "app" },
+      { id: SERVER_NAME, label: DISPLAY_NAME, server: SERVER_NAME, scopes: [...SCOPES].sort(), after: "app" },
     ])
     expect(jelly.rpc).toEqual([])
     expect(jelly.views).toEqual([])

@@ -1,0 +1,2189 @@
+{
+  "schema": "opencode-family/live-tools@1",
+  "evidence": "catalog",
+  "note": "Names (and digests of the description and signature the engine shows the model, after the plugin's own transforms) from Code Mode's search({ namespace }). No annotations and no JSON schemas: this does not satisfy the release gate.",
+  "listedAt": "2026-11-14",
+  "server": "x",
+  "namespace": "x",
+  "endpoint": null,
+  "auth": "none",
+  "host": {
+    "opencode": "2.2.6",
+    "via": "Code Mode catalog"
+  },
+  "protocol": null,
+  "pages": 0,
+  "count": 101,
+  "readOnlyHints": 0,
+  "digest": "f827e9995cac8171da38c145faf8d851e8c36e3ad6d374a096d50eba613cd83d",
+  "tools": [
+    {
+      "name": "accept_chat_message_request",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "df20a3d149f8856e64cae6dec198671b957ee636550de7440e5a104b44211ca7",
+        "length": 250,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "4a2ccb4a0aede1c809813ea1af6fc5116a93499a5bfd4121416b2b1b2f36f660",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "add_chat_moderator",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "46008a23ae3f66050e889c5062e821457efb7b56af3799fd6ff9c288e05d5ded",
+        "length": 171,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "629ef4023a1fe73417d9cea10cabdacdb2a2c38454809b7f13f2f42a93d741cc",
+      "inputParams": [
+        "user_id"
+      ]
+    },
+    {
+      "name": "add_conversation_keys",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "c6a9d00d446c83b3ed3f46809bb85d55248acd677e411ab031e8a50e6d1e79a3",
+        "length": 534,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "b8297d7d386e621db816383c9465153c25bbaef776b19bfcc0e817d98e9fa8f6",
+      "inputParams": [
+        "action_signatures",
+        "base64_encoded_key_rotation",
+        "conversation_key_version",
+        "conversation_participant_keys",
+        "id"
+      ]
+    },
+    {
+      "name": "add_lists_member",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "2471d07c21ec40a8b33a47265a7bc6d2ac8128b5fe21abfe8545ac026d09c16d",
+        "length": 41,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "3696033e2143f56edbd890021919fbd763a1636356f2c8c443296883c8717026",
+      "inputParams": [
+        "id",
+        "user_id"
+      ]
+    },
+    {
+      "name": "archive_chat_conversation",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "192208c00a98ef111329d3e070131ae4a747b67ed04e759791923539936a40c5",
+        "length": 303,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "771c5d80866c26b4f7e2ba3cddc58d6d7d4e0e7fc0e89ff489a6bc09ac6801f9",
+      "inputParams": [
+        "action_signatures",
+        "id"
+      ]
+    },
+    {
+      "name": "article_create_draft",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "8116315d8acb2d51f011caec1ef22932f7b6794763c078cd552beaae4b469fbd",
+        "length": 56,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "4f150f6fbbbc72443c68e6d8638897a3d4efea48325f392d73e17fb814cbd7ac",
+      "inputParams": [
+        "content_state",
+        "cover_media",
+        "title"
+      ]
+    },
+    {
+      "name": "cancel_scheduled_call",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "1e2e2738e496b4c9f93bf6fa06f4da7b991e93d0a56aaa1ada10e7b950b68630",
+        "length": 282,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "4ea6047dae152afbb5160ddbe0fb81b6d7a282a34cf596cdd4822af560572163",
+      "inputParams": [
+        "id",
+        "notify_invitees",
+        "occurrence_start_time",
+        "scope"
+      ]
+    },
+    {
+      "name": "chat_media_download",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "de1828ac83a82d3ab2e1e3aeae5713d7017323d3a039c82eb3ce58c2b719894c",
+        "length": 243,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "9013b4f03af77472572da0aca56322f031f73dd497b36610bd78a7209cb159f2",
+      "inputParams": [
+        "id",
+        "media_hash_key"
+      ]
+    },
+    {
+      "name": "chat_media_upload_append",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "0ec4d89c21d5a2a2f04d84c1527f21914cb33a64ccbdac69f21bbc5c012844e1",
+        "length": 84,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "57d5ae49e74ad2256dd28bb4c0bf5e618e8f70d7771bdc425920db6eede2a3c1",
+      "inputParams": [
+        "conversation_id",
+        "id",
+        "media",
+        "media_hash_key",
+        "segment_index"
+      ]
+    },
+    {
+      "name": "chat_media_upload_finalize",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "c63c3dbcb1df2e17e88900f1d10b05d07a00e7ef9de431706af28bbccf9ff82e",
+        "length": 78,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "b3f4dacbca91ddc6610e0619cc872fa0dc8ec3be91ec80b0e37dd418ced0bd62",
+      "inputParams": [
+        "conversation_id",
+        "id",
+        "media_hash_key",
+        "message_id",
+        "num_parts",
+        "ttl_msec"
+      ]
+    },
+    {
+      "name": "chat_media_upload_initialize",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "63770ca9d0b0441b545d785232236ebc20ec6d81002f0fd964f2a68d056c2d91",
+        "length": 80,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "5b3ced17aa71b399599561125b684ab45921df860499edd1ebbe1fcf591a3f9c",
+      "inputParams": [
+        "conversation_id",
+        "total_bytes"
+      ]
+    },
+    {
+      "name": "create_lists",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "445bd40b5d671809eac2cf5a03c93d2a3b68eb1efb0e5b3a630a6a30b071a92b",
+        "length": 46,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "0b3218d1ab28dc2cf018f7abae3b33b6aaf4e4565f7a2d70d5bc8b0e348c8996",
+      "inputParams": [
+        "description",
+        "name",
+        "private"
+      ]
+    },
+    {
+      "name": "create_posts",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "cd2cfd48903f7d2fb09b2ca4e69e113a7fea56052feb2aaa6af70dfddf9afdce",
+        "length": 426,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "999204ef310e8471e9899d235e4ed883a606a2fb77cf6d53dc4872e6c48c30d3",
+      "inputParams": [
+        "card_uri",
+        "clip",
+        "community_id",
+        "direct_message_deep_link",
+        "edit_options",
+        "for_super_followers_only",
+        "geo",
+        "made_with_ai",
+        "media",
+        "nullcast",
+        "paid_partnership",
+        "poll",
+        "quote_tweet_id",
+        "reply",
+        "reply_settings",
+        "share_with_followers",
+        "text"
+      ]
+    },
+    {
+      "name": "create_scheduled_broadcast",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "754ca8e909195baca1f3514e83ef6578b7ccc490ec5d307dbd7e809172ac751f",
+        "length": 321,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "a63a6e28790446cb9fa80a98d2a380057696dabe253136f589a8822b837de327",
+      "inputParams": [
+        "available_for_replay",
+        "chat_option",
+        "description",
+        "is_locked",
+        "locale",
+        "manual_publish",
+        "recurrence",
+        "scheduled_end_ms",
+        "scheduled_start_ms",
+        "source_id",
+        "telecast_id",
+        "thumbnail_media_id",
+        "title"
+      ]
+    },
+    {
+      "name": "create_source",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "2c7d1bfc81cfc5cbc62321d53791f88f608cb03e3abaf1be025cdceb2f7e8900",
+        "length": 241,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "c2ecf162c3d35afb8dc5dbdf9258ac5cc55b2a361936554cbfca6a53c73e7180",
+      "inputParams": [
+        "name",
+        "region"
+      ]
+    },
+    {
+      "name": "create_users_bookmark",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "31812a192981111793d859c81ea7a650d589f77beda6486d284b968c1608b880",
+        "length": 275,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "6179aa536064d58ea9dfd490554ebdb824fdd0db0b9efd3955584e2b1e445f7b",
+      "inputParams": [
+        "folder_id",
+        "id",
+        "tweet_id",
+        "tweet_ids"
+      ]
+    },
+    {
+      "name": "create_users_bookmark_folder",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "0d35d434bbbc79c2fcf9ddbf9e9bb661be3cf5cbc17fa71fad524dbaa2680a41",
+        "length": 57,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "788f4744e0cb214a80353c5aa4fe5621b7891913cc89385f45c2ce9d0f3c4d35",
+      "inputParams": [
+        "id",
+        "name"
+      ]
+    },
+    {
+      "name": "delete_scheduled_broadcast",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "873334fd5e29f8503d941dfba8c6b55a8b35a364f161bbb8f36a7057867e1689",
+        "length": 63,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "90deab9b6f615563aa8fa1824e750e89fff64576bf91a251260f8fe3c9a1c369",
+      "inputParams": [
+        "id",
+        "roll_forward"
+      ]
+    },
+    {
+      "name": "delete_source",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "1b57eb230df78b78bdbeabd98654421e921060fb490c66756f5f2e90bf0f1cb7",
+        "length": 55,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "9b081319f1d8ad4dbbe92ad5c58b93dfef05daee45e857e6d98fa8219f744a51",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "delete_users_bookmark",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "b99f8b4eb21285b76e41d2174e42aeb64c7287f86542f1c20de5ae6da9e0a501",
+        "length": 65,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "cc9df1ae52d83c033108bafdb24ea901cb319e994480c2d134657737fad37ebc",
+      "inputParams": [
+        "id",
+        "tweet_id"
+      ]
+    },
+    {
+      "name": "follow_list",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "70c63e09e813d11475abe404318d8ba6f0cba4469c786066bbab832dc2015365",
+        "length": 66,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "461d91cd5cf3ac7be28af46b6a65d183b0e3d013f5628f50148aa828d7f2ea8e",
+      "inputParams": [
+        "id",
+        "list_id"
+      ]
+    },
+    {
+      "name": "get_broadcast",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "2edfbdfc332719291c100062c16d1e27e298c66bcb53b692150974a1e548267c",
+        "length": 52,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "d82233503be52a7d176fb45acaf9f2fd5d290ddda8b4e638dae564c721727f51",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "get_broadcast_chat",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "e0aef36a5eeb9d2b13cef62d06550f854f9874f180aed7f9f6135f625df36bfa",
+        "length": 83,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "065d12e879c0701eea840744cbd8327a94837274febb4553b4662db8c9158cdf",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_chat_conversation",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "f73357ae7d4f7e9c4191bc8a78cb6ca213e975edfe0cad1cdc435f8d291370ef",
+        "length": 675,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "26ee5a171a7408a86fee68238a6b78c481498bcac7cdd894c2d063dfd4911a6d",
+      "inputParams": [
+        "expansions",
+        "id"
+      ]
+    },
+    {
+      "name": "get_chat_conversation_events",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "3f2c5201632c2d60ad482ab034ad96c46d7307fe4068bf4d9ae0a1dbb099292d",
+        "length": 1117,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "12dbb4ee8f830a892e343997c723a4c21e26f597cfc92a8412e6aa8da505130f",
+      "inputParams": [
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_chat_conversations",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "9d3ad788754a1c57eefecaa41ba1fdee9b7a2a4bcf749b82639387a76b5d459b",
+        "length": 1734,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "02f1de531a88ea0cb2f3b95ffe3647ee57d36248f21f7e295103159f2a91462d",
+      "inputParams": [
+        "end_time",
+        "expansions",
+        "is_archived",
+        "is_muted",
+        "max_results",
+        "pagination_token",
+        "participant_ids",
+        "participant_query",
+        "start_time",
+        "type",
+        "unread_only"
+      ]
+    },
+    {
+      "name": "get_chat_message_request",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "e0299152cbb9087cc71349d5cf3c621016d7f8d413159a730e92ff0cbe6c588c",
+        "length": 213,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "6c5d4d5f7fda1c162695a6cc0bbfe61f48360a4d041ed5336581e1b91aa01fdc",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "get_chat_message_requests",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "cd66e9900ec1d3f1934e9d0e565d2967f0e0ed7c643f0c0fc79c447b7b51d87d",
+        "length": 287,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "69d3e1d6b3f2c980a23e6bfaa07f5b0ae440a0cbcab1540351113b25a293090a",
+      "inputParams": [
+        "inbox_type",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_chat_moderators",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "371ed4b2899d050968214135fd5680c576deed8281086b624b30686e2a91c8b5",
+        "length": 149,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "00e5100143a433c91e001c158373e35fba55da48cfc2dfbbbbb4f3c29735094d",
+      "inputParams": [
+        "expansions"
+      ]
+    },
+    {
+      "name": "get_communities_by_id",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "7517276e2040f461a3e5aaf872551df3c726223bb8fda52b87ae8a91d2ae036c",
+        "length": 52,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "6f3eaa8f8ebd58ad66026e63b7c3612545879595eba94c6b6660fa5fc8877120",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "get_lists_by_id",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "13560fe7f648df19b9a20ae6c0aa5b987147bd011d00fef4fc9971dfd5fec0cb",
+        "length": 47,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "2dbf05ec6600e9bc32aab263d780f9923879b9cee2d8abea1b450c4e50df15c0",
+      "inputParams": [
+        "expansions",
+        "id"
+      ]
+    },
+    {
+      "name": "get_lists_followers",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "c545239d99bc5c24670be1158917dd000a5ae4a6f29d7142172575d436db79e5",
+        "length": 63,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "5b8ed1415613c8723ec978465661369a8e4fed40f6bf0e3a96f440893c192584",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_lists_members",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "e6c383db34d867076ce5853f47884aad87048ed727772f7e33751557b4fb6a8b",
+        "length": 71,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "51c8cac7d57138475ab6d957d21dac16f66e63a1caee8a9e5f4aee672578a650",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_lists_posts",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "32b91e3ec32b2bb291a29a9330231be1926f3a7241be2babc6655e20f1c0ca08",
+        "length": 68,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "514d10fb9d63babb8fbe352dda902b36dcb26d88021522816ac0e388229d89af",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_news",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "83197dbec87dbdcd185b666c197f1f2dd6194e664d81105c0cd5338968708041",
+        "length": 99,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "e48675cfb86116eed296c7f87c3e55da3e255afa190d5b1e7b702dfaeb0ae23a",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "get_posts_by_id",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "4b596c38301abd451cb039831f5053ee3acde6b746e03751bd2077e670c1e2db",
+        "length": 111,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "28de3be9223c953773f861d1443366defc592453a22ba55fd669d314060e236c",
+      "inputParams": [
+        "expansions",
+        "id"
+      ]
+    },
+    {
+      "name": "get_posts_by_ids",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "34d74081d07c76e57a904f3fbfabfb3b6f0ba7e299fa801b5d9af257aa7bf6b2",
+        "length": 113,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "3cbca9443cf63e0aa6984154e5e6c52bd6caec847d069b5d40cbd794422e0c28",
+      "inputParams": [
+        "expansions",
+        "ids"
+      ]
+    },
+    {
+      "name": "get_posts_counts_recent",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "9e4d99106a1a724e770fc607022d8f5c6574ffae441f6fe75a8c6a7251c8db42",
+        "length": 140,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "117a01e767691ba5a74ddfa8ad182c32b029274f1267e9fc80727cbdcecd7c42",
+      "inputParams": [
+        "end_time",
+        "granularity",
+        "next_token",
+        "pagination_token",
+        "query",
+        "since_id",
+        "start_time",
+        "until_id"
+      ]
+    },
+    {
+      "name": "get_posts_liking_users",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "2843df3be9ad9bdd4ae9f74b1db38348e85f070485db6533e2171a4d20ba8f22",
+        "length": 62,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "cb5fd2ee039f253c4fd82151470d5a1a62a7b4df2b9535712d537b86888d55a6",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_posts_quoted_posts",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "ccebc4487b22373ad74ba9656fb940cba4c7148dc8c11aa0b42ef545d12acc2d",
+        "length": 127,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "62f15a65de3083cdad0d40ec9e4494bb7a994bf7a8f83ae94d93c93029717b04",
+      "inputParams": [
+        "exclude",
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_posts_reposted_by",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "06bfcbba6643158719528d95c7df1b3af5ce66579d276fcf20eb8bdb30026523",
+        "length": 65,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "742c894dbb83e7c6d72c1decba071203bc505f067bfdd68ea800a6ac6fb06ffc",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_scheduled_broadcast",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "74fed682737411291cf980621223a66373c05e0d5ed423cbe9130cd8751bbdf9",
+        "length": 70,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "1d0e2b0ef66abbe8fb660f8a23e90884c566c727761e76a680809ed76971915d",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "get_scheduled_call",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "7b780f9039988a94fa6bbd2b501fd07daefec8bf8f54caf1cc103f4ea3f6fe47",
+        "length": 313,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "1fdbc41e9e6107af92264a69d3f268a4ee94e6283609a4a752a815913683b3c2",
+      "inputParams": [
+        "expansions",
+        "id"
+      ]
+    },
+    {
+      "name": "get_source",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "422fcf4b1a9ca104a094c5afa70db765b4234480151d0dab3730202ff872adaf",
+        "length": 216,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "0e51db399e3607b9e5f0645866b7435c49c01ae334a3e4bc220dbe83642689ae",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "get_spaces_by_creator_ids",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "b9ec177649c4b9f6fcdb392407895055efcd8cdc7691119f658463a8c9db6589",
+        "length": 58,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "1e08a1167db705607751af41cdb6a80d15edebf72769927a93fcbe14729eddac",
+      "inputParams": [
+        "expansions",
+        "user_ids"
+      ]
+    },
+    {
+      "name": "get_spaces_by_id",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "ce11853b2c31291c2c7357e2fc1e1927d8b390952cab57292c33ba5ad5052d52",
+        "length": 48,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "f2b6b7e25eb2ac15bc74426afeca031943f4b2507acc082c2b190564f7b97b98",
+      "inputParams": [
+        "expansions",
+        "id"
+      ]
+    },
+    {
+      "name": "get_spaces_by_ids",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "260a080586c9e9cb81d10ceee4fa4cc54aac486947938776328e1149ad3c0860",
+        "length": 50,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "92454cb5d132c1c5f1d6259437d07138bb592b6ee669f3748b2f7fb683deef60",
+      "inputParams": [
+        "expansions",
+        "ids"
+      ]
+    },
+    {
+      "name": "get_spaces_posts",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "ce2fcb20a796e9432754a7d40ba83f1b485ec1d0a8d6219cb3ff2401ce2feda8",
+        "length": 63,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "c589040e9d556f9130135355f41654f335496f245b31c8c25d521f1b840e59c3",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_trends_by_woeid",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "5672a3739daae93a1e382d70728df8f9d7fa20fc34816091d2cb4df10e047665",
+        "length": 144,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "d31c6308a09a778260a5310f3b7dedf0bda7dac918999259f9e8e1db27099f74",
+      "inputParams": [
+        "max_trends",
+        "woeid"
+      ]
+    },
+    {
+      "name": "get_usage_credits",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "30ce8edfb4d94fdeb512148bef0c8ef02624f5cee3abf834f0922018558f7c74",
+        "length": 151,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "d0e2f32ce280bca34c4fef2503967d6ff6dd5461b2755fd3b1e5fe2ad9ac884f",
+      "inputParams": []
+    },
+    {
+      "name": "get_users_blocking",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "bd517e43988b58054524db44fc9fb68200e10f7977d20d9632ce24a0b2a5bb9a",
+        "length": 50,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "1e89b8b50a866b705bff4784c51845b6614dda38960d333862a5e0befa9f872c",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_users_bookmark_folders",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "ca5c387e190063292559ab8d38153c561e1af2b532196b718c9fea93ceb1df69",
+        "length": 71,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "6cf268faebefb4e587bd979f48faa7f1d381adace2b13e35b70163945acc2a0e",
+      "inputParams": [
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_users_bookmarks",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "c58b9fd2521eb713b451e461ed997de245af4dc5674708e940be3682d5fef8b7",
+        "length": 127,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "b12db6d3a1bbab7ac2e02e6124e8160c7277477b38eecad6f3218cafd6614b72",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_users_bookmarks_by_folder_id",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "09765e9cf53e6f41c21fbbb59549c6f46a3df3b5dd0514ef310ae2bb19896b55",
+        "length": 147,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "cbbedb855fa2cffeadba898033e605aefa6dad4088095372168868bb339daba4",
+      "inputParams": [
+        "folder_id",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_users_by_id",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "96fd76aaba9f45cfb1ad4ba950534d95eae1f6a070ee2000e0620278e1485926",
+        "length": 49,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "d6ebc58da2315bef8c7ccca7a3d04fe1421a59ea02cfecc83d20f87c65d4b36e",
+      "inputParams": [
+        "expansions",
+        "id"
+      ]
+    },
+    {
+      "name": "get_users_by_username",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "b1b54b3a1f89b03ec3857c56fba5d3adebaa106405a1ac511bcb881443a29626",
+        "length": 55,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "89d75f59c52336cdce2f2e1840c21b9c969ba695098434ac6fa246bb79917ae4",
+      "inputParams": [
+        "expansions",
+        "username"
+      ]
+    },
+    {
+      "name": "get_users_by_usernames",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "59df1d56bbff428c94e405f669e04261f9de40c4b46d9164791dc1fb1af380a0",
+        "length": 55,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "8f563305301aa7e9b1001ffebd5be11fc75566e3bf29a6f2dc09b0effa46d62d",
+      "inputParams": [
+        "expansions",
+        "usernames"
+      ]
+    },
+    {
+      "name": "get_users_followed_lists",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "5f117fbedc5ad8cec386523e6a5b2cb7128a4d7a424147daeba863ba4f23fcb9",
+        "length": 66,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "f9ddcc4086ccf77cf6137dd4d0b92b301f5e6a06e32f5afd9486aaa6c0212641",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_users_liked_posts",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "8ea5fda0ca5084783bb908573c17f330e46affb94e1998611698a493a1699a5a",
+        "length": 127,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "83a8b60fa1a56c6fdc828cac33e434d74f47095d7f19a1ed7eb0d70ab54a7c08",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_users_list_memberships",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "d4260e01e080dfc386457b9cfac116b5fba6e52f85590f904bf5ea632791ea83",
+        "length": 74,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "9dba991e29004aa341f2382539905d4e301db2dbdefa3422d1f33311fdd8cd36",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_users_me",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "2a35c7051573231d6d81bc4b4263650212e963409a9c7f290a38daa0acc5b8ea",
+        "length": 44,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "c2d8776596ce7d9957ac18b780b5ad14d49ac8b6045add1c4e60540628d8a9ca",
+      "inputParams": [
+        "expansions"
+      ]
+    },
+    {
+      "name": "get_users_me_followers",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "4c566a7e195e724fc393d4dc7d66650d3605c881c17c55225feeec68083bbee4",
+        "length": 144,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "46a8971625314b1879020af7e96b17fab14d2baeeef0c771355f7b24e34acf6a",
+      "inputParams": [
+        "expansions",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_users_me_following",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "e939ffdc29e7e20406be12baee76916da677fe9fbad3be556447c3fc72d358c6",
+        "length": 141,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "db84dd30ef17944910ff95413cd88719df16fe2ebbf865ef0b443cddf1b64d5c",
+      "inputParams": [
+        "expansions",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_users_mentions",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "fb20114fe3b8002ae74c1703f7ad6fe9eef0eddbeba2701d78022ee0ff948b05",
+        "length": 267,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "5aeb47bc81fab6c604401074c1ff00ac335dd0120e8d1f96ac387a8b41927080",
+      "inputParams": [
+        "end_time",
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token",
+        "since_id",
+        "start_time",
+        "until_id"
+      ]
+    },
+    {
+      "name": "get_users_owned_lists",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "da072a5c0fed86fc94ffaff0d587e032b5669d8abef728a2d8a08b760b9aa7fe",
+        "length": 63,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "b625fae6bb07a3012d5a8edb1be6a1c5811de690320e94437b18b898e92f9cea",
+      "inputParams": [
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "get_users_pinned_lists",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "42a38cf0da8697a37bcf18c8314c75cf105101a93e4454415082f2ab9b539a35",
+        "length": 59,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "9a73452eb1cdc2b6e3effe69ce791011d8b7634ef013a6b4417c7538fb27e946",
+      "inputParams": [
+        "expansions",
+        "id"
+      ]
+    },
+    {
+      "name": "get_users_posts",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "516503cfab0456a6d154db25be41794ac3ee3ed375f39dce6c5328d1e84d0453",
+        "length": 266,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "af53f5e5d3eb8653acfb860cf6b250541fc101b87c04514080f536c314c2b815",
+      "inputParams": [
+        "end_time",
+        "exclude",
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token",
+        "since_id",
+        "start_time",
+        "until_id"
+      ]
+    },
+    {
+      "name": "get_users_public_key",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "ca01a8c35663fe03236ee5cba294e8de2b1f55ff635e99f2a272f1dd2782dfd5",
+        "length": 253,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "179357e6a3f1c5b809c6d44ec588c5489e248a4ba7c817a6b9bfa1e4442af111",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "get_users_public_keys",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "c39cb96cca03147eb3c47b185002a63dbfa64841ab14341e3778a80545c55fea",
+        "length": 364,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "db2698dd0bce669ee3b61d849bc2a176bc263dd9dd5bc31cc661de070b8367a7",
+      "inputParams": [
+        "ids"
+      ]
+    },
+    {
+      "name": "get_users_timeline",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "4e5dddf6a7d42174beca2ee2f34fd7376f010bd6867709d27576da13a58d0a43",
+        "length": 285,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "220f990d7c93e237c8fc7757cc5d08a63ae266f9fb60f6f16926ad81fa8655ed",
+      "inputParams": [
+        "end_time",
+        "exclude",
+        "expansions",
+        "id",
+        "max_results",
+        "pagination_token",
+        "since_id",
+        "start_time",
+        "until_id"
+      ]
+    },
+    {
+      "name": "go_live_scheduled_broadcast",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "24c4e137e5c37c827e617ed1a0e01ffeb66f672d0d5a04d61eef7c3020299477",
+        "length": 162,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "cd979da6dc365a63209e467d3fb2ffbabcf5bf1d5277999d8f645056daa71bd8",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "list_broadcasts",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "481a95310f8467a6e0a0842448169c2893eadc1449927d9be90ebab3480db1d2",
+        "length": 219,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "c8d923144795ce567bc680c06bd894af7a8346b9b795180362390bbf153545e8",
+      "inputParams": [
+        "ids",
+        "max_results",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "list_scheduled_broadcasts",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "eb92c071b1e9aba7c9109ea3b88a7993f7dd36879e879770527a83fb9fdf1f4f",
+        "length": 61,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "aad44f15bd54a3aa804818af2b33b5f18cb39c08209d445a835861e13481a193",
+      "inputParams": [
+        "max_results",
+        "newest_start_time",
+        "oldest_start_time",
+        "pagination_token"
+      ]
+    },
+    {
+      "name": "list_scheduled_calls",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "e1123d7cfa2b4ec88ec735700952a0874468a9faf2604f3a7ec517842b4ad7c0",
+        "length": 453,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "3ed31d63ef4473da4e8a094369b1b9cdc047579f2fd3d3cd32093f21c9c50c6e",
+      "inputParams": [
+        "end_time",
+        "expansions",
+        "max_results",
+        "start_time"
+      ]
+    },
+    {
+      "name": "list_sources",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "9c3547e27cff998dfc7954ede08afbdeb28b70e4fffb015fbd6dbebd37c84980",
+        "length": 224,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "7cd7cc7f6ad671ac85fd4d84cabfe154120d4edf5fd1b6dbd078ae1f121f627c",
+      "inputParams": []
+    },
+    {
+      "name": "mark_chat_conversation_read",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "51ba92d4f12bbab23ec3773682ecff93ece1e52a7bd7d8793a28c711e720dda9",
+        "length": 504,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "26a9f099da57b5fe3baf7334cf6dee054516a5c4fc809b7d4deae23b350112a7",
+      "inputParams": [
+        "action_signatures",
+        "id"
+      ]
+    },
+    {
+      "name": "mark_chat_conversation_unread",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "3d6db527f739fd4f682cdf523561a0c5f71ceed5d3540b2f4702a056a954af72",
+        "length": 232,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "c479cdda38e226ba7d1e82aabd67d0bcf7a515e37abbb27f60820a677dc06604",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "media_upload",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "f08d205b04434cd8d6f26d02adfe7738c3fad823987ddbe9f0c42ac347f67306",
+        "length": 403,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "83b0c286ada268e9fc18c910c76245c28bafd9692660440bb348fa97accc3ce3",
+      "inputParams": [
+        "additional_owners",
+        "media",
+        "media_category"
+      ]
+    },
+    {
+      "name": "mute_broadcast_chat_user",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "20e8416597c001e54cb09eb58262f9853ff41e901c87b516d048371630e8a778",
+        "length": 201,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "0ff855c3161342c2e84e4b516fffdabcc82c84beb8ccb68481c322033519aeea",
+      "inputParams": [
+        "end_at_ms",
+        "id",
+        "message_id",
+        "user_id"
+      ]
+    },
+    {
+      "name": "pin_list",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "dd20fc9ef45b9d3ed025a3983c88e242cd34586dfe3d5c8a1402097dae46a71e",
+        "length": 63,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "406fcc59efbed92dab2969e851f4571bba2d94208634c3281053cb2a9de8bf0f",
+      "inputParams": [
+        "id",
+        "list_id"
+      ]
+    },
+    {
+      "name": "remove_chat_moderator",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "7493095f82198a16a530109b4d94acec3c3cb727446354ece21ff84683069a04",
+        "length": 116,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "e92901e56b20f12448d0265a8930c31e58f0390e9cfebc66a777e3290219f4ba",
+      "inputParams": [
+        "user_id"
+      ]
+    },
+    {
+      "name": "remove_lists_member_by_user_id",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "b7395d98559af35cc2d051a401d6d0d3ed17e06d8adb225887a6779699fe3e9b",
+        "length": 39,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "551f0aa53368e7f0164a5059289771a684066b9107988a8426571bba83aacf35",
+      "inputParams": [
+        "id",
+        "user_id"
+      ]
+    },
+    {
+      "name": "respond_to_scheduled_call",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "538b415de74a8b7b39d17af22c37e00b12d4dee94bfd7081e7b61e2cca53e0b1",
+        "length": 259,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "5166a6181709cf9b307ed00bc10e8a2c0de15cb1a3b0fe5feef0c03fedcdf94b",
+      "inputParams": [
+        "id",
+        "occurrence_start_time",
+        "response",
+        "scope"
+      ]
+    },
+    {
+      "name": "schedule_call",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "eaa741d3d1ab45a6e4abb133fe2934a3858fae1d6da42a03e23b5f9dac1a876a",
+        "length": 327,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "f4e0cfc9f59d41c3f33f03c301270ee7ea0f68edd7dd4a2f8a64eaac94f05dce",
+      "inputParams": [
+        "description",
+        "duration_minutes",
+        "invitee_ids",
+        "notify_invitees",
+        "recurrence",
+        "start_time",
+        "time_zone",
+        "title"
+      ]
+    },
+    {
+      "name": "search_communities",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "7fd29b0d223670e0dff491721748756baffe70a8264927fb50cc3541f94647df",
+        "length": 68,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "2d6cc5baf5e2f71de9c62fb6d3275278907e34c5c951c33009f9162248c45e56",
+      "inputParams": [
+        "max_results",
+        "next_token",
+        "pagination_token",
+        "query"
+      ]
+    },
+    {
+      "name": "search_news",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "ad8c234012b5422141f886550a0f701e6cfe8e00d05a12cda5351e94bbcca905",
+        "length": 137,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "80db4a96482ff1ee122397f9983e2b7c7ba701cfa00d963469a2d5ddf0f6a290",
+      "inputParams": [
+        "max_age_hours",
+        "max_results",
+        "query"
+      ]
+    },
+    {
+      "name": "search_posts_all",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "12e234de5e87fc531fe01f90165caadde5be5a6079d0d36c15a36700590c83d8",
+        "length": 304,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "dd76deb49d1d03704356062ead3f625dc57796f7b830d71d95b60db9aa7cb7d7",
+      "inputParams": [
+        "end_time",
+        "expansions",
+        "max_results",
+        "next_token",
+        "pagination_token",
+        "query",
+        "since_id",
+        "sort_order",
+        "start_time",
+        "until_id"
+      ]
+    },
+    {
+      "name": "search_spaces",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "434293f7ac93d7d2e5021d7c8fd462d489f9ea63f5adda8acf534c9c2775cf00",
+        "length": 63,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "6033c1f90653f6d1cb9403c1abf22f76947b53199e6dbda44d2b14402486e9d3",
+      "inputParams": [
+        "expansions",
+        "max_results",
+        "query",
+        "state"
+      ]
+    },
+    {
+      "name": "search_users",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "7eefab989c68d5696d7290682d25edb81042f4ce07b4e220c4dd5c0df63a03d9",
+        "length": 50,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "a1a21eedc8b9c09b968649726c40d85d10aad55b23fff050ac108acd2e4400c3",
+      "inputParams": [
+        "expansions",
+        "max_results",
+        "next_token",
+        "query"
+      ]
+    },
+    {
+      "name": "send_chat_message",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "19e3f9cdfec0d8a777a21986eb0704e4ab1dac08c3e11d98b757485badad6b95",
+        "length": 780,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "a384988ee7dc2bba8a01cb10c95a39fdaede09911eaed9e302da59cd8afc7d4a",
+      "inputParams": [
+        "content",
+        "conversation_token",
+        "encoded_message_create_event",
+        "encoded_message_event_signature",
+        "id",
+        "message_id",
+        "xdk_version"
+      ]
+    },
+    {
+      "name": "send_chat_typing_indicator",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "9c5d6b8d9d20cd877c58e44d702ca601d242121887b1f4b7ec9a344d3cbfeb96",
+        "length": 244,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "848684a543392e6f586c977c8d2b046589e487abae105b596b06a207810daa98",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "unarchive_chat_conversation",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "e982a66032e47ed0850ae4d095a9acdd4acc4a93c7ba55620b734414bd7d3cb3",
+        "length": 318,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "98afcf02df21971fa7a266bcc5084a773da6a4c55286ca19f743305ce1e888d2",
+      "inputParams": [
+        "id"
+      ]
+    },
+    {
+      "name": "unfollow_list",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "7834ab9fea10537ed481a402978f298ff4203633ea3f9f65da26f899fa3a24fc",
+        "length": 59,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "add1c217d92824466e70b5d99d47c5a8ee803043d652d505377196d18e529b9c",
+      "inputParams": [
+        "id",
+        "list_id"
+      ]
+    },
+    {
+      "name": "unmute_broadcast_chat_user",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "c03ca5111b1f54a083344877267766c8ca9a96bbb7c52297693ebeb49d83e0c6",
+        "length": 137,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "e7112315b5f0c8a48e97e69749df121f821f75e3f948e688e0e0d1ec42771523",
+      "inputParams": [
+        "id",
+        "user_id"
+      ]
+    },
+    {
+      "name": "unpin_list",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "d82efc920c087f0d5c4c8dd61110edf5cc07eb650889a4966a9a9bd8c9e3b8b6",
+        "length": 56,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "acda64ebb816297183d961fada613ac898ed9381fc8ef6d0541d30dfe1256a36",
+      "inputParams": [
+        "id",
+        "list_id"
+      ]
+    },
+    {
+      "name": "update_lists",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "c04b997f7e46a89e5de6c272bebb2ee6f061822289910984a2e102b4c299423a",
+        "length": 81,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "f21a8c37554c1494f41681ee9d9e3662ece3210277ee3c3b618eb48236cbe664",
+      "inputParams": [
+        "description",
+        "id",
+        "name",
+        "private"
+      ]
+    },
+    {
+      "name": "update_scheduled_broadcast",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "40ff1970d88747d424466450e2cd05796528a926cb235e7d991df70db2aa0df1",
+        "length": 374,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "752683d7b6eeebf9c3d32cafcac9ee8205b7a44571182f516dfd6716af91cd7b",
+      "inputParams": [
+        "available_for_replay",
+        "chat_option",
+        "description",
+        "id",
+        "is_locked",
+        "locale",
+        "manual_publish",
+        "roll_forward",
+        "scheduled_broadcast_id",
+        "scheduled_end_ms",
+        "scheduled_start_ms",
+        "source_id",
+        "thumbnail_media_id",
+        "title"
+      ]
+    },
+    {
+      "name": "update_scheduled_call",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "8a704d325fb35534f05afeb7dc2b885fb9dbf0dcd580041884a422cb31043364",
+        "length": 247,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "d1d5115da685fd0a4fe9df4f85f1d460e973b4fc2001de400229ca5202b984af",
+      "inputParams": [
+        "description",
+        "duration_minutes",
+        "id",
+        "invitee_ids",
+        "notify_invitees",
+        "occurrence_start_time",
+        "recurrence",
+        "scope",
+        "start_time",
+        "time_zone",
+        "title"
+      ]
+    },
+    {
+      "name": "update_source",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "1f341494cf2bc9a0172a43679f1f40a45a562597873be8a70d40085e1b207be3",
+        "length": 55,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "ae06402cff0b8c09ce71146d6b6b53da56045df4c84952fdb34badf3091f4f3f",
+      "inputParams": [
+        "id",
+        "name"
+      ]
+    },
+    {
+      "name": "users_id_block",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "4c88152fa876160560859f63b2da222a1a6af6c19955fd98b348447f28b5303e",
+        "length": 320,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "305e86c7bf4905e1c4f749f18d7154f619f4e582c8a488359a4169043e99e63b",
+      "inputParams": [
+        "id",
+        "target_user_id"
+      ]
+    },
+    {
+      "name": "users_id_unblock",
+      "readOnlyHint": null,
+      "destructiveHint": null,
+      "idempotentHint": null,
+      "openWorldHint": null,
+      "annotations": null,
+      "inputSchema": null,
+      "description": {
+        "sha256": "1f1e66db8a35fcead35660a5b0223b5d6c080c380ba739acfc4b26beebbf2ec3",
+        "length": 248,
+        "text": null,
+        "transformed": true
+      },
+      "signatureSha256": "f90464443d85fec0b6abcf6b0c76e0182d276ff905b593c461e3694e39b0cb64",
+      "inputParams": [
+        "source_user_id",
+        "target_user_id"
+      ]
+    }
+  ]
+}

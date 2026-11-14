@@ -13,7 +13,8 @@ export const ENDPOINT = "https://api.x.com/mcp"
 export const REDIRECT_URI = "http://127.0.0.1:8766/callback"
 /**
  * X's 401 names no scope, so the plugin pins them. `offline.access` is what makes X issue a refresh token;
- * `bookmark.write` and `tweet.write` are what the bookmark and Article tools need.
+ * `bookmark.write` and `tweet.write` are what the bookmark and Article tools need, and `media.write` what
+ * `media_upload` and the chat media tools need.
  */
 export const SCOPES: readonly string[] = [
   "tweet.read",
@@ -29,6 +30,7 @@ export const SCOPES: readonly string[] = [
   "bookmark.read",
   "bookmark.write",
   "tweet.write",
+  "media.write",
   "offline.access",
 ]
 /** What Code Mode's catalog says about the `x` namespace. */

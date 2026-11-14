@@ -32,16 +32,17 @@ import type { Plugin } from "@opencode/plugin"
 import { Rpc } from "@opencode/plugin/rpc"
 
 // >>> PLUGIN-SPECIFIC >>>
-import { assertBudget, BudgetExceededError, estimateCall, PriceUnknownError, recordCall, rememberEstimate, resetBilling, scriptCostOfCall, spentOf, takeEstimate } from "../billing.js"
+import { assertBudget, BudgetExceededError, estimateCall, hasBudget, PriceUnknownError, recordCall, rememberEstimate, resetBilling, scriptCostOfCall, spentOf, takeEstimate, unpricedLine } from "../billing.js"
+import { priceOf } from "../prices.js"
 import { PLUGIN_ID as X_PLUGIN_ID, SERVER_NAME } from "../constants.js"
-import { DENY_TOOLS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../x-tools.js"
+import { SENSITIVE_TOOLS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../x-tools.js"
 
 /** The plugin's id. The RPC id is `<PLUGIN_ID>.tools`. */
 export const PLUGIN_ID = X_PLUGIN_ID
 
 /**
- * Every known X tool, by its upstream name, with its class: the 51 reads, the 8 private writes, the public
- * `create_posts` (a send, because it reaches everyone), and the 40 privacy-restricted tools for DMs, follows, mutes
+ * Every known X tool, by its upstream name, with its class: the 51 reads, the 9 private writes, the public
+ * `create_posts` (a send, because it reaches everyone), and the 40 privacy-sensitive tools for DMs, follows, mutes
  * and live video (six reads and 34 destructive actions). The class is what `describe` reports and what an approval
  * shows; the rules, not the class, decide whether a call runs. A tool X adds later is not a method.
  */
@@ -49,7 +50,7 @@ export const METHODS: readonly MethodSpec[] = [
   ...READ_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "read" })),
   ...WRITE_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "write" })),
   ...PUBLIC_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "send" })),
-  ...DENY_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: PRIVATE_READ_TOOLS.includes(name) ? "read" : "destructive" })),
+  ...SENSITIVE_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: PRIVATE_READ_TOOLS.includes(name) ? "read" : "destructive" })),
 ]
 
 /** Forgets every session's recorded spend and the daily ledger. The tests use it. */
@@ -63,6 +64,12 @@ export function resetScriptSpend(): void {
  * before dispatch when the estimate does not fit the session or the rolling daily cap.
  */
 export function shapeInput(method: string, input: unknown, call: ShapeCall, owns?: boolean): unknown {
+  // X publishes no price for it: a budget cannot be checked, so with one set it is refused; without one it runs.
+  if (priceOf(method) === undefined) {
+    if (hasBudget()) throw new PriceUnknownError(method)
+    takeEstimate(call.sessionID)
+    return input
+  }
   // The input passes to X unchanged, page size and next-page token included; the estimate prices the page asked for.
   const estimate = estimateCall(method, input, owns)
   assertBudget(call.sessionID, estimate.estimateUsd)
@@ -77,6 +84,14 @@ export function shapeInput(method: string, input: unknown, call: ShapeCall, owns
  * Mode aggregate; a script has no program, so each call gets its own line, as a direct call does.
  */
 export function shapeResult(method: string, result: McpResult, call: ShapeCall, owns?: boolean): McpResult {
+  if (priceOf(method) === undefined) {
+    takeEstimate(call.sessionID)
+    const spent = spentOf(call.sessionID)
+    const unknown = { estimateUsd: null, actualUsd: null, sessionSpentUsd: spent.sessionSpentUsd, dailySpentUsd: spent.dailySpentUsd, basis: "unknown" }
+    const output = result.output && typeof result.output === "object" && !Array.isArray(result.output) ? { ...(result.output as Record<string, unknown>), cost: unknown } : { cost: unknown }
+    const line = unpricedLine(method)
+    return { ...result, output, text: result.text === "" ? line : `${result.text}\n${line}` }
+  }
   const estimate = takeEstimate(call.sessionID) ?? estimateCall(method, {}, owns)
   const cost = scriptCostOfCall(method, {}, result, estimate, owns)
   recordCall(call.sessionID, cost.actualUsd)
@@ -107,8 +122,8 @@ export function pluginError(error: unknown): Failure | undefined {
   if (error instanceof PriceUnknownError) {
     return {
       code: "X_PRICE_UNKNOWN",
-      what: `${error.method} has no published X price, so it is refused rather than run for free`,
-      next: "Use a method whose price is in X's pay-per-usage table, or add its price to this plugin's table before a script calls it.",
+      what: `${error.method} has no published X price, so with a script budget set it is refused: its cost cannot be checked against the budget`,
+      next: "Use a priced method, or remove scriptBudgetUsd and scriptDailyBudgetUsd to run it under X's own billing.",
     }
   }
   if (error instanceof BudgetExceededError) {

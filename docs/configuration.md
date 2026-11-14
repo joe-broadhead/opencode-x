@@ -4,7 +4,7 @@ Every option is optional. The smallest setup is one entry in `plugins`, then the
 
 ```json
 {
-  "plugins": ["github:joe-broadhead/opencode-x#v0.0.2"]
+  "plugins": ["github:joe-broadhead/opencode-x#v0.0.3"]
 }
 ```
 
@@ -14,7 +14,7 @@ To set options, use the object form:
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.2",
+      "package": "github:joe-broadhead/opencode-x#v0.0.3",
       "options": {
         "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" }
       }
@@ -38,7 +38,7 @@ so it needs the app's OAuth 2.0 client. The values go in the plugin options (man
 | `client_secret` | A non-empty string, preferably `{env:X_CLIENT_SECRET}` | none | For a confidential (Web App) app. Leave it out for a Native App, a public client with PKCE and no secret; X issued it a refresh token in the live test. Needs `client_id`. |
 | `redirect_uri` | An `http:` loopback URL with an explicit port and a path, or an `https:` URL | `http://127.0.0.1:8766/callback` | X matches it exactly. Register the same URL in the app's **User authentication settings**. |
 | `callback_port` | `1`–`65535` | none | Only, and always, with an `https:` redirect: the local port a proxy forwards the callback to. With a loopback redirect, OpenCode listens on the redirect's own port. |
-| `scopes` | A non-empty list of X OAuth 2.0 scopes | `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write offline.access` | `offline.access` is what makes X issue a refresh token. Dropping a group's scope makes those tools fail with `403`, or removes them from the list. |
+| `scopes` | A non-empty list of X OAuth 2.0 scopes | `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write media.write offline.access` | `offline.access` is what makes X issue a refresh token. Dropping a group's scope makes those tools fail with `403`, or removes them from the list. |
 
 The plugin never shows the client secret: status and the RPC name the client ID, whether a secret is set, and where it
 came from. The secret lives in OpenCode's credential store, or in managed config.
@@ -157,7 +157,7 @@ no secret, and no per-member app.
 1. In [console.x.com](https://console.x.com), create an app and open **User authentication settings**. Set OAuth 2.0
    on, choose **Native App** (a public client: client ID only, no secret), and register **both** callbacks:
    `http://127.0.0.1:8766/callback` and `http://localhost:8766/callback`.
-2. Add the scopes `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write offline.access`.
+2. Add the scopes `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write media.write offline.access`.
 3. Move the app to **Pay-per-use → Production**. Without it, X answers `client-not-enrolled`.
 4. Buy **credits** and set a **spending limit**. Every member's calls draw on them.
 
@@ -168,7 +168,7 @@ no secret, and no per-member app.
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.2",
+      "package": "github:joe-broadhead/opencode-x#v0.0.3",
       "options": { "oauth": { "client_id": "YOUR_TEAM_APP_CLIENT_ID" } }
     }
   ]
@@ -204,7 +204,7 @@ If your config defines no server named `x`, and the plugin has a client, it regi
     "client_id": "YOUR_X_CLIENT_ID",
     "client_secret": "{env:X_CLIENT_SECRET}",
     "redirect_uri": "http://127.0.0.1:8766/callback",
-    "scope": "tweet.read users.read bookmark.read bookmark.write tweet.write offline.access"
+    "scope": "tweet.read users.read bookmark.read bookmark.write tweet.write media.write offline.access"
   }
 }
 ```
@@ -377,8 +377,8 @@ into an agent that gets no block of its own:
 
 With the default, an agent can post, reply, quote, edit, bookmark, create or change lists, draft an Article, send a
 DM, follow, block, mute, change list membership, moderate a chat and go live on the user's real account without asking.
-`READ_TOOLS` in `src/x-tools.ts` lists the 51 reads; `WRITE_TOOLS` the 8 private writes; `PUBLIC_TOOLS` the one public
-write, `create_posts`; `DENY_TOOLS` the 40 tools that are now allowed with the rest, but were once off. A tool X adds
+`READ_TOOLS` in `src/x-tools.ts` lists the 51 reads; `WRITE_TOOLS` the 9 private writes; `PUBLIC_TOOLS` the one public
+write, `create_posts`; `SENSITIVE_TOOLS` the 40 privacy-sensitive tools, now allowed with the rest, that were once off. A tool X adds
 later matches `x_*` and is allowed with `all`.
 
 `x_create_posts` is public: anyone can read the Post, and it appears on the user's profile and in followers'
@@ -635,7 +635,7 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `SERVER_NOT_REGISTERED` | Setup: the `x` server could not be registered. Status shows the problem. | Restart OpenCode. |
 | `RULES_NOT_ADDED` | Setup: the default permission rules could not be added, so X tools may run without asking. Status shows the problem. | Restart OpenCode. |
 | `X_BUDGET_EXCEEDED` | The tools RPC: the next call's estimate does not fit the opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` you set. No X call is made. Without either option this never happens. | Raise or remove `scriptBudgetUsd` or `scriptDailyBudgetUsd`, or wait for the 24-hour window to roll; each call is billed. |
-| `X_PRICE_UNKNOWN` | The tools RPC: the method has no published price in the plugin's table. No X call is made. | Use a priced method, or add its price to the plugin's table before a script calls it. |
+| `X_PRICE_UNKNOWN` | The tools RPC, with a script budget set: X publishes no price for the method (`media_upload` and the chat media methods), so its cost cannot be checked against the budget. No X call is made. | Use a priced method, or remove `scriptBudgetUsd` and `scriptDailyBudgetUsd` to run it under X's own billing. |
 
 For example:
 
