@@ -22,8 +22,9 @@ All notable changes to this project are documented in this file. It follows
   answers), a first listing looks it up once by its handle, and its cursor, bound to the plugin, the feed and the
   account, carries the account's X id, so a later listing makes no lookup and costs one user read less than source
   `x`. A cursor that names another account than `account` is refused with `ACCOUNT_MISMATCH`. A change of X sign-in
-  is noticed only when the caller passes the new account or calls `probe` (README, Known limits). A feed the
-  `events.feeds` option leaves out answers `SOURCE_DISABLED`, which is how a person turns a source off.
+  is noticed only when the caller passes the new account or calls `probe` (the README's Known limits, "A feed source
+  notices a change of X account only when told", and `docs/configuration.md`'s Sources). A feed the `events.feeds`
+  option leaves out answers `SOURCE_DISABLED`, which is how a person turns a source off.
 - For Memory and jelly: the tools RPC method `probe` (action `x_probe`, allowed by the default rules at every `access`)
   answers who is signed in, `{ source, account, owner, cost, trust }`, with one billed `get_users_me` read, and refuses
   another account with `ACCOUNT_MISMATCH`.
