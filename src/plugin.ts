@@ -2,8 +2,9 @@ import { Plugin, type Mcp } from "@opencode/plugin"
 import { reasonOf } from "./redact.js"
 import { errorText, ENDPOINT, NAMESPACE_DESCRIPTION, PLUGIN_ID, SERVER_NAME, SUPPORTED_HOST } from "./constants.js"
 import { checkHost, isSupportedHost } from "./host-version.js"
-import { registerToolsRpc, METHODS, shapeInput, shapeResult } from "./host/tools-rpc.js"
-import { eventsMethod, eventsTool, type EventsToolOptions } from "./events.js"
+import { registerToolsRpc } from "@we-the-rebel-alliance/source-contract/tools-rpc"
+import { METHODS, PLUGIN, shapeInput, shapeResult } from "./tools-rpc.js"
+import { eventsMethod, eventsTool, probeMethod, type EventsToolOptions } from "./events.js"
 import { watchIntegration } from "./integration.js"
 import { watchListing } from "./listing.js"
 import { parseOptions, type Options } from "./options.js"
@@ -127,8 +128,9 @@ export function createXPlugin(seam: XSeam) {
           source = next
           report("server")(problem)
         })
-        // Memory's source of X events, a Code Mode tool in the x namespace and the tools RPC method events_list. It
-        // never calls a server at another URL, and reads status (registered below) only when it cannot call X.
+        // X's sources (package.json's `sources`): events_list, a Code Mode tool in the x namespace and a tools RPC
+        // method, and probe, a tools RPC method. Neither calls a server at another URL, and each reads status (registered
+        // below) only when it cannot call X.
         const events: EventsToolOptions = {
           tool: ctx.tool,
           permission: ctx.permission,
@@ -192,8 +194,9 @@ export function createXPlugin(seam: XSeam) {
         // no server: a call gets the status's code and next step, read at each call, so a client saved in /connect
         // applies at once. Script budgets are opt-in: without them, X's own billing and limits apply.
         await configureBilling({ storage: ctx.storage, sessionBudgetUsd: options.scriptBudgetUsd, dailyBudgetUsd: options.scriptDailyBudgetUsd, ownsXApp: options.ownsXApp })
-        stopTools = await registerToolsRpc(ctx, {
-          methods: [...METHODS, eventsMethod(events)],
+        stopTools = await registerToolsRpc(ctx as never, {
+          plugin: PLUGIN,
+          methods: [...METHODS, eventsMethod(events), probeMethod(events)],
           shapers: { input: (method, input, call) => shapeInput(method, input, call, options.ownsXApp), result: (method, result, call) => shapeResult(method, result, call, options.ownsXApp) },
           mcp: {
             server: SERVER_NAME,

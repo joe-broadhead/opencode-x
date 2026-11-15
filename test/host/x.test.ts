@@ -15,7 +15,7 @@ import { PUBLIC_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, evaluate, type Rule } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { StatusRpc } from "../../src/status.js"
-import { TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { TOOLS_RPC_ID } from "../../src/tools-rpc.js"
 import { DENIED_SAMPLE, MODEL_ID, startFakeMcp, X_SCOPES } from "./fake-mcp.js"
 import { agentRules, appOptions, attempt, cleanup, effect, HOST_VERSION, session, startHost, until, type Host } from "./harness.js"
 
@@ -253,13 +253,14 @@ describe(`the plugin on OpenCode ${HOST_VERSION}`, () => {
     const sessionID = await scriptSession(host)
     const described = await rpcDescribe(host, sessionID)
     const methods = described.methods as { name: string; class: string; permission?: string }[]
-    // The 101 known tools, and the plugin's own events_list, a read.
-    expect(methods).toHaveLength(102)
+    // The 101 known tools, and the plugin's own events_list and probe, both reads.
+    expect(methods).toHaveLength(103)
     const counts: Record<string, number> = {}
     for (const method of methods) counts[method.class!] = (counts[method.class!] ?? 0) + 1
-    expect(counts).toEqual({ read: 58, write: 9, send: 1, destructive: 34 })
+    expect(counts).toEqual({ read: 59, write: 9, send: 1, destructive: 34 })
     const permission = Object.fromEntries(methods.map((method) => [method.name, method.permission]))
     expect(permission.search_posts_all).toBe("allow")
+    expect(permission.probe).toBe("allow")
     expect(permission.create_users_bookmark).toBe("ask")
     expect(permission.users_id_block).toBe("ask")
     expect(described.location).toBe(host.location.directory)

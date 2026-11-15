@@ -76,14 +76,23 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   recolour, redraw or combine it. It uses only the drawing elements Jelly's icon cleaner keeps, and no `<title>`: the
   `jelly.title` is the accessible name.
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
-- **The tools RPC (v2).** `src/host/tools-rpc.ts` is a copy of a module shared by several plugins. Change only its block
-  between the `PLUGIN-SPECIFIC` markers here; change the rest in every plugin at once.
-  `scripts/check-copies.mjs` holds it, the declaration kit `test/support/jelly-kit.ts` and Jelly's setting rules
-  `test/support/jelly-settings.ts`, equal to the copies every plugin carries. Its methods are every known tool, from
+- **The source contract.** `@we-the-rebel-alliance/source-contract`, pinned to its tag `v0.1.0` (the commit in
+  `package-lock.json`), is a devDependency that the build bundles into `dist/index.js`, so an install runs no build and
+  has no runtime dependency. Import only its `tools-rpc`, `events` and `cursor` entries from `src/`; the tests also use
+  its `conformance` and `descriptor`. `package.json`'s top-level `sources` declares X's three sources, and the
+  `conformance` stage runs the kit over each, on recorded invented X answers, and writes
+  `reports/conformance-report.json`. A feed source never asserts `x_get_users_me`: that identity read is `probe`'s
+  alone. Every `usd` in `sources` is the standard rate in `src/prices.ts` (a test keeps them equal); the `ownsXApp`
+  Owned Read rate cannot be declared yet, so $0.005 stays the most a post costs.
+- **The tools RPC (v2.3).** The package's `tools-rpc` is the transport every plugin shares; X's part is
+  `src/tools-rpc.ts` (the plugin value, the method table, the shapers and next steps). `scripts/check-copies.mjs`
+  holds the declaration kit `test/support/jelly-kit.ts` and Jelly's setting rules `test/support/jelly-settings.ts`,
+  equal to the copies every plugin carries. Its methods are every known tool, from
   `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS` and `SENSITIVE_TOOLS`, each with its class, and never an unknown tool. A rule must allow a method before a script can run it: an `ask` is
   refused, and a saved "Always allow" is not a grant. Neither path caps a read: the model's arguments and the RPC's
   `shapeInput` pass page size and pagination to X unchanged, and `shapeResult` always appends the cost line and counts the session's spend; only an
-  opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` refuses. Keep the RPC id `x.posts.tools` and its method names stable: scripts call them by name.
+  opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` refuses. Beside them are the plugin's own `events_list` and
+  `probe`. Keep the RPC id `x.posts.tools` and its method names stable: scripts call them by name.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
   `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`.
   Every temp root of the host and pack tests is a git repository under the system's `/tmp`, never under `TMPDIR` or
@@ -119,9 +128,9 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   `permission.ask`;
 - the deprecated `ctx.generate.text` and `experimental.policies`;
 - importing `@opencode/ai`;
-- a permission hook, except the one `permission.hook("evaluate")` in `src/host/tools-rpc.ts` (and the bundle that
-  inlines it), exactly once each: it turns an `ask` on one of the tools RPC's own script calls in flight into a deny,
-  because no one can answer it, and touches nothing else;
+- a permission hook, except the one `permission.hook("evaluate")` of the source contract's tools RPC, which appears
+  exactly once, in the bundle that inlines it: it turns an `ask` on one of the tools RPC's own script calls in flight
+  into a deny, because no one can answer it, and touches nothing else;
 - references to private host source or host checkouts;
 - machine-local home and temp paths;
 - the family's internal working-folder path in any git-tracked file, this file and the check itself excepted;

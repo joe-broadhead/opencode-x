@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { METHODS } from "../../src/host/tools-rpc.js"
+import { METHODS } from "../../src/tools-rpc.js"
 import { PARAMETERS } from "../../src/x-tools.js"
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url))

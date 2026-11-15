@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-x",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "description": "Unofficial OpenCode plugin for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, post, and draft long-form Articles, through X's official MCP server",
   "keywords": [
@@ -68,6 +68,162 @@
       "mark": true
     }
   },
+  "sources": {
+    "contractVersion": 1,
+    "rpc": "x.posts.tools",
+    "probe": {
+      "action": "x_probe"
+    },
+    "items": [
+      {
+        "id": "x.mentions",
+        "kind": "events",
+        "reads": "message",
+        "tool": "events_list",
+        "input": {
+          "source": "mentions"
+        },
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "events": "x_events_list",
+          "operations": [
+            "get_users_me",
+            "get_users_by_username",
+            "get_users_mentions"
+          ],
+          "identity": [
+            "get_users_me"
+          ]
+        },
+        "private": false,
+        "cost": {
+          "class": "billed",
+          "units": [
+            {
+              "per": "post",
+              "usd": 0.005
+            },
+            {
+              "per": "author",
+              "usd": 0.01
+            },
+            {
+              "per": "user",
+              "usd": 0.01
+            }
+          ],
+          "probe": {
+            "per": "user",
+            "usd": 0.01
+          }
+        },
+        "maxBytes": 900000,
+        "urlHosts": [
+          "x.com"
+        ]
+      },
+      {
+        "id": "x.bookmarks",
+        "kind": "events",
+        "reads": "bookmark",
+        "tool": "events_list",
+        "input": {
+          "source": "bookmarks"
+        },
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "events": "x_events_list",
+          "operations": [
+            "get_users_me",
+            "get_users_by_username",
+            "get_users_bookmarks"
+          ],
+          "identity": [
+            "get_users_me"
+          ]
+        },
+        "private": true,
+        "cost": {
+          "class": "billed",
+          "units": [
+            {
+              "per": "post",
+              "usd": 0.005
+            },
+            {
+              "per": "author",
+              "usd": 0.01
+            },
+            {
+              "per": "user",
+              "usd": 0.01
+            }
+          ],
+          "probe": {
+            "per": "user",
+            "usd": 0.01
+          }
+        },
+        "maxBytes": 900000,
+        "urlHosts": [
+          "x.com"
+        ]
+      },
+      {
+        "id": "x.timeline",
+        "kind": "events",
+        "reads": "message",
+        "tool": "events_list",
+        "input": {
+          "source": "timeline"
+        },
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "events": "x_events_list",
+          "operations": [
+            "get_users_me",
+            "get_users_by_username",
+            "get_users_timeline"
+          ],
+          "identity": [
+            "get_users_me"
+          ]
+        },
+        "private": false,
+        "cost": {
+          "class": "billed",
+          "units": [
+            {
+              "per": "post",
+              "usd": 0.005
+            },
+            {
+              "per": "author",
+              "usd": 0.01
+            },
+            {
+              "per": "user",
+              "usd": 0.01
+            }
+          ],
+          "probe": {
+            "per": "user",
+            "usd": 0.01
+          }
+        },
+        "maxBytes": 900000,
+        "urlHosts": [
+          "x.com"
+        ]
+      }
+    ]
+  },
   "scripts": {
     "check": "node scripts/check.mjs",
     "typecheck": "node scripts/check.mjs typecheck",
@@ -87,6 +243,7 @@
     "@opentui/solid": "0.8.0",
     "@types/bun": "1.4.4",
     "@types/node": "24.19.2",
+    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.1.0",
     "esbuild": "0.28.2",
     "solid-js": "1.9.17",
     "typescript": "5.9.3"

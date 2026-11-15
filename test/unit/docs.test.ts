@@ -61,9 +61,9 @@ describe("docs", () => {
     expect(stale).toEqual([])
   })
 
-  test.each(FILES)("%s names only X tools the plugin knows, and its own x_events_list", (file) => {
+  test.each(FILES)("%s names only X tools the plugin knows, and its own x_events_list and x_probe", (file) => {
     const named = [...text(file).matchAll(/\bx_([a-z][a-z_]*)(?![\w*])/g)].map((match) => match[1]!)
-    expect(named.filter((tool) => ![...KNOWN, "events_list"].includes(tool))).toEqual([])
+    expect(named.filter((tool) => ![...KNOWN, "events_list", "probe"].includes(tool))).toEqual([])
   })
 
   test.each(["docs/configuration.md", "docs/scripting.md", "docs/jelly.md", "SECURITY.md", "CHANGELOG.md"])("%s says nothing provisional or pending", (file) => {
@@ -333,7 +333,7 @@ describe("docs", () => {
 
   test("the scripting guide points at the methods table, and gives X's cost, budget and rate limits", () => {
     const guide = text("docs/scripting.md")
-    expect(guide).toContain("(`METHODS` in `src/host/tools-rpc.ts`)")
+    expect(guide).toContain("(`METHODS` in `src/tools-rpc.ts`)")
     expect(guide).toContain("`scriptBudgetUsd`")
     expect(guide).toContain("`X_BUDGET_EXCEEDED`")
     expect(guide).toContain("x-opencode-directory")

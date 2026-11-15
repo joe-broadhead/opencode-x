@@ -1,6 +1,6 @@
 import type { Plugin, Rpc } from "@opencode/plugin"
 import { DISPLAY_NAME, ENDPOINT, PLUGIN_ID, SCOPES, SERVER_NAME, TESTED_HOSTS } from "./constants.js"
-import { EVENTS_LIST } from "./host/events-list.js"
+import { EVENTS_LIST } from "@we-the-rebel-alliance/source-contract/events"
 import { isSupportedHost, type HostCheck } from "./host-version.js"
 import { classify, SENSITIVE_TOOLS, PUBLIC_TOOLS, WRITE_TOOLS } from "./x-tools.js"
 import { defaultRules, unguardedAgents, type Access, type Rule } from "./permissions.js"

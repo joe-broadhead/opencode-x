@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { DISPLAY_NAME, SCOPES, SERVER_NAME } from "../../src/constants.js"
 import { SENSITIVE_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
-import { METHODS } from "../../src/host/tools-rpc.js"
+import { METHODS } from "../../src/tools-rpc.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { parseOptions } from "../../src/options.js"

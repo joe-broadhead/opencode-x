@@ -40,7 +40,8 @@ around a decline with another tool, a shell command, a link or a screenshot.
   to sign in to X again (`/connect`, X), and post without the media only if the user agrees.
 
 Each call is billed to the X developer account that owns the app (yours, or your team's): about $0.005 for a bookmark
-or list change, and a post create at $0.015, or $0.200 with a link.
+or list change, and a post create at $0.015, or $0.200 with a link. X publishes no price for `media_upload`, so its
+price is unknown: never quote one, and say so if the user asks.
 
 ## Posting
 

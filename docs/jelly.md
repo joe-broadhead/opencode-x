@@ -55,8 +55,9 @@ live capture with X's `readOnlyHint`s, and each `readOnly` is the class in `src/
 of the tool.
 
 The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page
-against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit, and the shared part of the tools
-RPC (`src/host/tools-rpc.ts`), equal to the copy every plugin carries.
+against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit equal to the copy every plugin
+carries. The tools RPC is the source contract's, bundled; X's sources are declared beside `jelly`, in the top-level
+`sources` key, which Jelly reads through the source contract.
 
 ## Skills
 
