@@ -2,9 +2,9 @@
 // plugin's own events_list and probe methods against recorded X answers (test/fixtures/sources.json, all invented):
 // no X call, no sign-in. The reads go through a fake of OpenCode's executor that asserts `x_<tool>` on the kit's
 // recording permission, as the host asserts it, so the kit sees exactly what each read asserts. The report is written to
-// conformance-report.json, for a release to attach.
+// reports/conformance-report.json, for a release to attach.
 import { describe, expect, test } from "bun:test"
-import { readFileSync, writeFileSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { declarationProblems, sourceConformance, type ConformanceReport, type PageCase, type SessionContext } from "@we-the-rebel-alliance/source-contract/conformance"
@@ -140,9 +140,9 @@ describe("the source contract's conformance kit", () => {
       })
       reports.push(report)
       expect(report.problems).toEqual([])
-      // X keeps no history a cursor can outlive: a mentions or timeline position reads on from X's own since_id, and a
-      // bookmarks walk from the newest bookmarks it knows. So no case can answer CURSOR_EXPIRED, and the kit's gap
-      // check cannot run: the report stays incomplete on that one check, and says so.
+      // X reaches back only a limited number of recent posts in each feed, so a cursor older than that window can miss
+      // posts. X gives no sign of it (it moves an old since_id forward silently), so the plugin cannot tell, never
+      // answers CURSOR_EXPIRED, and the kit's gap check cannot run: the report stays incomplete on that one check.
       expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual(["gap-and-cursor-expired"])
     })
   }
@@ -158,6 +158,7 @@ describe("the source contract's conformance kit", () => {
       ok: reports.every((entry) => entry.ok),
       sources: reports,
     }
-    writeFileSync(join(root, "conformance-report.json"), `${JSON.stringify(report, null, 2)}\n`)
+    mkdirSync(join(root, "reports"), { recursive: true })
+    writeFileSync(join(root, "reports", "conformance-report.json"), `${JSON.stringify(report, null, 2)}\n`)
   })
 })

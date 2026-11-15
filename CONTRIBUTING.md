@@ -40,7 +40,7 @@ npm run check
 | --- | --- |
 | `typecheck` | `tsc --noEmit` over `src/` and `test/`, strict, with unused names as errors |
 | `unit` | `bun test ./test/unit`: every module in `src/`, the docs' counts and error table, and the Jelly declaration |
-| `conformance` | `bun test ./test/conformance`: the source contract's conformance kit over each source in `package.json`'s `sources`, on recorded invented X answers (`test/fixtures/sources.json`), with no X call; writes `conformance-report.json` |
+| `conformance` | `bun test ./test/conformance`: the source contract's conformance kit over each source in `package.json`'s `sources`, on recorded invented X answers (`test/fixtures/sources.json`), with no X call; writes `reports/conformance-report.json` |
 | `build` | `node scripts/build.mjs`: deletes `dist/` and bundles `src/index.ts` and `src/tui.ts` with esbuild into the self-contained `dist/index.js` and `dist/tui.js`. Fails if a bundle imports anything the host does not provide |
 | `icons` | `node scripts/check-icons.mjs`: the SVG is clean and exact, the 128 and 256 PNGs exist, and exports and files agree |
 | `host` | `bun test ./test/host`: the plugin inside an embedded OpenCode host, once on each tested release (`@opencode/sdk` 2.2.3, 2.2.4, 2.2.5 and 2.2.6) |

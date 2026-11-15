@@ -667,7 +667,7 @@ It asserts `x_probe`, then makes one billed read, `get_users_me`. `source` is `x
 ### Conformance
 
 `npm run check` runs the contract's conformance kit over each source with recorded, invented X answers (no X call),
-and writes its report to `conformance-report.json`.
+and writes its report to `reports/conformance-report.json`.
 
 ## Errors
 

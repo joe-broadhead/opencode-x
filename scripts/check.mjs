@@ -28,7 +28,7 @@ const stages = {
   typecheck: () => run("tsc", ["--noEmit", "-p", "tsconfig.json"]),
   unit: () => run("bun", ["test", "./test/unit"]),
   // The source contract's conformance kit over every declared source, on recorded X answers; it writes
-  // conformance-report.json for a release to attach.
+  // reports/conformance-report.json for a release to attach.
   conformance: () => run("bun", ["test", "./test/conformance"]),
   kit: () => run("node", ["--test", "scripts/release-kit.test.mjs"]),
   build: () => run("node", ["scripts/build.mjs"]),

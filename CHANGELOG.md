@@ -26,9 +26,10 @@ All notable changes to this project are documented in this file. It follows
   answers who is signed in, `{ source, account, owner, cost, trust }`, with one billed `get_users_me` read, and refuses
   another account with `ACCOUNT_MISMATCH`.
 - `npm run check` runs the contract's conformance kit over each declared source (the new `conformance` stage, in CI
-  too), on recorded invented X answers with no X call, and writes `conformance-report.json` for a release to attach.
-  Every check that applies passes; the report stays incomplete on the kit's expired-cursor check, which no X source can
-  run, because X keeps no history a cursor can outlive.
+  too), on recorded invented X answers with no X call, and writes `reports/conformance-report.json` (git-ignored) for a
+  release to attach. Every check that applies passes. The report stays incomplete on the kit's expired-cursor check:
+  X reaches back only a limited number of recent posts in each feed, so a cursor older than that window can miss posts,
+  and X gives no sign of it, so the plugin cannot tell and never answers `CURSOR_EXPIRED`.
 
 ### Changed
 
