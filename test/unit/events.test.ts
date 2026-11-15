@@ -315,13 +315,13 @@ describe("x_events_list's feed sources", () => {
     expect(resultProblems(result)).toEqual([])
   })
 
-  test("a later listing reads from its cursor alone, with or without the account, and makes no lookup", async () => {
+  test("a later listing reads from its cursor and the account it names, and makes no lookup", async () => {
     const host = x()
     const list = run(host)
     const first = await list({ source: "timeline", account: ACCOUNT, since: SINCE })
     host.data.timeline.push(post("2026-11-06T09:00:00Z", 0, "Later that week"))
     const before = host.calls.length
-    const next = await list({ source: "timeline", cursor: first.cursor })
+    const next = await list({ source: "timeline", account: ACCOUNT, cursor: first.cursor })
     expect(host.calls.slice(before).map((call) => call.tool)).toEqual(["x_get_users_timeline"])
     expect(next.events.map((event) => event.title)).toEqual(["Later that week"])
     expect(next.owner).toEqual(OWNER)
@@ -329,16 +329,34 @@ describe("x_events_list's feed sources", () => {
     expect((await list({ source: "timeline", account: ACCOUNT, cursor: next.cursor })).events).toEqual([])
   })
 
-  test("refuses a first listing without an account, another account's or source's cursor, and a feed that is off", async () => {
+  test("refuses a listing without an account, another source's cursor, and a feed that is off", async () => {
     const list = run(x(), { feeds: ["mentions", "bookmarks"] })
-    await expect(list({ source: "mentions", since: SINCE })).rejects.toThrow(/^INPUT_INVALID: A first listing of X's mentions names the account/)
+    await expect(list({ source: "mentions", since: SINCE })).rejects.toThrow(/^INPUT_INVALID: A listing of X's mentions names the account it reads/)
     const cursor = (await list({ source: "mentions", account: ACCOUNT, since: SINCE })).cursor
-    await expect(list({ source: "mentions", account: "someoneelse", cursor })).rejects.toThrow(/^CURSOR_INVALID: /)
-    await expect(list({ source: "bookmarks", cursor })).rejects.toThrow(/^CURSOR_INVALID: /)
+    await expect(list({ source: "mentions", cursor })).rejects.toThrow(/^INPUT_INVALID: A listing of X's mentions names the account it reads/)
+    await expect(list({ source: "bookmarks", account: ACCOUNT, cursor })).rejects.toThrow(/^CURSOR_INVALID: /)
     await expect(list({ cursor })).rejects.toThrow(/^CURSOR_INVALID: /)
     await expect(list({ source: "timeline", account: ACCOUNT })).rejects.toThrow(/^SOURCE_DISABLED: X's timeline are turned off: the events.feeds option does not name "timeline"\. Next step: Add "timeline" to events.feeds/)
     await expect(list({ source: "likes", account: ACCOUNT })).rejects.toThrow(/^SOURCE_UNKNOWN: /)
     await expect(list({ source: "mentions", account: "nobody" })).rejects.toThrow(/^UPSTREAM_ERROR: X's get_users_by_username failed: Could not find user\./)
+  })
+
+  test("refuses a cursor passed for another account with ACCOUNT_MISMATCH, and reads no post for it", async () => {
+    const host = x()
+    const list = run(host)
+    const cursor = (await list({ source: "mentions", account: ACCOUNT, since: SINCE })).cursor
+    const before = host.calls.length
+    await expect(list({ source: "mentions", account: "@SomeoneElse", cursor })).rejects.toThrow(
+      /^ACCOUNT_MISMATCH: The cursor is for another X account than "someoneelse"\. Next step: Pass the cursor with the account it was issued for/,
+    )
+    // A cursor forged for another handle, under this account's binding, names that handle: it is refused the same way.
+    const state = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as Record<string, unknown>
+    const forged = Buffer.from(JSON.stringify({ ...state, a: "someoneelse" }), "utf8").toString("base64url")
+    await expect(list({ source: "mentions", account: ACCOUNT, cursor: forged })).rejects.toThrow(/^ACCOUNT_MISMATCH: /)
+    // Forged the other way, naming the asked handle under another account's binding, it is not this account's cursor.
+    const other = Buffer.from(JSON.stringify({ ...state, b: "0000000000000000" }), "utf8").toString("base64url")
+    await expect(list({ source: "mentions", account: ACCOUNT, cursor: other })).rejects.toThrow(/^CURSOR_INVALID: /)
+    expect(host.calls.length).toBe(before)
   })
 
   test("refuses for good a post that holds a secret, and moves its cursor past it", async () => {
@@ -348,7 +366,7 @@ describe("x_events_list's feed sources", () => {
     const result = await list({ source: "mentions", account: ACCOUNT, since: SINCE })
     expect(result.refused).toEqual([{ external_id: data.mentions[0]!.id, reason: "secret", detail: "holds a secret (connection string)" }])
     expect(result.events.map((event) => event.external_id)).not.toContain(data.mentions[0]!.id)
-    expect((await list({ source: "mentions", cursor: result.cursor })).events).toEqual([])
+    expect((await list({ source: "mentions", account: ACCOUNT, cursor: result.cursor })).events).toEqual([])
     // Source x keeps contract 1's answers: it lists the post.
     expect((await list({ since: SINCE })).events.map((event) => event.external_id)).toContain(data.mentions[0]!.id)
   })

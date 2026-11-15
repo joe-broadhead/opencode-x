@@ -588,7 +588,10 @@ async function combinedEvents(read: Read, options: XEventsOptions, request: Even
   return { result: eventsListResult({ source: X_SOURCE, account, owner }, oldestFirst(budget.listed), cursor, more), calls: options.maxCalls - budget.calls, costs: budget.costs, feeds: options.feeds }
 }
 
-/** The account a feed cursor names inside, read before its binding is checked; undefined when it names none. */
+/**
+ * The account a feed cursor names inside, read before its binding is checked, to tell another account's cursor from a
+ * broken one; undefined when it names none.
+ */
 function cursorAccount(cursor: string): string | undefined {
   try {
     const value = record(JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as unknown)["a"]
@@ -600,29 +603,32 @@ function cursorAccount(cursor: string): string | undefined {
 
 /**
  * One feed source, as the source contract lists it. Who is signed in is `probe`'s to read: a feed never asks X for
- * it. A first listing looks up the account the consumer names, by its handle, for its X id; the cursor then carries
- * the id and the owner's label, bound to the plugin, the feed and the account, so a later listing makes no lookup at
- * all. Posts holding a secret are refused for good, and the page counts what X returned for each price unit.
+ * it. Every listing names the account it reads, as a consumer's grant does. A first listing looks that account up by
+ * its handle, for its X id; the cursor then carries the id and the owner's label, bound to the plugin, the feed and the
+ * account, so a later listing makes no lookup at all, and a cursor that names another account is refused. Posts
+ * holding a secret are refused for good, and the page counts what X returned for each price unit.
  */
 async function feedEvents(read: Read, options: XEventsOptions, request: EventsListRequest, feed: Feed, now: number): Promise<XEventsAnswer> {
   const asked = request.account === undefined ? undefined : handleOf(request.account)
+  if (asked === undefined || !HANDLE.test(asked)) {
+    throw xError("INPUT_INVALID", `A listing of X's ${feed} names the account it reads: events_list has no "account".`, `Pass "account", the signed-in handle that probe answers, or source "${X_SOURCE}".`)
+  }
   let user: { id: string; owner: EventsOwner; account: string }
   let state: FeedState
   let lookups = 0
   let calls = options.maxCalls
   if (request.cursor !== undefined) {
-    const account = asked ?? cursorAccount(request.cursor)
-    if (account === undefined) throw refuseCursor()
-    const decoded = decodeBoundCursor({ plugin: NAMESPACE, source: feed, account }, request.cursor)
+    const named = cursorAccount(request.cursor)
+    if (named !== undefined && named !== asked) {
+      throw xError("ACCOUNT_MISMATCH", `The cursor is for another X account than "${asked}".`, `Pass the cursor with the account it was issued for, or call events_list for "${asked}" without a cursor, with since, to start again.`)
+    }
+    const decoded = decodeBoundCursor({ plugin: NAMESPACE, source: feed, account: asked }, request.cursor)
     if (!decoded.ok) throw refuseCursor()
     const [me, label, position] = [id(decoded.state["i"]), decoded.state["l"], feedState(feed, decoded.state["p"])]
-    if (me === undefined || typeof label !== "string" || label === "" || label.length > EVENT_LIMITS.ownerLabel || position === undefined || decoded.state["a"] !== account) throw refuseCursor()
-    user = { id: me, account, owner: { id: `x:@${account}`, label } }
+    if (me === undefined || typeof label !== "string" || label === "" || label.length > EVENT_LIMITS.ownerLabel || position === undefined || decoded.state["a"] !== asked) throw refuseCursor()
+    user = { id: me, account: asked, owner: { id: `x:@${asked}`, label } }
     state = position
   } else {
-    if (asked === undefined || !HANDLE.test(asked)) {
-      throw xError("INPUT_INVALID", `A first listing of X's ${feed} names the account: events_list has no cursor and no "account".`, `Pass "account", the signed-in handle that probe answers, or source "${X_SOURCE}".`)
-    }
     calls--
     const result = await read("get_users_by_username", { username: asked, "user.fields": "username,name" })
     lookups = 1

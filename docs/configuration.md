@@ -627,12 +627,15 @@ events_list({ since?, cursor?, limit?, account?, source? })
   link `https://x.com/i/status/<id>`, and the label `mention`, `timeline` or `bookmark`. Each event's `source` is the
   page's. A post in two feeds is listed once by source `x`.
 - **Account and owner**: `account` is your handle, lowercase, without `@`; `owner` is `x:@<handle>` with your name.
-  - A feed source never asks X who is signed in: `probe` does. Its first listing needs `account` (the handle `probe`
-    answers; without it, `INPUT_INVALID`), which it looks up once with `get_users_by_username`, billed as one user.
-    Its cursor then carries the account's X id and the owner's label, so later listings make no lookup. A cursor
-    names its account, so `account` may be left out with one; another account's cursor is `CURSOR_INVALID`. If you
-    later sign in to X as someone else, a feed cursor still reads its own account's feed: X refuses bookmarks and the
-    home timeline of anyone but the signed-in user, and mentions are public posts.
+  - A feed source never asks X who is signed in: `probe` does. Every listing names `account` (the handle `probe`
+    answers; without it, `INPUT_INVALID`), as a consumer's grant does. A first listing looks it up once with
+    `get_users_by_username`, billed as one user; the cursor then carries the account's X id and the owner's label,
+    bound to the plugin, the feed and the account, so later listings make no lookup. A cursor that names another
+    account than `account` is `ACCOUNT_MISMATCH`; another feed's or plugin's cursor is `CURSOR_INVALID`.
+  - A sign-in changed to another X account is noticed only when the caller passes the new account (its cursor is then
+    refused) or calls `probe`: the source contract forbids a content read from asserting the identity read, so a feed
+    does not ask X who is signed in. Until then a feed cursor reads its own account's feed: X refuses bookmarks and
+    the home timeline of anyone but the signed-in user, and mentions are public posts.
   - Source `x` looks up who is signed in with `get_users_me` on every call; another handle in `account` is
     `ACCOUNT_UNKNOWN`.
 - **Refused posts**: a feed source refuses for good a post whose title or text holds a secret (an API key, a token, a
@@ -676,11 +679,11 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | Code | When | Next step |
 | --- | --- | --- |
 | `OPTIONS_INVALID` | Setup: an option is unknown or has a wrong value. `/x-status` shows the message, which names the option. | Fix the plugin options in `opencode.json`. |
-| `INPUT_INVALID` | `x_events_list` or `probe`: the input is not the contract's, such as a `limit` outside 1 to 500, or a feed source's first listing without `account`. | Pass the inputs as its schema describes them. |
+| `INPUT_INVALID` | `x_events_list` or `probe`: the input is not the contract's, such as a `limit` outside 1 to 500, or a feed source's listing without `account`. | Pass the inputs as its schema describes them. |
 | `SOURCE_UNKNOWN` | `x_events_list` or `probe`: `source` is not `x`, `mentions`, `bookmarks` or `timeline`. | Leave `source` out, or pass one of them. |
 | `SOURCE_DISABLED` | `x_events_list` or `probe`: the feed `source` names is not in `events.feeds`, so that source is turned off. | Add the feed to `events.feeds` if you want it read, then restart OpenCode. |
 | `ACCOUNT_UNKNOWN` | `x_events_list`, source `x`: `account` is not the signed-in handle. | Leave `account` out, or pass the handle the message names. |
-| `ACCOUNT_MISMATCH` | `probe`: `account` is not the signed-in handle. | Sign in to X as that account, or read as the handle the message names. |
+| `ACCOUNT_MISMATCH` | `probe`: `account` is not the signed-in handle. `x_events_list`, a feed source: the cursor names another account than `account`. | For `probe`, sign in to X as that account, or read as the handle the message names; for a cursor, pass it with its own account, or start again without one. |
 | `CURSOR_INVALID` | `x_events_list`: the cursor is malformed, another source's, or another account's. | Call without a cursor to start again. |
 | `UPSTREAM_ERROR` | `x_events_list` or `probe`: X refused one of its reads, such as a rate limit. The message holds the first line of X's text, at most 300 characters, with tokens and URL query strings removed. | Run `/x-status`, then call again with the same cursor. |
 | `UPSTREAM_UNREADABLE` | `x_events_list` or `probe`: one of its reads answered in a shape it does not read. | Call the read the message names directly, and run `/x-status`. |

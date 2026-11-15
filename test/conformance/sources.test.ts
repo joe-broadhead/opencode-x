@@ -89,19 +89,20 @@ const firstCursor = async (feed: Feed) => (await list({ source: feed, account: A
 
 async function casesFor(feed: Feed): Promise<PageCase[]> {
   const first = await firstCursor(feed)
-  const done = (await list({ source: feed, cursor: first }))["cursor"] as string
+  const done = (await list({ source: feed, account: ACCOUNT, cursor: first }))["cursor"] as string
   const other = feed === "mentions" ? "bookmarks" : "mentions"
   return [
     { name: "a first listing, by the account probe names", input: { source: feed, account: ACCOUNT, since: SINCE }, expect: "page" },
-    { name: "what came after the first listing, one post refused for a secret", input: { source: feed, cursor: first }, expect: "page" },
-    { name: "the same, naming the account", input: { source: feed, account: ACCOUNT, cursor: first, limit: 2 }, expect: "page" },
-    { name: "nothing new since the last listing", input: { source: feed, cursor: done }, expect: "empty" },
+    { name: "what came after the first listing, one post refused for a secret", input: { source: feed, account: ACCOUNT, cursor: first }, expect: "page" },
+    { name: "the same, two at a time", input: { source: feed, account: ACCOUNT, cursor: first, limit: 2 }, expect: "page" },
+    { name: "nothing new since the last listing", input: { source: feed, account: ACCOUNT, cursor: done }, expect: "empty" },
+    { name: "a cursor without the account it reads", input: { source: feed, cursor: first }, expect: { refuses: "INPUT_INVALID" } },
     { name: "a first listing that names no account", input: { source: feed, since: SINCE }, expect: { refuses: "INPUT_INVALID" } },
-    { name: "another account's cursor", input: { source: feed, account: "someoneelse", cursor: first }, expect: { refuses: "CURSOR_INVALID" } },
-    { name: "another source's cursor", input: { source: other, cursor: first }, expect: { refuses: "CURSOR_INVALID" } },
+    { name: "a cursor passed for another account", input: { source: feed, account: "someoneelse", cursor: first }, expect: { refuses: "ACCOUNT_MISMATCH" } },
+    { name: "another source's cursor", input: { source: other, account: ACCOUNT, cursor: first }, expect: { refuses: "CURSOR_INVALID" } },
     {
       name: "a cursor bound to another plugin",
-      input: { source: feed, cursor: encodeBoundCursor({ plugin: "y", source: feed, account: ACCOUNT }, { a: ACCOUNT, i: X["me"].id, l: "Sam Rivera (@SamRivera)", p: { t: NOW } }) },
+      input: { source: feed, account: ACCOUNT, cursor: encodeBoundCursor({ plugin: "y", source: feed, account: ACCOUNT }, { a: ACCOUNT, i: X["me"].id, l: "Sam Rivera (@SamRivera)", p: { t: NOW } }) },
       expect: { refuses: "CURSOR_INVALID" },
     },
     { name: "a source this plugin does not have", input: { source: "likes", account: ACCOUNT }, expect: { refuses: "SOURCE_UNKNOWN" } },

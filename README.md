@@ -305,11 +305,11 @@ Run `/x-status` first. Its last line is the next step.
 | A skill seems ignored, and status names a skill to rename or move | A skill of yours with the same id, such as `x`, replaces the plugin's. Rename or move it. |
 | `/x` is missing | The plugin did not start. Run `/plugins` to see the error. |
 | `OPTIONS_INVALID` | An option is unknown or has a wrong value. The message names the option and the accepted values. |
-| `INPUT_INVALID` | `x_events_list` or `probe`: the input is not the contract's, such as a `limit` outside 1 to 500, or a feed source's first listing without `account`. | Pass the inputs as its schema describes them. |
+| `INPUT_INVALID` | `x_events_list` or `probe`: the input is not the contract's, such as a `limit` outside 1 to 500, or a feed source's listing without `account`. | Pass the inputs as its schema describes them. |
 | `SOURCE_UNKNOWN` | `x_events_list` or `probe`: `source` is not `x`, `mentions`, `bookmarks` or `timeline`. | Leave `source` out, or pass one of them. |
 | `SOURCE_DISABLED` | `x_events_list` or `probe`: the feed `source` names is not in `events.feeds`, so that source is turned off. | Add the feed to `events.feeds` if you want it read, then restart OpenCode. |
 | `ACCOUNT_UNKNOWN` | `x_events_list`, source `x`: `account` is not the signed-in handle. | Leave `account` out, or pass the handle the message names. |
-| `ACCOUNT_MISMATCH` | `probe`: `account` is not the signed-in handle. | Sign in to X as that account, or read as the handle the message names. |
+| `ACCOUNT_MISMATCH` | `probe`: `account` is not the signed-in handle. `x_events_list`, a feed source: the cursor names another account than `account`. | For `probe`, sign in to X as that account, or read as the handle the message names; for a cursor, pass it with its own account, or start again without one. |
 | `CURSOR_INVALID` | `x_events_list`: the cursor is malformed, another source's, or another account's. | Call without a cursor to start again. |
 | `UPSTREAM_ERROR` | `x_events_list` or `probe`: X refused one of its reads, such as a rate limit. The message holds the first line of X's text, at most 300 characters, with tokens and URL query strings removed. | Run `/x-status`, then call again with the same cursor. |
 | `UPSTREAM_UNREADABLE` | `x_events_list` or `probe`: one of its reads answered in a shape it does not read. | Call the read the message names directly, and run `/x-status`. |
@@ -339,6 +339,11 @@ A script's errors from the tools RPC have their own codes, listed in
 - **Media uploads have no published price.** X's pricing page gives none for `x_media_upload` or the chat media tools,
   so the plugin does not guess one: a script with a budget set is refused them (`X_PRICE_UNKNOWN`), and without a
   budget their cost line says the price is unknown. X's Developer Console has the real bill.
+- **A feed source notices a change of X account only when told.** `x_events_list`'s feed sources never ask X who is
+  signed in, because the source contract keeps that identity read for `probe`. If you sign in to X as another account,
+  a feed notices only when its caller passes the new account (the old account's cursor is then `ACCOUNT_MISMATCH`) or
+  calls `probe`. Until then a cursor reads its own account's feed: X refuses bookmarks and the home timeline of anyone
+  but the signed-in user, and mentions are public posts. Source `x` asks X on every call.
 - **A public app refreshes.** X issued a Native App (public client) a refresh token on 2026-11-06, and OpenCode
   refreshed it about two hours later; `offline.access` is still required.
 - **There is no delete or Article-publish tool.** A Post published by mistake is removed in the X app; an Article

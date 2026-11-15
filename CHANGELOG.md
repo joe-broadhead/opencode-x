@@ -18,10 +18,12 @@ All notable changes to this project are documented in this file. It follows
 - For Memory and every consumer: `events_list` lists one feed when `source` names it. A feed's page carries `plugin`,
   `asOf`, `cost.units` (the posts, authors and users X returned for the call's reads; no `usd`, since X reports no
   price) and `refused[]`: a post whose title or text holds a secret is refused for good with `reason: "secret"`, and
-  the cursor moves past it. A feed never asks X who is signed in: its first listing needs `account` (the handle the
-  probe answers) and looks it up once by its handle, and its cursor, bound to the plugin, the feed and the account,
-  carries the account's X id, so a later listing makes no lookup and costs one user read less than source `x`. A feed
-  the `events.feeds` option leaves out answers `SOURCE_DISABLED`, which is how a person turns a source off.
+  the cursor moves past it. A feed never asks X who is signed in: every listing names `account` (the handle the probe
+  answers), a first listing looks it up once by its handle, and its cursor, bound to the plugin, the feed and the
+  account, carries the account's X id, so a later listing makes no lookup and costs one user read less than source
+  `x`. A cursor that names another account than `account` is refused with `ACCOUNT_MISMATCH`. A change of X sign-in
+  is noticed only when the caller passes the new account or calls `probe` (README, Known limits). A feed the
+  `events.feeds` option leaves out answers `SOURCE_DISABLED`, which is how a person turns a source off.
 - For Memory and jelly: the tools RPC method `probe` (action `x_probe`, allowed by the default rules at every `access`)
   answers who is signed in, `{ source, account, owner, cost, trust }`, with one billed `get_users_me` read, and refuses
   another account with `ACCOUNT_MISMATCH`.
