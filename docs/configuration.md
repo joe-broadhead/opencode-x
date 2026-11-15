@@ -664,6 +664,11 @@ probe({ source?, account? })
 It asserts `x_probe`, then makes one billed read, `get_users_me`. `source` is `x` (the default) or a feed; a feed that
 `events.feeds` leaves out is `SOURCE_DISABLED`. An `account` other than the signed-in handle is `ACCOUNT_MISMATCH`.
 
+### Conformance
+
+`npm run check` runs the contract's conformance kit over each source with recorded, invented X answers (no X call),
+and writes its report to `conformance-report.json`.
+
 ## Errors
 
 Every error from the plugin reads `CODE: What happened. Next step: What to do.`
