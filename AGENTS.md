@@ -82,7 +82,8 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   its `conformance` and `descriptor`. `package.json`'s top-level `sources` declares X's three sources, and the
   `conformance` stage runs the kit over each, on recorded invented X answers, and writes
   `reports/conformance-report.json`. A feed source never asserts `x_get_users_me`: that identity read is `probe`'s
-  alone.
+  alone. Every `usd` in `sources` is the standard rate in `src/prices.ts` (a test keeps them equal); the `ownsXApp`
+  Owned Read rate cannot be declared yet, so $0.005 stays the most a post costs.
 - **The tools RPC (v2.3).** The package's `tools-rpc` is the transport every plugin shares; X's part is
   `src/tools-rpc.ts` (the plugin value, the method table, the shapers and next steps). `scripts/check-copies.mjs`
   holds the declaration kit `test/support/jelly-kit.ts` and Jelly's setting rules `test/support/jelly-settings.ts`,

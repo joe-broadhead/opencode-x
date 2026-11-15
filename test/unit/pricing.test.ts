@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { billingStatus, configureBilling, costOf, estimateCall, flushBilling, recordModelCost, resetBilling, scriptCostOfCall } from "../../src/billing.js"
 import { PRICES, PRICE_AS_OF, PRICE_SOURCE, priceOf, UNPRICED } from "../../src/prices.js"
 import { METHODS, pluginError, resetScriptSpend, shapeInput, shapeResult } from "../../src/tools-rpc.js"
@@ -14,6 +16,28 @@ const fresh = async (input: { sessionBudgetUsd?: number; dailyBudgetUsd?: number
   await configureBilling({ storage: store, sessionBudgetUsd: input.sessionBudgetUsd, dailyBudgetUsd: input.dailyBudgetUsd, ownsXApp: input.ownsXApp })
   return store
 }
+
+describe("the sources' declared prices", () => {
+  test("every usd in package.json's sources is the standard rate in the price table", () => {
+    const sources = JSON.parse(readFileSync(join(import.meta.dir, "../../package.json"), "utf8")).sources as {
+      items: { id: string; permission: { operations: string[] }; cost: { units: { per: string; usd: number }[]; probe: { per: string; usd: number } } }[]
+    }
+    const rate = (method: string) => {
+      const price = priceOf(method)
+      if (price === undefined || !("perResourceUsd" in price)) throw new Error(`${method} has no per-resource price`)
+      return price.perResourceUsd
+    }
+    expect(sources.items.length).toBe(3)
+    for (const item of sources.items) {
+      const feed = item.permission.operations.find((operation) => ["get_users_mentions", "get_users_bookmarks", "get_users_timeline"].includes(operation))!
+      // A post at its feed's standard rate (the Owned Read rate depends on ownsXApp and cannot be declared); an author
+      // and a looked-up user at the user rate X bills for each user it returns; the probe's one get_users_me user.
+      const expected: Record<string, number> = { post: rate(feed), author: rate("get_users_by_id"), user: rate("get_users_by_username") }
+      expect(Object.fromEntries(item.cost.units.map((unit) => [unit.per, unit.usd]))).toEqual(expected)
+      expect(item.cost.probe).toEqual({ per: "user", usd: rate("get_users_me") })
+    }
+  })
+})
 
 describe("the price table", () => {
   test("has one row for every known method X prices, none for the media methods it does not, and no unknown row", () => {

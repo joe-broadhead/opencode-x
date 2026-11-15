@@ -591,9 +591,10 @@ This plugin's sources are declared in `package.json`'s `sources` key, by the sha
 
 Each also names `get_users_by_username` (a first listing's account lookup) and `get_users_me` (the probe's, its one
 identity read) among its operations. All three are billed (`cost.class: "billed"`) at X's standard rates from this
-plugin's price table (`src/prices.ts`): mentions and bookmarks cost $0.001 a post when you own the X app
-(`ownsXApp`), which the declaration cannot state, so its post price is the most a post costs. A probe costs one user,
-$0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` is private; the other two
+plugin's price table (`src/prices.ts`), and a test keeps each `usd` equal to its row there. The declared post price,
+$0.005, is the most a post costs: mentions and bookmarks cost $0.001 a post when you own the X app (`ownsXApp`), but
+the contract's descriptor has no way yet to state a price that depends on an option, so the Owned Read rate is not
+declared. A probe costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` is private; the other two
 read public posts.
 
 A feed the `events.feeds` option leaves out is `SOURCE_DISABLED`, which is how you turn a source off: the home
