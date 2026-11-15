@@ -230,10 +230,10 @@ describe("docs", () => {
     for (const versions of mentions) expect({ file, versions: [...new Set(versions)].sort() }).toEqual({ file, versions: [...TESTED_HOSTS].sort() })
   })
 
-  test("the untested example is 2.2.99, and no doc names a later 2.2 release as tested", () => {
+  test("the untested example is 2.2.99, and no doc names an untested later 2.2 or 2.3 release as tested", () => {
     const all = ["README.md", "AGENTS.md", "SECURITY.md", "docs/configuration.md", "CHANGELOG.md"].map((file) => readFileSync(join(ROOT, file), "utf8")).join("\n")
     expect(all).toContain("2.2.99")
-    expect(all).not.toMatch(/\b2\.2\.(?:7|8|9[0-8])\b(?!\d)/)
+    expect(all).not.toMatch(/\b2\.(?:2\.(?:[89]|9[0-8])|3\.(?:[1-9]|[1-9]\d))\b(?!\d)/)
   })
 
   test("every call is billed, in the README, the skills, the namespace and status", () => {

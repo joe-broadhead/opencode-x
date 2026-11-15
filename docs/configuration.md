@@ -121,18 +121,18 @@ cap when it is set.
 - Type: `true` or `false`.
 - Default: `false`.
 
-The plugin supports OpenCode `>=2.2.3 <2.3.0`, the range `opencode.host` in `package.json` declares, and every check
-runs on 2.2.3, 2.2.4, 2.2.5 and 2.2.6, the tested releases. Status shows the version, whether it is tested and the supported
-range in its `OpenCode` row, for example `2.2.5 (tested; supported range >=2.2.3 <2.3.0)`.
+The plugin supports OpenCode `>=2.2.3 <2.4.0`, the range `opencode.host` in `package.json` declares, and every check
+runs on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0, the tested releases. Status shows the version, whether it is tested and the supported
+range in its `OpenCode` row, for example `2.2.5 (tested; supported range >=2.2.3 <2.4.0)`.
 
 - **A tested release:** the plugin starts.
 - **Another release inside the range, such as 2.2.99:** the plugin starts too. Status marks the version `untested`,
   and the status RPC's `host.tested` is `false`. The next step is the same as on a tested release.
-- **Outside the range, including 2.3.0, prereleases and development builds:** the plugin does not set itself up, and
+- **Outside the range, including 2.4.0, prereleases and development builds:** the plugin does not set itself up, and
   `/x-status` shows `host untested` with the fix. `/plugins` shows the same code:
 
   ```text
-  HOST_UNTESTED: OpenCode 2.3.0 is outside the supported range >=2.2.3 <2.3.0, so X is not set up. Next step: Use OpenCode >=2.2.3 <2.3.0, or set "allowUntestedHost": true in this plugin's options to run anyway.
+  HOST_UNTESTED: OpenCode 2.4.0 is outside the supported range >=2.2.3 <2.4.0, so X is not set up. Next step: Use OpenCode >=2.2.3 <2.4.0, or set "allowUntestedHost": true in this plugin's options to run anyway.
   ```
 
 - **Outside the range with `"allowUntestedHost": true`:** it starts anyway, and `/x-status` and `/x` show a warning.
@@ -689,7 +689,7 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `UPSTREAM_ERROR` | `x_events_list` or `probe`: X refused one of its reads, such as a rate limit. The message holds the first line of X's text, at most 300 characters, with tokens and URL query strings removed. | Run `/x-status`, then call again with the same cursor. |
 | `UPSTREAM_UNREADABLE` | `x_events_list` or `probe`: one of its reads answered in a shape it does not read. | Call the read the message names directly, and run `/x-status`. |
 | `TOOL_UNAVAILABLE` | `x_events_list` or `probe`: OpenCode does not list a read it needs. While X cannot be called, it gives status's own code and next step instead. | Wait a few seconds, then run `/x-status` and follow its next step. |
-| `HOST_UNTESTED` | Setup: OpenCode is outside `>=2.2.3 <2.3.0`, and `allowUntestedHost` is not set. | Use OpenCode `>=2.2.3 <2.3.0`, or set `"allowUntestedHost": true`. |
+| `HOST_UNTESTED` | Setup: OpenCode is outside `>=2.2.3 <2.4.0`, and `allowUntestedHost` is not set. | Use OpenCode `>=2.2.3 <2.4.0`, or set `"allowUntestedHost": true`. |
 | `CLIENT_ID_MISSING` | Setup: no X app client ID is in the options or the `/connect` X app entry. | Run `/connect` and choose X app, and paste your X app's client ID. |
 | `CLIENT_ID_INVALID` | Setup: the saved client ID is empty or has spaces. | Save the client ID again from the app's User authentication settings. |
 | `STATUS_UNAVAILABLE` | `/x-status`, `/x` or the status RPC: the status could not be read, or the plugin is not running on the server. The RPC answers with its error `unavailable`. | The message's own next step: restart OpenCode and run the command again, or, when the plugin is not running, run `/plugins` to see why. |
@@ -736,7 +736,7 @@ meanings:
 | `unknownCount`, `unknownTools` | How many of them the plugin does not know, and at most 20 of their names, only those made of lowercase letters, digits and `_` |
 | `unguardedAgents` | Agents where a new X tool would run without asking; empty when there are none. An agent whose own rules already ask or deny for every X tool is not listed. |
 | `shadowedSkills` | Present only when a skill with one of the plugin's ids, such as your own `x` skill, replaces the plugin's: each `id` and the `path` OpenCode loads instead |
-| `host` | `version` (`null` if OpenCode reports none), `range` (the supported range) and `tested` (true only for 2.2.3, 2.2.4, 2.2.5 and 2.2.6) |
+| `host` | `version` (`null` if OpenCode reports none), `range` (the supported range) and `tested` (true only for 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0) |
 | `problems` | Setup problems, each `CODE: What happened. Next step: What to do.` |
 | `nextStep` | Exactly one next step: the `Next step` row, `Nothing to do.` when nothing is needed |
 

@@ -225,7 +225,7 @@ function nextStepOf(status: Omit<Status, "nextStep">, setupNext: string | undefi
   const { source } = status
   switch (status.state) {
     case "host_untested":
-      return setupNext ?? "Use OpenCode >=2.2.3 <2.3.0, or set \"allowUntestedHost\": true in this plugin's options to run anyway."
+      return setupNext ?? "Use OpenCode >=2.2.3 <2.4.0, or set \"allowUntestedHost\": true in this plugin's options to run anyway."
     case "conflict": {
       const { url, expected } = source as Extract<ServerSource, { type: "conflict" }>
       return `Your OpenCode config defines mcp.servers.${SERVER_NAME} with ${url}, but the plugin uses ${expected}. Point it at ${expected} or remove it, then restart OpenCode.`
