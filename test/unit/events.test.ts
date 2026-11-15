@@ -1,10 +1,12 @@
-// x_events_list, Memory's source of X events, against a synthetic X: the shared contract's conformance check through
-// the tool and through the tools RPC method, the call cap, the window narrowing that keeps oldest first, bookmarks
-// walked to the last known one, and the refusals. Every handle, post and id below is invented.
+// x_events_list and probe, X's sources, against a synthetic X: the shared contract's conformance check through the
+// tool and through the tools RPC method, the call cap, the window narrowing that keeps oldest first, bookmarks walked
+// to the last known one, the feed sources' own account, cursor, refusal and cost, the probe, and the refusals. Every
+// handle, post and id below is invented. test/conformance runs the contract's full kit over the declared sources.
 import { describe, expect, test } from "bun:test"
-import { EVENTS_ACTION, eventsMethod, eventsTool, meOf, postEvent, postsPage, type EventsToolOptions, type Feed } from "../../src/events.js"
-import { assertEventsListConformance, encodeCursor, resultProblems, type EventsListInput, type EventsListResult } from "../../src/host/events-list.js"
-import type { ToolCall } from "../../src/host/tools-rpc.js"
+import { createHash } from "node:crypto"
+import { EVENTS_ACTION, PACKAGE, PROBE_ACTION, eventsMethod, eventsTool, meOf, postEvent, postsPage, probeMethod, type EventsToolOptions, type Feed } from "../../src/events.js"
+import { assertEventsListConformance, encodeCursor, resultProblems, type EventsListInput, type EventsListResult } from "@we-the-rebel-alliance/source-contract/events"
+import type { ToolCall } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import type { Status } from "../../src/status.js"
 
 const NOW = Date.parse("2026-11-08T12:00:00Z")
@@ -58,6 +60,9 @@ function x(data = fixture(), pageSize = 2) {
   const answer = (value: unknown) => ({ output: value, content: [{ type: "text", text: JSON.stringify(value) }] })
   const execute = (tool: string, input: Record<string, unknown>) => {
     if (tool === "x_get_users_me") return answer({ data: { id: ME, username: "SamRivera", name: "Sam Rivera" } })
+    if (tool === "x_get_users_by_username") {
+      return String(input["username"]) === "samrivera" ? answer({ data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }) : answer({ errors: [{ title: "Not Found Error", detail: "Could not find user." }] })
+    }
     const feed = TOOL[tool]!
     if (input["id"] !== ME) return answer({ errors: [{ title: "Forbidden", detail: "Not this user" }] })
     let posts = [...data[feed]]
@@ -76,7 +81,7 @@ function x(data = fixture(), pageSize = 2) {
     return answer({ ...(page.length === 0 ? {} : { data: page, ...(users.length === 0 ? {} : { includes: { users } }) }), meta: { result_count: page.length, ...(next === undefined ? {} : { next_token: next }) } })
   }
   const list = async () =>
-    ["x_get_users_me", ...Object.keys(TOOL)].map((id) => ({
+    ["x_get_users_me", "x_get_users_by_username", ...Object.keys(TOOL)].map((id) => ({
       id,
       execute: async (input: Record<string, unknown>) => {
         calls.push({ tool: id, input })
@@ -281,5 +286,95 @@ describe("x_events_list", () => {
     )
     expect(await eventsMethod({ ...options(), status: async () => signIn }).available!()).toBe("AUTH_REQUIRED")
     expect(await eventsMethod(options()).available!()).toBeUndefined()
+  })
+
+  test("source x still reads a cursor an earlier version issued, and lists from it what the current cursor lists", async () => {
+    const list = run()
+    const first = await list({ since: SINCE, limit: 2 })
+    const state = JSON.parse(Buffer.from(first.cursor, "base64url").toString("utf8")) as Record<string, unknown>
+    expect([state["v"], state["s"], typeof state["b"]]).toEqual([2, "x", "string"])
+    const old = encodeCursor("x", { o: createHash("sha256").update(`samrivera\u0000${ME}`).digest("hex").slice(0, 16), f: state["f"] })
+    expect((await list({ cursor: old })).events.map((event) => event.external_id)).toEqual((await list({ cursor: first.cursor })).events.map((event) => event.external_id))
+  })
+})
+
+describe("x_events_list's feed sources", () => {
+  const ACCOUNT = "samrivera"
+
+  test("a first listing looks the named account up by its handle, never asks who is signed in, and says what X returned", async () => {
+    const host = x(fixture(), 10)
+    const asserts: unknown[] = []
+    const result = (await eventsTool(options(host, {}, asserts)).execute({ source: "mentions", account: "@SamRivera", since: SINCE }, context)).output
+    expect(host.calls.map((call) => call.tool)).toEqual(["x_get_users_by_username", "x_get_users_mentions"])
+    expect(host.calls[0]!.input).toEqual({ username: ACCOUNT, "user.fields": "username,name" })
+    expect(asserts).toEqual([{ sessionID: "ses_1", agent: "build", action: EVENTS_ACTION, resources: ["*"], source: { type: "tool", messageID: "msg_1", id: "call_1" } }])
+    expect(result).toMatchObject({ source: "mentions", account: ACCOUNT, owner: OWNER, plugin: PACKAGE, asOf: new Date(NOW).toISOString(), more: false, trust: "untrusted" })
+    expect(result.events.map((event) => [event.source, event.external_id])).toEqual(fixture().mentions.slice(1).map((item) => ["mentions", item.id]))
+    // Three mentions by two authors, and the one user the lookup returned.
+    expect(result.cost).toEqual({ units: [{ per: "post", count: 3 }, { per: "author", count: 2 }, { per: "user", count: 1 }] })
+    expect(resultProblems(result)).toEqual([])
+  })
+
+  test("a later listing reads from its cursor alone, with or without the account, and makes no lookup", async () => {
+    const host = x()
+    const list = run(host)
+    const first = await list({ source: "timeline", account: ACCOUNT, since: SINCE })
+    host.data.timeline.push(post("2026-11-06T09:00:00Z", 0, "Later that week"))
+    const before = host.calls.length
+    const next = await list({ source: "timeline", cursor: first.cursor })
+    expect(host.calls.slice(before).map((call) => call.tool)).toEqual(["x_get_users_timeline"])
+    expect(next.events.map((event) => event.title)).toEqual(["Later that week"])
+    expect(next.owner).toEqual(OWNER)
+    expect(next.cost).toEqual({ units: [{ per: "post", count: 1 }, { per: "author", count: 1 }] })
+    expect((await list({ source: "timeline", account: ACCOUNT, cursor: next.cursor })).events).toEqual([])
+  })
+
+  test("refuses a first listing without an account, another account's or source's cursor, and a feed that is off", async () => {
+    const list = run(x(), { feeds: ["mentions", "bookmarks"] })
+    await expect(list({ source: "mentions", since: SINCE })).rejects.toThrow(/^INPUT_INVALID: A first listing of X's mentions names the account/)
+    const cursor = (await list({ source: "mentions", account: ACCOUNT, since: SINCE })).cursor
+    await expect(list({ source: "mentions", account: "someoneelse", cursor })).rejects.toThrow(/^CURSOR_INVALID: /)
+    await expect(list({ source: "bookmarks", cursor })).rejects.toThrow(/^CURSOR_INVALID: /)
+    await expect(list({ cursor })).rejects.toThrow(/^CURSOR_INVALID: /)
+    await expect(list({ source: "timeline", account: ACCOUNT })).rejects.toThrow(/^SOURCE_DISABLED: X's timeline are turned off: the events.feeds option does not name "timeline"\. Next step: Add "timeline" to events.feeds/)
+    await expect(list({ source: "likes", account: ACCOUNT })).rejects.toThrow(/^SOURCE_UNKNOWN: /)
+    await expect(list({ source: "mentions", account: "nobody" })).rejects.toThrow(/^UPSTREAM_ERROR: X's get_users_by_username failed: Could not find user\./)
+  })
+
+  test("refuses for good a post that holds a secret, and moves its cursor past it", async () => {
+    const data = fixture()
+    data.mentions.unshift(post("2026-11-03T09:00:00Z", 1, "@SamRivera the files are at https://pilot:Wq7rZp4xLm9@files.example.net/share"))
+    const list = run(x(data))
+    const result = await list({ source: "mentions", account: ACCOUNT, since: SINCE })
+    expect(result.refused).toEqual([{ external_id: data.mentions[0]!.id, reason: "secret", detail: "holds a secret (connection string)" }])
+    expect(result.events.map((event) => event.external_id)).not.toContain(data.mentions[0]!.id)
+    expect((await list({ source: "mentions", cursor: result.cursor })).events).toEqual([])
+    // Source x keeps contract 1's answers: it lists the post.
+    expect((await list({ since: SINCE })).events.map((event) => event.external_id)).toContain(data.mentions[0]!.id)
+  })
+})
+
+describe("probe", () => {
+  const call: ToolCall = { sessionID: "ses_1", agent: "build", messageID: "msg_script", id: "script:1", signal: new AbortController().signal, progress: async () => {} }
+
+  test("asserts x_probe, reads who is signed in once, and answers the owner, the cost and nothing else", async () => {
+    const host = x()
+    const asserts: unknown[] = []
+    const answer = await probeMethod(options(host, {}, asserts)).run({ source: "bookmarks", account: "samrivera" }, call)
+    expect(answer).toEqual({ source: "bookmarks", account: "samrivera", owner: OWNER, cost: { units: [{ per: "user", count: 1 }] }, trust: "untrusted" })
+    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_me"])
+    expect(asserts).toEqual([{ sessionID: "ses_1", agent: "build", action: PROBE_ACTION, resources: ["*"], source: { type: "tool", messageID: "msg_script", id: "script:1" } }])
+    expect(PROBE_ACTION).toBe("x_probe")
+    expect((await probeMethod(options()).run({}, call)) as unknown).toMatchObject({ source: "x", account: "samrivera" })
+  })
+
+  test("refuses another account, a feed that is off, an unknown source and any other input", async () => {
+    const method = probeMethod(options(x(), { feeds: ["mentions"] }))
+    await expect(method.run({ account: "someoneelse" }, call)).rejects.toThrow(/^ACCOUNT_MISMATCH: X is signed in to another account than "someoneelse"\. Next step: .*"samrivera"/)
+    await expect(method.run({ source: "timeline" }, call)).rejects.toThrow(/^SOURCE_DISABLED: /)
+    await expect(method.run({ source: "likes" }, call)).rejects.toThrow(/^SOURCE_UNKNOWN: /)
+    await expect(method.run({ cursor: "abc" }, call)).rejects.toThrow(/^INPUT_INVALID: The probe input is invalid/)
+    const signIn = { state: "sign_in_required", code: "AUTH_REQUIRED", message: "Sign in to X.", nextStep: "Run /connect and choose X." } as unknown as Status
+    await expect(probeMethod({ ...options(), tool: { list: async () => [] } as never, status: async () => signIn }).run({}, call)).rejects.toThrow("AUTH_REQUIRED: Sign in to X; probe cannot call get_users_me. Next step: Run /connect and choose X.")
   })
 })

@@ -68,6 +68,162 @@
       "mark": true
     }
   },
+  "sources": {
+    "contractVersion": 1,
+    "rpc": "x.posts.tools",
+    "probe": {
+      "action": "x_probe"
+    },
+    "items": [
+      {
+        "id": "x.mentions",
+        "kind": "events",
+        "reads": "message",
+        "tool": "events_list",
+        "input": {
+          "source": "mentions"
+        },
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "events": "x_events_list",
+          "operations": [
+            "get_users_me",
+            "get_users_by_username",
+            "get_users_mentions"
+          ],
+          "identity": [
+            "get_users_me"
+          ]
+        },
+        "private": false,
+        "cost": {
+          "class": "billed",
+          "units": [
+            {
+              "per": "post",
+              "usd": 0.005
+            },
+            {
+              "per": "author",
+              "usd": 0.01
+            },
+            {
+              "per": "user",
+              "usd": 0.01
+            }
+          ],
+          "probe": {
+            "per": "user",
+            "usd": 0.01
+          }
+        },
+        "maxBytes": 900000,
+        "urlHosts": [
+          "x.com"
+        ]
+      },
+      {
+        "id": "x.bookmarks",
+        "kind": "events",
+        "reads": "bookmark",
+        "tool": "events_list",
+        "input": {
+          "source": "bookmarks"
+        },
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "events": "x_events_list",
+          "operations": [
+            "get_users_me",
+            "get_users_by_username",
+            "get_users_bookmarks"
+          ],
+          "identity": [
+            "get_users_me"
+          ]
+        },
+        "private": true,
+        "cost": {
+          "class": "billed",
+          "units": [
+            {
+              "per": "post",
+              "usd": 0.005
+            },
+            {
+              "per": "author",
+              "usd": 0.01
+            },
+            {
+              "per": "user",
+              "usd": 0.01
+            }
+          ],
+          "probe": {
+            "per": "user",
+            "usd": 0.01
+          }
+        },
+        "maxBytes": 900000,
+        "urlHosts": [
+          "x.com"
+        ]
+      },
+      {
+        "id": "x.timeline",
+        "kind": "events",
+        "reads": "message",
+        "tool": "events_list",
+        "input": {
+          "source": "timeline"
+        },
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "events": "x_events_list",
+          "operations": [
+            "get_users_me",
+            "get_users_by_username",
+            "get_users_timeline"
+          ],
+          "identity": [
+            "get_users_me"
+          ]
+        },
+        "private": false,
+        "cost": {
+          "class": "billed",
+          "units": [
+            {
+              "per": "post",
+              "usd": 0.005
+            },
+            {
+              "per": "author",
+              "usd": 0.01
+            },
+            {
+              "per": "user",
+              "usd": 0.01
+            }
+          ],
+          "probe": {
+            "per": "user",
+            "usd": 0.01
+          }
+        },
+        "maxBytes": 900000,
+        "urlHosts": [
+          "x.com"
+        ]
+      }
+    ]
+  },
   "scripts": {
     "check": "node scripts/check.mjs",
     "typecheck": "node scripts/check.mjs typecheck",

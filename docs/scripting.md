@@ -8,14 +8,16 @@ server. It uses the tools RPC, `x.posts.tools`, through `opencode api` or an Ope
 | one per known X tool, named after it: `search_posts_all`, `get_users_me`, `create_users_bookmark`, `create_posts` and the others | `x_<method>` |
 | `describe` | none: lists every method with its class, its permission action, whether OpenCode lists its tool now, and its input as JSON Schema; given a session, it also gives each method's `permission` |
 
-The methods are exactly the tools this plugin knows (`METHODS` in `src/host/tools-rpc.ts`): the 51 reads, the 9 private
+The methods are exactly the tools this plugin knows (`METHODS` in `src/tools-rpc.ts`): the 51 reads, the 9 private
 writes, the public `create_posts`, and the 40 tools that were once off and now follow the same `access` block. A tool X adds later is not a method until
 the plugin classifies it, so a script never reaches one.
 
-`events_list` is the plugin's own read for Memory's collector. It runs `x_events_list`'s own spec as the session and
-its agent: it asserts `x_events_list`, then makes at most `events.maxCalls` reads through OpenCode's executors, each
-under its own rules. Its own refusals, such as a cursor from another account, are the codes in the configuration
-guide's [Errors](configuration.md#errors); a refused read is `PERMISSION_DENIED` naming that read.
+`events_list` and `probe` are the plugin's own reads for collectors, X's side of the source contract
+([Sources](configuration.md#sources)). `events_list` runs `x_events_list`'s own spec as the session and its agent: it
+asserts `x_events_list`, then makes at most `events.maxCalls` reads through OpenCode's executors, each under its own
+rules. `probe` asserts `x_probe`, then reads `get_users_me` once. Their own refusals, such as a cursor from another
+account, are the codes in the configuration guide's [Errors](configuration.md#errors); a refused read is
+`PERMISSION_DENIED` naming that read.
 
 Each method runs the tool with the same input: X's own tool, through OpenCode's own connection and sign-in. The plugin
 never sees the OAuth token.

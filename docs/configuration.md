@@ -144,8 +144,9 @@ To narrow what the model may do in X, use permission rules; see [Permissions](#p
 - `feeds`: a non-empty list of `mentions`, `bookmarks` and `timeline`, each once. Default `["mentions", "bookmarks"]`.
 - `maxCalls`: a whole number of at least 2. Default 4. A walk stops early when X repeats a page token.
 
-What `x_events_list` lists for Memory's collector, and the most billed X reads one call of it makes, the account
-lookup included. See [Events list](#events-list).
+Which feeds `x_events_list` lists, and so which of X's sources are on (a source whose feed is left out answers
+`SOURCE_DISABLED`), and the most billed X reads one call of it makes, an account lookup included. See
+[Sources](#sources).
 
 ## Team app
 
@@ -311,7 +312,8 @@ into an agent that gets no block of its own:
   {"action":"x_search_posts_all","resource":"*","effect":"allow"},
   {"action":"x_search_spaces","resource":"*","effect":"allow"},
   {"action":"x_search_users","resource":"*","effect":"allow"},
-  {"action":"x_events_list","resource":"*","effect":"allow"}
+  {"action":"x_events_list","resource":"*","effect":"allow"},
+  {"action":"x_probe","resource":"*","effect":"allow"}
 ]
 ```
 
@@ -371,7 +373,8 @@ into an agent that gets no block of its own:
   {"action":"x_search_posts_all","resource":"*","effect":"allow"},
   {"action":"x_search_spaces","resource":"*","effect":"allow"},
   {"action":"x_search_users","resource":"*","effect":"allow"},
-  {"action":"x_events_list","resource":"*","effect":"allow"}
+  {"action":"x_events_list","resource":"*","effect":"allow"},
+  {"action":"x_probe","resource":"*","effect":"allow"}
 ]
 ```
 
@@ -575,17 +578,42 @@ scheduled calls.
 A `403` names the missing scope. Add it in the app's **User authentication settings**, then sign in again. This table
 is the shipped minimum; X may change an endpoint's scope, in which case the `403` is the authority.
 
-## Events list
+## Sources
 
-`x_events_list` (Code Mode `tools.x.events_list`, and the tools RPC method `events_list`) is this plugin's side of the
-`events_list` source contract that Memory's collector reads. It is not for answering questions.
+This plugin's sources are declared in `package.json`'s `sources` key, by the shared source contract
+(`@we-the-rebel-alliance/source-contract` v0.1.0), so Memory, jelly and any other project read them the same way:
+
+| Source | Kind | Reads | `events_list` source | X reads | Price units |
+| --- | --- | --- | --- | --- | --- |
+| `x.mentions` | events | `message` | `mentions` | `get_users_mentions` | post $0.005, author $0.01, user $0.01 |
+| `x.bookmarks` | events | `bookmark` | `bookmarks` | `get_users_bookmarks` | post $0.005, author $0.01, user $0.01 |
+| `x.timeline` | events | `message` | `timeline` | `get_users_timeline` | post $0.005, author $0.01, user $0.01 |
+
+Each also names `get_users_by_username` (a first listing's account lookup) and `get_users_me` (the probe's, its one
+identity read) among its operations. All three are billed (`cost.class: "billed"`) at X's standard rates from this
+plugin's price table (`src/prices.ts`): mentions and bookmarks cost $0.001 a post when you own the X app
+(`ownsXApp`), which the declaration cannot state, so its post price is the most a post costs. A probe costs one user,
+$0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` is private; the other two
+read public posts.
+
+A feed the `events.feeds` option leaves out is `SOURCE_DISABLED`, which is how you turn a source off: the home
+timeline is off unless you name it.
+
+### `events_list`
+
+`x_events_list` (Code Mode `tools.x.events_list`, and the tools RPC method `events_list`) lists what reached you on X.
+It is not for answering questions.
 
 ```text
 events_list({ since?, cursor?, limit?, account?, source? })
-  → { source: "x", account, owner: { id, label }, events, cursor, more, trust: "untrusted" }
+  → { source, account, owner: { id, label }, events, cursor, more, trust: "untrusted",
+      refused?, cost?, plugin?, asOf? }
 ```
 
-- **What it lists**, from the feeds in `events.feeds`, in that order:
+- **Sources**: `source` is `mentions`, `bookmarks` or `timeline` for one feed, the contract's sources; or `x`, the
+  default, for every feed in `events.feeds` in one listing, in that order, as earlier versions listed them. Another
+  name is `SOURCE_UNKNOWN`.
+- **What it lists**:
   - `mentions` (`get_users_mentions`) and `timeline` (`get_users_timeline`, your home timeline): the posts after the
     cursor's last one (`since_id`), or from the start time on the first listing (`start_time`). X lists them newest
     first, so the whole window is read before its oldest posts are listed; a window the call cap does not let it
@@ -596,22 +624,45 @@ events_list({ since?, cursor?, limit?, account?, source? })
 - **An event**: kind `message` (a mention or a timeline post, `external_id` the post id) or `bookmark`
   (`bookmark:<post id>`), `occurred_at` the post's time, thread `x-conversation:<id>`, the author as `x:@<handle>`
   with their name, the first line as the title, the text (a long post's whole text, at most 4,096 characters), the
-  link `https://x.com/i/status/<id>`, and the label `mention`, `timeline` or `bookmark`. A post in two feeds is listed
-  once.
-- **Account and owner**: from `get_users_me`. `account` is your handle, lowercase, without `@`; `owner` is
-  `x:@<handle>` with your name. Memory compares the owner with the person it collects for. `account` and `source` are
-  optional inputs: another handle is `ACCOUNT_UNKNOWN`, another source `SOURCE_UNKNOWN`.
+  link `https://x.com/i/status/<id>`, and the label `mention`, `timeline` or `bookmark`. Each event's `source` is the
+  page's. A post in two feeds is listed once by source `x`.
+- **Account and owner**: `account` is your handle, lowercase, without `@`; `owner` is `x:@<handle>` with your name.
+  - A feed source never asks X who is signed in: `probe` does. Its first listing needs `account` (the handle `probe`
+    answers; without it, `INPUT_INVALID`), which it looks up once with `get_users_by_username`, billed as one user.
+    Its cursor then carries the account's X id and the owner's label, so later listings make no lookup. A cursor
+    names its account, so `account` may be left out with one; another account's cursor is `CURSOR_INVALID`. If you
+    later sign in to X as someone else, a feed cursor still reads its own account's feed: X refuses bookmarks and the
+    home timeline of anyone but the signed-in user, and mentions are public posts.
+  - Source `x` looks up who is signed in with `get_users_me` on every call; another handle in `account` is
+    `ACCOUNT_UNKNOWN`.
+- **Refused posts**: a feed source refuses for good a post whose title or text holds a secret (an API key, a token, a
+  private key or a password in a URL), with the contract's own detector. It is listed in `refused[]` with `reason:
+  "secret"` and never in `events`; the cursor moves past it.
 - **Cost**: X bills every tool call to the X developer account that owns the app, per post and per author returned.
-  One call makes at most `events.maxCalls` reads, `get_users_me` included, and asks for each author's handle, which X
-  bills as a user read. With the default feeds and cap, one call costs a few cents for a quiet account. When the cap
-  stops it, the result says `more`, and the text the model reads gives the actual cost line.
-- **Cursor**: opaque, at most 1,024 characters. It holds each feed's position and a digest of the account, so
-  another account's cursor is `CURSOR_INVALID`. A cursor wins over the `since` input; without either, or for a feed
-  turned on later, listing starts 24 hours ago.
-- **Limits**: `limit` is 1 to 500 (100 by default), and a result stays within 900 KB.
+  One call makes at most `events.maxCalls` reads, an account lookup included, and asks for each author's handle, which
+  X bills as a user read. A feed source's page carries `cost.units`: the posts, authors and users X returned for this
+  call's reads, per the declared price units. X reports no price itself, so the page has no `usd`. With the default
+  feeds and cap, one call costs a few cents for a quiet account. When the cap stops it, the result says `more`, and
+  the text the model reads gives the actual cost line.
+- **Cursor**: opaque, at most 1,024 characters, bound to the plugin, the source and the account. Source `x`'s also
+  holds a digest of the signed-in owner, and a cursor an earlier version issued is still read. A cursor wins over the
+  `since` input; without either, or for a feed turned on later, listing starts 24 hours ago.
+- **Limits**: `limit` is 1 to 500 (100 by default), and a result stays within 900 KB, every source's `maxBytes`.
 - **Permissions**: it asserts `x_events_list`, then each read goes through OpenCode's own executor with its own rules.
-  The call cap bounds these reads. Every result carries
-  `trust: "untrusted"`.
+  The call cap bounds these reads. Every result carries `trust: "untrusted"`.
+
+### `probe`
+
+The tools RPC method `probe` (action `x_probe`) says who is signed in to X, for a consumer binding a source, and reads
+nothing else.
+
+```text
+probe({ source?, account? })
+  → { source, account, owner: { id, label }, cost: { units: [{ per: "user", count: 1 }] }, trust: "untrusted" }
+```
+
+It asserts `x_probe`, then makes one billed read, `get_users_me`. `source` is `x` (the default) or a feed; a feed that
+`events.feeds` leaves out is `SOURCE_DISABLED`. An `account` other than the signed-in handle is `ACCOUNT_MISMATCH`.
 
 ## Errors
 
@@ -620,13 +671,15 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | Code | When | Next step |
 | --- | --- | --- |
 | `OPTIONS_INVALID` | Setup: an option is unknown or has a wrong value. `/x-status` shows the message, which names the option. | Fix the plugin options in `opencode.json`. |
-| `INPUT_INVALID` | `x_events_list`: the input is not the contract's, such as a `limit` outside 1 to 500. | Pass the inputs as its schema describes them. |
-| `SOURCE_UNKNOWN` | `x_events_list`: `source` is not `x`. | Leave `source` out, or pass `x`. |
-| `ACCOUNT_UNKNOWN` | `x_events_list`: `account` is not the signed-in handle. | Leave `account` out, or pass the handle the message names. |
+| `INPUT_INVALID` | `x_events_list` or `probe`: the input is not the contract's, such as a `limit` outside 1 to 500, or a feed source's first listing without `account`. | Pass the inputs as its schema describes them. |
+| `SOURCE_UNKNOWN` | `x_events_list` or `probe`: `source` is not `x`, `mentions`, `bookmarks` or `timeline`. | Leave `source` out, or pass one of them. |
+| `SOURCE_DISABLED` | `x_events_list` or `probe`: the feed `source` names is not in `events.feeds`, so that source is turned off. | Add the feed to `events.feeds` if you want it read, then restart OpenCode. |
+| `ACCOUNT_UNKNOWN` | `x_events_list`, source `x`: `account` is not the signed-in handle. | Leave `account` out, or pass the handle the message names. |
+| `ACCOUNT_MISMATCH` | `probe`: `account` is not the signed-in handle. | Sign in to X as that account, or read as the handle the message names. |
 | `CURSOR_INVALID` | `x_events_list`: the cursor is malformed, another source's, or another account's. | Call without a cursor to start again. |
-| `UPSTREAM_ERROR` | `x_events_list`: X refused one of its reads, such as a rate limit. The message holds the first line of X's text, at most 300 characters, with tokens and URL query strings removed. | Run `/x-status`, then call again with the same cursor. |
-| `UPSTREAM_UNREADABLE` | `x_events_list`: one of its reads answered in a shape it does not read. | Call the read the message names directly, and run `/x-status`. |
-| `TOOL_UNAVAILABLE` | `x_events_list`: OpenCode does not list a read it needs. While X cannot be called, it gives status's own code and next step instead. | Wait a few seconds, then run `/x-status` and follow its next step. |
+| `UPSTREAM_ERROR` | `x_events_list` or `probe`: X refused one of its reads, such as a rate limit. The message holds the first line of X's text, at most 300 characters, with tokens and URL query strings removed. | Run `/x-status`, then call again with the same cursor. |
+| `UPSTREAM_UNREADABLE` | `x_events_list` or `probe`: one of its reads answered in a shape it does not read. | Call the read the message names directly, and run `/x-status`. |
+| `TOOL_UNAVAILABLE` | `x_events_list` or `probe`: OpenCode does not list a read it needs. While X cannot be called, it gives status's own code and next step instead. | Wait a few seconds, then run `/x-status` and follow its next step. |
 | `HOST_UNTESTED` | Setup: OpenCode is outside `>=2.2.3 <2.3.0`, and `allowUntestedHost` is not set. | Use OpenCode `>=2.2.3 <2.3.0`, or set `"allowUntestedHost": true`. |
 | `CLIENT_ID_MISSING` | Setup: no X app client ID is in the options or the `/connect` X app entry. | Run `/connect` and choose X app, and paste your X app's client ID. |
 | `CLIENT_ID_INVALID` | Setup: the saved client ID is empty or has spaces. | Save the client ID again from the app's User authentication settings. |

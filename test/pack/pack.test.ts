@@ -17,7 +17,7 @@ import { arch, platform } from "node:os"
 import { basename, join, relative, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { ENDPOINT, REDIRECT_URI, SUPPORTED_HOST, TESTED_HOSTS } from "../../src/constants.js"
-import { TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { TOOLS_RPC_ID } from "../../src/tools-rpc.js"
 import { SENSITIVE_TOOLS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { defaultRules, type Rule } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
@@ -330,13 +330,14 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
   test("describes exactly the known tools, each with its class, available and with its live schema", async () => {
     const { value } = await script("describe", {})
     expect(value.id).toBe(TOOLS_RPC_ID)
-    // The known tools, then the plugin's own events_list, which is not one of X's tools and is checked below.
-    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOLS, "events_list"])
+    // The known tools, then the plugin's own events_list and probe, which are not X's tools and are checked below.
+    expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOLS, "events_list", "probe"])
     const classes: Record<string, string> = {}
     for (const method of value.methods) classes[method.class] = (classes[method.class] ?? "") + "."
-    expect(classes).toEqual({ read: ".".repeat(READ_TOOLS.length + PRIVATE_READ_TOOLS.length + 1), write: ".".repeat(WRITE_TOOLS.length), send: ".", destructive: ".".repeat(SENSITIVE_TOOLS.length - PRIVATE_READ_TOOLS.length) })
-    expect(value.methods.find((method: { name: string }) => method.name === "events_list")).toMatchObject({ kind: "plugin", class: "read" })
-    for (const method of value.methods.filter((method: { name: string }) => method.name !== "events_list")) {
+    expect(classes).toEqual({ read: ".".repeat(READ_TOOLS.length + PRIVATE_READ_TOOLS.length + 2), write: ".".repeat(WRITE_TOOLS.length), send: ".", destructive: ".".repeat(SENSITIVE_TOOLS.length - PRIVATE_READ_TOOLS.length) })
+    expect(value.methods.find((method: { name: string }) => method.name === "events_list")).toMatchObject({ kind: "plugin", class: "read", action: "x_events_list" })
+    expect(value.methods.find((method: { name: string }) => method.name === "probe")).toMatchObject({ kind: "plugin", class: "read", action: "x_probe" })
+    for (const method of value.methods.filter((method: { name: string }) => method.name !== "events_list" && method.name !== "probe")) {
       expect({ name: method.name, kind: method.kind, action: method.action, available: method.available }).toEqual({
         name: method.name,
         kind: "mcp",
@@ -363,6 +364,14 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     const result = await call("build", "events_list", {})
     expect(result).toMatchObject({ type: "failed", code: "UPSTREAM_UNREADABLE" })
     expect(String(result.message)).toContain("UPSTREAM_UNREADABLE: X's get_users_me answered in a shape events_list does not read.")
+    expect(toolCalls(from)).toEqual(["get_users_me"])
+  })
+
+  test("probe runs the packed plugin's own spec, reads who is signed in through OpenCode, and reports an answer it cannot read", async () => {
+    const from = fake.calls.length
+    const result = await call("build", "probe", { source: "mentions" })
+    expect(result).toMatchObject({ type: "failed", code: "UPSTREAM_UNREADABLE" })
+    expect(String(result.message)).toContain("UPSTREAM_UNREADABLE: X's get_users_me answered in a shape probe does not read.")
     expect(toolCalls(from)).toEqual(["get_users_me"])
   })
 

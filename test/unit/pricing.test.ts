@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { billingStatus, configureBilling, costOf, estimateCall, flushBilling, recordModelCost, resetBilling, scriptCostOfCall } from "../../src/billing.js"
 import { PRICES, PRICE_AS_OF, PRICE_SOURCE, priceOf, UNPRICED } from "../../src/prices.js"
-import { METHODS, pluginError, resetScriptSpend, shapeInput, shapeResult } from "../../src/host/tools-rpc.js"
+import { METHODS, pluginError, resetScriptSpend, shapeInput, shapeResult } from "../../src/tools-rpc.js"
 
 const storage = () => {
   const data = new Map<string, unknown>()

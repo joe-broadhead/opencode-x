@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test"
 import { PLUGIN_ID } from "../../src/constants.js"
-import { METHODS, NEXT_STEPS, PLUGIN_ID as RPC_PLUGIN_ID, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { METHODS, NEXT_STEPS, PLUGIN, TOOLS_RPC_ID } from "../../src/tools-rpc.js"
 import { SENSITIVE_TOOLS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 
-describe("X's block of the shared tools RPC", () => {
+describe("X's plugin value for the shared tools RPC", () => {
   test("has the plugin's id and one method per known tool, by its exact name and class, and nothing else", () => {
-    expect(RPC_PLUGIN_ID).toBe(PLUGIN_ID)
+    expect(PLUGIN.id).toBe(PLUGIN_ID)
+    expect(PLUGIN.nextSteps).toBe(NEXT_STEPS)
     expect(PLUGIN_ID).toBe("x.posts")
     expect(TOOLS_RPC_ID).toBe("x.posts.tools")
     expect(METHODS.map((method) => method.name).sort()).toEqual([...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOLS].sort())

@@ -47,6 +47,7 @@ export const TESTED_HOSTS: readonly string[] = ["2.2.3", "2.2.4", "2.2.5", "2.2.
  * table entry nothing raises is left behind. `errorText` and `xError` take only these, so a typo fails `tsc`.
  */
 export type PluginCode =
+  | "ACCOUNT_MISMATCH"
   | "ACCOUNT_UNKNOWN"
   | "CLIENT_ID_INVALID"
   | "CLIENT_ID_MISSING"
@@ -60,12 +61,14 @@ export type PluginCode =
   | "X_PRICE_UNKNOWN"
   | "CURSOR_INVALID"
   | "INPUT_INVALID"
+  | "SOURCE_DISABLED"
   | "SOURCE_UNKNOWN"
   | "TOOL_UNAVAILABLE"
   | "UPSTREAM_ERROR"
   | "UPSTREAM_UNREADABLE"
 
 export const PLUGIN_CODES: readonly PluginCode[] = [
+  "ACCOUNT_MISMATCH",
   "ACCOUNT_UNKNOWN",
   "CLIENT_ID_INVALID",
   "CLIENT_ID_MISSING",
@@ -79,6 +82,7 @@ export const PLUGIN_CODES: readonly PluginCode[] = [
   "X_PRICE_UNKNOWN",
   "CURSOR_INVALID",
   "INPUT_INVALID",
+  "SOURCE_DISABLED",
   "SOURCE_UNKNOWN",
   "TOOL_UNAVAILABLE",
   "UPSTREAM_ERROR",
