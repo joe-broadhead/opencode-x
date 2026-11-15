@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] - 2026-11-15
+
+### Changed
+
+- Admits OpenCode 2.3: the host range is `>=2.2.3 <2.4.0`, tested on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0, and CI
+  runs the host and pack suites on each of them. An out-of-range example is now 2.4.0. On 2.3, pressing Stop aborts a
+  call's signal, which `events_list`, `probe` and the tools RPC already pass to OpenCode's executor for each X read; a
+  stopped script call fails as `CANCELLED`.
+
 ## [0.0.4] - 2026-11-15
 
 ### Added

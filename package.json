@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-x",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": true,
   "description": "Unofficial OpenCode plugin for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, post, and draft long-form Articles, through X's official MCP server",
   "keywords": [
@@ -37,7 +37,7 @@
     "CHANGELOG.md"
   ],
   "opencode": {
-    "host": ">=2.2.3 <2.3.0",
+    "host": ">=2.2.3 <2.4.0",
     "icons": [
       {
         "src": "assets/icon.svg",
