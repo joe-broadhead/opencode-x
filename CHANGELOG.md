@@ -4,6 +4,41 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- X's sources under the shared source contract, `@we-the-rebel-alliance/source-contract` v0.1.0: `package.json`'s new
+  top-level `sources` key declares `x.mentions`, `x.bookmarks` and `x.timeline`, each an `events` source read with
+  `events_list` (input `source` `mentions`, `bookmarks` or `timeline`), with its X operations, `get_users_me` as its one
+  identity operation, `cost.class: "billed"` with X's per-post, per-author and per-user prices from the plugin's price
+  table and the probe's price (one user), `maxBytes` 900,000, the tools RPC `x.posts.tools` and the probe action
+  `x_probe`. `bookmarks` is private. Memory and jelly read the declaration from the installed package, with the
+  contract's `descriptor`.
+- For Memory and every consumer: `events_list` lists one feed when `source` names it. A feed's page carries `plugin`,
+  `asOf`, `cost.units` (the posts, authors and users X returned for the call's reads; no `usd`, since X reports no
+  price) and `refused[]`: a post whose title or text holds a secret is refused for good with `reason: "secret"`, and
+  the cursor moves past it. A feed never asks X who is signed in: its first listing needs `account` (the handle the
+  probe answers) and looks it up once by its handle, and its cursor, bound to the plugin, the feed and the account,
+  carries the account's X id, so a later listing makes no lookup and costs one user read less than source `x`. A feed
+  the `events.feeds` option leaves out answers `SOURCE_DISABLED`, which is how a person turns a source off.
+- For Memory and jelly: the tools RPC method `probe` (action `x_probe`, allowed by the default rules at every `access`)
+  answers who is signed in, `{ source, account, owner, cost, trust }`, with one billed `get_users_me` read, and refuses
+  another account with `ACCOUNT_MISMATCH`.
+- `npm run check` runs the contract's conformance kit over each declared source (the new `conformance` stage, in CI
+  too), on recorded invented X answers with no X call, and writes `conformance-report.json` for a release to attach.
+  Every check that applies passes; the report stays incomplete on the kit's expired-cursor check, which no X source can
+  run, because X keeps no history a cursor can outlive.
+
+### Changed
+
+- The tools RPC and the events contract are the source contract's, bundled into `dist/index.js` from the pinned tag;
+  `src/host/tools-rpc.ts` and `src/host/events-list.ts` are deleted, and so are their `check-copies` pins. X's part of
+  the RPC is `src/tools-rpc.ts`. The RPC id `x.posts.tools`, its methods and their answers are unchanged, and source
+  `x` (the default) lists exactly as before, for scripts and Memory's collector. Its cursor is now the contract's bound
+  cursor; a cursor an earlier version issued is still read.
+- The `x-write` skill says `media_upload` has no known price, so the model never quotes one.
+
 ## [0.0.3] - 2026-11-14
 
 ### Added
