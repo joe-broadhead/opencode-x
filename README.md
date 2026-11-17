@@ -340,7 +340,8 @@ A script's errors from the tools RPC have their own codes, listed in
   so the plugin does not guess one: a script with a budget set is refused them (`X_PRICE_UNKNOWN`), and without a
   budget their cost line says the price is unknown. X's Developer Console has the real bill.
 - **A feed source notices a change of X account only when told.** `x_events_list`'s feed sources never ask X who is
-  signed in, because the source contract keeps that identity read for `probe`. If you sign in to X as another account,
+  signed in, because that identity read is `probe`'s until Memory and jelly accept a source that declares it
+  (`permission.readsIdentity`, in the source contract they pin). If you sign in to X as another account,
   a feed notices only when its caller passes the new account (the old account's cursor is then `ACCOUNT_MISMATCH`) or
   calls `probe`. Until then a cursor reads its own account's feed: X refuses bookmarks and the home timeline of anyone
   but the signed-in user, and mentions are public posts. Source `x` asks X on every call.

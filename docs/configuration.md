@@ -581,7 +581,7 @@ is the shipped minimum; X may change an endpoint's scope, in which case the `403
 ## Sources
 
 This plugin's sources are declared in `package.json`'s `sources` key, by the shared source contract
-(`@we-the-rebel-alliance/source-contract` v0.1.0), so Memory, jelly and any other project read them the same way:
+(`@we-the-rebel-alliance/source-contract` v0.2.0), so Memory, jelly and any other project read them the same way:
 
 | Source | Kind | Reads | `events_list` source | X reads | Price units |
 | --- | --- | --- | --- | --- | --- |
@@ -593,8 +593,8 @@ Each also names `get_users_by_username` (a first listing's account lookup) and `
 identity read) among its operations. All three are billed (`cost.class: "billed"`) at X's standard rates from this
 plugin's price table (`src/prices.ts`), and a test keeps each `usd` equal to its row there. The declared post price,
 $0.005, is the most a post costs: mentions and bookmarks cost $0.001 a post when you own the X app (`ownsXApp`), but
-the contract's descriptor has no way yet to state a price that depends on an option, so the Owned Read rate is not
-declared. A probe costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` is private; the other two
+the Owned Read rate is not declared: source-contract v0.2.0 can state it (a price's `conditions` and `min`), but
+Memory and jelly on v0.1.x refuse those keys, so it waits until both are on v0.2.0. A probe costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` is private; the other two
 read public posts.
 
 A feed the `events.feeds` option leaves out is `SOURCE_DISABLED`, which is how you turn a source off: the home
@@ -634,7 +634,7 @@ events_list({ since?, cursor?, limit?, account?, source? })
     bound to the plugin, the feed and the account, so later listings make no lookup. A cursor that names another
     account than `account` is `ACCOUNT_MISMATCH`; another feed's or plugin's cursor is `CURSOR_INVALID`.
   - A sign-in changed to another X account is noticed only when the caller passes the new account (its cursor is then
-    refused) or calls `probe`: the source contract forbids a content read from asserting the identity read, so a feed
+    refused) or calls `probe`: a content read may assert the identity read only with `permission.readsIdentity` (source-contract v0.2.0), which Memory and jelly on v0.1.x refuse, so a feed
     does not ask X who is signed in. Until then a feed cursor reads its own account's feed: X refuses bookmarks and
     the home timeline of anyone but the signed-in user, and mentions are public posts.
   - Source `x` looks up who is signed in with `get_users_me` on every call; another handle in `account` is
@@ -670,8 +670,13 @@ It asserts `x_probe`, then makes one billed read, `get_users_me`. `source` is `x
 
 ### Conformance
 
-`npm run check` runs the contract's conformance kit over each source with recorded, invented X answers (no X call),
-and writes its report to `reports/conformance-report.json`.
+`npm run conformance` (and `npm run check`) runs the contract's conformance kit over each source with recorded, invented
+X answers (no X call), and writes its report to `reports/conformance-report.json`, which a release attaches. The report
+is complete and ok: every check that applies runs. Two do not apply, and each says why in the report: `failed-holds-cursor`
+(`atomicPages`: X answers each feed read in one call, so no single post can fail on its own) and `gap-and-cursor-expired`
+(`noExpiry`: a feed cursor holds X post ids, which never expire, and X answers an old `since_id` without refusing it, so
+the plugin never answers `CURSOR_EXPIRED`). X's reach-back window can still skip posts older than it, with no sign from
+X, so no gap can be said; see the README's Known limits.
 
 ## Errors
 

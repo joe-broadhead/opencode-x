@@ -22,6 +22,8 @@ const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { na
 const checked = SOURCES_SCHEMA.check(pkg.sources)
 if (!checked.ok) throw new Error(`the sources declaration is invalid: ${checked.problems.join("; ")}`)
 const sources: Sources = checked.value
+/** The pinned contract, as installed: the report names it. */
+const CONTRACT_VERSION = (JSON.parse(readFileSync(join(root, "node_modules/@we-the-rebel-alliance/source-contract/package.json"), "utf8")) as { version: string }).version
 const X = JSON.parse(readFileSync(join(root, "test/fixtures/sources.json"), "utf8")) as Record<string, any>
 
 const NOW = Date.parse("2026-11-08T12:00:00Z")
@@ -29,6 +31,12 @@ const SINCE = "2026-11-01T00:00:00Z"
 const ACCOUNT = "samrivera"
 /** Each feed answers one page at a time from X, so no single post can fail on its own. */
 const ATOMIC = "X answers each feed read (get_users_mentions, get_users_timeline, get_users_bookmarks) as one page in one call, so no single post can fail on its own"
+/**
+ * A feed's cursor holds X post ids, and X answers an old `since_id` without refusing it, so the plugin never answers
+ * CURSOR_EXPIRED. X's reach-back limit is not an expiry: it can skip posts older than X's window, and X gives no sign of
+ * it, so the plugin cannot say a gap. The report shows the reason.
+ */
+const NO_EXPIRY = "X's ids never expire: a feed cursor holds X post ids, X answers an old since_id without refusing it, and the plugin never answers CURSOR_EXPIRED. X's reach-back window can skip posts older than it with no sign from X, so no gap can be said"
 const TOOL_FEED: Record<string, Feed> = { x_get_users_mentions: "mentions", x_get_users_timeline: "timeline", x_get_users_bookmarks: "bookmarks" }
 
 const answer = (value: unknown) => ({ output: value, content: [{ type: "text", text: JSON.stringify(value) }] })
@@ -138,13 +146,19 @@ describe("the source contract's conformance kit", () => {
         sources,
         describe: { id: TOOLS_RPC_ID },
         atomicPages: { reason: ATOMIC },
+        noExpiry: { reason: NO_EXPIRY },
       })
       reports.push(report)
       expect(report.problems).toEqual([])
-      // X reaches back only a limited number of recent posts in each feed, so a cursor older than that window can miss
-      // posts. X gives no sign of it (it moves an old since_id forward silently), so the plugin cannot tell, never
-      // answers CURSOR_EXPIRED, and the kit's gap check cannot run: the report stays incomplete on that one check.
-      expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual(["gap-and-cursor-expired"])
+      // Complete: every check that applies ran. The two the source says cannot apply carry its reason, and nothing else
+      // is left out but the ones whose subject never appears (no gap, no removals) and a snapshot's.
+      expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
+      expect(report.incomplete).toBe(false)
+      expect(report.ok).toBe(true)
+      expect(Object.fromEntries(report.checks.filter((check) => check.reason !== undefined).map((check) => [check.name, check.reason]))).toEqual({
+        "failed-holds-cursor": ATOMIC,
+        "gap-and-cursor-expired": NO_EXPIRY,
+      })
     })
   }
 
@@ -152,11 +166,11 @@ describe("the source contract's conformance kit", () => {
     expect(reports.map((report) => report.source).sort()).toEqual(FEEDS.map((feed) => `${NAMESPACE}.${feed}`).sort())
     const installed = readInstalledDescriptor(root, { version: pkg.version })
     const report = {
-      contract: "@we-the-rebel-alliance/source-contract@0.1.0",
+      contract: `@we-the-rebel-alliance/source-contract@${CONTRACT_VERSION}`,
       plugin: PACKAGE,
       version: pkg.version,
       descriptorHash: installed.ok ? installed.value.hash : null,
-      ok: reports.every((entry) => entry.ok),
+      ok: reports.length === FEEDS.length && reports.every((entry) => entry.ok && !entry.incomplete),
       sources: reports,
     }
     mkdirSync(join(root, "reports"), { recursive: true })

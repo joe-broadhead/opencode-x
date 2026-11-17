@@ -4,6 +4,32 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The source contract is `@we-the-rebel-alliance/source-contract` v0.2.0 (tag `v0.2.0`, commit `88bdc1e`), bundled into
+  `dist/index.js` as before, with no runtime dependency. The declaration, the events, the cursors, the error codes and
+  every answer are unchanged: X sends none of v0.2.0's new keys, which Memory and jelly on v0.1.x refuse.
+- The conformance report is complete and ok. `npm run conformance` (new; `npm run check` runs it too) runs the kit over
+  each source and writes `reports/conformance-report.json`. Every check that applies runs; two do not, and the report
+  says why: `failed-holds-cursor` (`atomicPages`: X answers each feed read in one call, so no single post can fail on its
+  own) and `gap-and-cursor-expired` (`noExpiry`: a feed cursor holds X post ids, which never expire, and X answers an old
+  `since_id` without refusing it, so the plugin never answers `CURSOR_EXPIRED`). X's reach-back window can still skip
+  posts older than it, with no sign from X, so no gap can be said; the README's Known limits say so. The report names
+  the contract it ran, v0.2.0.
+- Releases use the family's release kit r4.1 (`1f452e5`): a release runs `npm run conformance` on its parent in a job
+  of its own and attaches the report as the Release asset `conformance-report.json`, listed in `SHA256SUMS`, and checks
+  that the staged tarball is the one it packed. `docs/jelly.md` carries jelly's shared rules for the family, word for
+  word, and the declaration kit `test/support/jelly-kit.ts` knows jelly's `cost` and `admin` lines. The host range is
+  unchanged, `>=2.2.3 <2.4.0`, tested on OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0.
+
+### What Memory and jelly should change
+
+- Nothing now. Once both are on source-contract v0.2.0, X will declare a price's `conditions` and `min` for the Owned
+  Read rate ($0.001 a post for mentions and bookmarks when you own the X app), and may declare `permission.readsIdentity`
+  so a feed can ask X who is signed in and notice a change of account itself.
+
 ## [0.0.5] - 2026-11-15
 
 ### Changed
