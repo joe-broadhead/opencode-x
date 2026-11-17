@@ -4,7 +4,7 @@ Every option is optional. The smallest setup is one entry in `plugins`, then the
 
 ```json
 {
-  "plugins": ["github:joe-broadhead/opencode-x#v0.0.5"]
+  "plugins": ["github:joe-broadhead/opencode-x#v0.0.6"]
 }
 ```
 
@@ -14,7 +14,7 @@ To set options, use the object form:
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.5",
+      "package": "github:joe-broadhead/opencode-x#v0.0.6",
       "options": {
         "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" }
       }
@@ -169,7 +169,7 @@ no secret, and no per-member app.
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.5",
+      "package": "github:joe-broadhead/opencode-x#v0.0.6",
       "options": { "oauth": { "client_id": "YOUR_TEAM_APP_CLIENT_ID" } }
     }
   ]
@@ -581,7 +581,7 @@ is the shipped minimum; X may change an endpoint's scope, in which case the `403
 ## Sources
 
 This plugin's sources are declared in `package.json`'s `sources` key, by the shared source contract
-(`@we-the-rebel-alliance/source-contract` v0.1.0), so Memory, jelly and any other project read them the same way:
+(`@we-the-rebel-alliance/source-contract` v0.2.0), so Memory, jelly and any other project read them the same way:
 
 | Source | Kind | Reads | `events_list` source | X reads | Price units |
 | --- | --- | --- | --- | --- | --- |
@@ -593,8 +593,8 @@ Each also names `get_users_by_username` (a first listing's account lookup) and `
 identity read) among its operations. All three are billed (`cost.class: "billed"`) at X's standard rates from this
 plugin's price table (`src/prices.ts`), and a test keeps each `usd` equal to its row there. The declared post price,
 $0.005, is the most a post costs: mentions and bookmarks cost $0.001 a post when you own the X app (`ownsXApp`), but
-the contract's descriptor has no way yet to state a price that depends on an option, so the Owned Read rate is not
-declared. A probe costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` is private; the other two
+the Owned Read rate is not declared: source-contract v0.2.0 can state it (a price's `conditions` and `min`), but
+Memory and jelly on v0.1.x refuse those keys, so it waits until both are on v0.2.0. A probe costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` is private; the other two
 read public posts.
 
 A feed the `events.feeds` option leaves out is `SOURCE_DISABLED`, which is how you turn a source off: the home
@@ -619,6 +619,9 @@ events_list({ since?, cursor?, limit?, account?, source? })
     cursor's last one (`since_id`), or from the start time on the first listing (`start_time`). X lists them newest
     first, so the whole window is read before its oldest posts are listed; a window the call cap does not let it
     finish is narrowed with `until_id` to its older part and read on the next call, so nothing is skipped.
+  - `bookmarks` and the two above as feed sources: X lists only a limited number of each feed's most recent posts, and
+    moves an older `since_id` forward without saying so. A feed source therefore says when it may have missed posts,
+    once, with the contract's `gap` (below).
   - `bookmarks` (`get_users_bookmarks`): X gives bookmarks no time, so they are read newest first until one the
     cursor knows (it keeps the five newest), page by page; a walk the cap stops continues from X's page token. The
     first listing lists no bookmark: it notes the newest, and every bookmark added after them is listed.
@@ -634,16 +637,39 @@ events_list({ since?, cursor?, limit?, account?, source? })
     bound to the plugin, the feed and the account, so later listings make no lookup. A cursor that names another
     account than `account` is `ACCOUNT_MISMATCH`; another feed's or plugin's cursor is `CURSOR_INVALID`.
   - A sign-in changed to another X account is noticed only when the caller passes the new account (its cursor is then
-    refused) or calls `probe`: the source contract forbids a content read from asserting the identity read, so a feed
+    refused) or calls `probe`: a content read may assert the identity read only with `permission.readsIdentity` (source-contract v0.2.0), which Memory and jelly on v0.1.x refuse, so a feed
     does not ask X who is signed in. Until then a feed cursor reads its own account's feed: X refuses bookmarks and
     the home timeline of anyone but the signed-in user, and mentions are public posts.
   - Source `x` looks up who is signed in with `get_users_me` on every call; another handle in `account` is
     `ACCOUNT_UNKNOWN`.
+- **Gaps**: a feed source answers `gap` once, on the page where it finds that X no longer lists what is behind its
+  cursor; the next page carries none. Source `x` answers no gap, as contract 1 lists.
+  - `mentions` and `timeline`: every call first checks, with one small read (up to five posts, ids and times only),
+    that X still lists a post with an id up to the cursor's (`until_id`), the newest post it listed. When X lists
+    none, it no longer reaches back that far, and the page answers `gap: { reason: "expired", since }` from that
+    post's time, with the posts X still lists. The check is by id, as the cursor is, so a cut inside one second is
+    seen too. A first listing checks for a post from before its start (`end_time`), and answers `gap: { reason:
+    "window-truncated", since }` from the start when X lists none.
+  - `bookmarks`: a walk that ends without meeting any bookmark the cursor knows, after reading 700 or more, answers
+    `gap: { reason: "expired", since }` from when the known ones were confirmed. X lists its 800 most recent, and may
+    count toward them posts it no longer returns (deleted, protected or suspended authors), hence a margin of 100. A
+    shorter walk means they were removed, and answers no gap. A false gap needs all five known bookmarks removed and
+    more than 700 added.
+  - A deleted post, or a removed bookmark, loses nothing and makes no gap: the check asks for any post from that far
+    back, not for one post.
+  - X can move past a read between any two of its calls, even minutes apart: a busy account passes X's 800 mentions
+    in minutes. So every call checks, not only a read's first. A cursor from an earlier version is checked on its
+    first read too; the gap's time comes from its post's id (a snowflake).
+  - The check's cost: up to five posts a call, the newest at or below the cursor's post. This read or an earlier one
+    has just been answered those posts, and X charges a post once in a 24-hour UTC window, so the check costs next to
+    nothing. It is not counted against `events.maxCalls`, so it never takes a read from the listing; the text the
+    model reads counts it apart.
 - **Refused posts**: a feed source refuses for good a post whose title or text holds a secret (an API key, a token, a
   private key or a password in a URL), with the contract's own detector. It is listed in `refused[]` with `reason:
   "secret"` and never in `events`; the cursor moves past it.
 - **Cost**: X bills every tool call to the X developer account that owns the app, per post and per author returned.
-  One call makes at most `events.maxCalls` reads, an account lookup included, and asks for each author's handle, which
+  One call makes at most `events.maxCalls` reads, an account lookup included, plus a feed source's reach check
+  (Gaps, above), and asks for each author's handle, which
   X bills as a user read. A feed source's page carries `cost.units`: the posts, authors and users X returned for this
   call's reads, per the declared price units. X reports no price itself, so the page has no `usd`. With the default
   feeds and cap, one call costs a few cents for a quiet account. When the cap stops it, the result says `more`, and
@@ -670,8 +696,12 @@ It asserts `x_probe`, then makes one billed read, `get_users_me`. `source` is `x
 
 ### Conformance
 
-`npm run check` runs the contract's conformance kit over each source with recorded, invented X answers (no X call),
-and writes its report to `reports/conformance-report.json`.
+`npm run conformance` (and `npm run check`) runs the contract's conformance kit over each source with recorded, invented
+X answers (no X call), and writes its report to `reports/conformance-report.json`, which a release attaches. The report
+is complete and ok: every check that applies runs, `gap-and-cursor-expired` and `gap-once-per-read` included, on a
+cursor from further back than X still lists and a first listing from further back than X lists. One does not apply, and the
+report says why: `failed-holds-cursor` (`atomicPages`: X answers each feed read in one call, so no single post can fail
+on its own).
 
 ## Errors
 

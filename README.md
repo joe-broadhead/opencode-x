@@ -45,7 +45,7 @@ X is a trademark of X Corp.; this unofficial plugin is not endorsed by them.
 ## Install
 
 ```sh
-opencode plugin add github:joe-broadhead/opencode-x#v0.0.5
+opencode plugin add github:joe-broadhead/opencode-x#v0.0.6
 ```
 
 Run `opencode reload`, or restart OpenCode. Then run `/x-status`: it shows `not configured` until you save your X
@@ -55,12 +55,12 @@ The plugin registers X's MCP server under the name `x`, adds default permission 
 `/x` status view and two skills. Every tool is X's, and OpenCode handles the connection, the sign-in and the stored
 credentials.
 
-Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-x#v0.0.4`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-x#v<version>`.
+Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-x#v0.0.5`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-x#v<version>`.
 
 Or add the plugin to `opencode.json` instead, with the same spec:
 
 ```json
-{ "plugins": [{ "package": "github:joe-broadhead/opencode-x#v0.0.5" }] }
+{ "plugins": [{ "package": "github:joe-broadhead/opencode-x#v0.0.6" }] }
 ```
 
 The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
@@ -137,7 +137,7 @@ X's mentions, bookmarks and home timeline are sources under the shared source co
 for their collectors, not for answering questions: it lists, since a cursor, one feed (or, as source `x`, every feed
 `events.feeds` names) as normalised events, oldest first, each with its author's handle and link. The tools RPC's
 `probe` says who is signed in. Every X call is billed, so one call makes at most `events.maxCalls` reads (4 by default,
-an account lookup included) and says there is more when it stops early; a collector picks up the rest on its next
+an account lookup included, besides a feed source's small reach check) and says there is more when it stops early; a collector picks up the rest on its next
 call. A feed's page counts the posts, authors and users X returned, and refuses for good a post holding a secret.
 Leaving a feed out of `events.feeds` turns its source off
 ([configuration](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/configuration.md#sources)).
@@ -217,7 +217,7 @@ Set options with the object form of the plugin entry:
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.5",
+      "package": "github:joe-broadhead/opencode-x#v0.0.6",
       "options": {
         "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" }
       }
@@ -237,7 +237,7 @@ Set options with the object form of the plugin entry:
 | `ownsXApp` | `true` or `false` | `false` | Use the $0.001 Owned Read price for the account's own posts, mentions, bookmarks, followers and lists. Set it only if that account owns the developer app. |
 | `allowUntestedHost` | `true` or `false` | `false` | Starts on an OpenCode version outside `>=2.2.3 <2.4.0`, with a warning in status. |
 | `events.feeds` | `mentions`, `bookmarks`, `timeline` | `["mentions", "bookmarks"]` | The feeds `x_events_list` lists, and so which of X's sources are on. Your home timeline is the busiest and dearest feed, so it is listed only when you name it. |
-| `events.maxCalls` | `2` or more | `4` | The most billed X reads one `x_events_list` call makes, an account lookup included. |
+| `events.maxCalls` | `2` or more | `4` | The most billed X reads one `x_events_list` call makes, an account lookup included. A feed source's reach check, up to five posts X has just returned, is besides them. |
 
 `{env:NAME}` is substituted when OpenCode loads the config, so the secret can stay in your environment instead of the
 file. An unset variable arrives as an empty string, which the plugin rejects with `OPTIONS_INVALID`. A variable
@@ -258,7 +258,7 @@ on macOS, or `/etc/opencode/opencode.json` on Linux. Members then only run `/con
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.5",
+      "package": "github:joe-broadhead/opencode-x#v0.0.6",
       "options": { "oauth": { "client_id": "YOUR_TEAM_APP_CLIENT_ID" } }
     }
   ]
@@ -339,8 +339,15 @@ A script's errors from the tools RPC have their own codes, listed in
 - **Media uploads have no published price.** X's pricing page gives none for `x_media_upload` or the chat media tools,
   so the plugin does not guess one: a script with a budget set is refused them (`X_PRICE_UNKNOWN`), and without a
   budget their cost line says the price is unknown. X's Developer Console has the real bill.
+- **X lists only each feed's most recent posts.** X keeps a limited number of each feed's newest mentions, timeline posts
+  and bookmarks (its 800 most recent bookmarks). A collector that falls behind, or a first listing from further back,
+  could miss posts. A feed source answers the contract's `gap` once when that may have happened ([configuration](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/configuration.md#events_list)).
+  Source `x` answers no gap.
+- **A deleted post is not reported.** A post X stops listing because its author deleted it, or a bookmark you removed,
+  is simply not listed again; an event already listed stays with the consumer. It makes no gap: nothing was lost.
 - **A feed source notices a change of X account only when told.** `x_events_list`'s feed sources never ask X who is
-  signed in, because the source contract keeps that identity read for `probe`. If you sign in to X as another account,
+  signed in, because that identity read is `probe`'s until Memory and jelly accept a source that declares it
+  (`permission.readsIdentity`, in the source contract they pin). If you sign in to X as another account,
   a feed notices only when its caller passes the new account (the old account's cursor is then `ACCOUNT_MISMATCH`) or
   calls `probe`. Until then a cursor reads its own account's feed: X refuses bookmarks and the home timeline of anyone
   but the signed-in user, and mentions are public posts. Source `x` asks X on every call.
@@ -377,7 +384,7 @@ Sign out while the plugin is still installed: once it is removed, OpenCode no lo
 1. Sign out: `opencode mcp logout x`. Right after OpenCode starts or reloads, it can answer
    `MCP server not found: x` for a few seconds; wait, then run it again.
 2. Check: `opencode auth list` no longer lists **X**.
-3. Remove the plugin: `opencode plugin remove github:joe-broadhead/opencode-x#v0.0.5`, then `opencode reload`.
+3. Remove the plugin: `opencode plugin remove github:joe-broadhead/opencode-x#v0.0.6`, then `opencode reload`.
    `opencode mcp list` no longer lists `x`.
 4. Remove the **X app** entry: `opencode auth logout x-app` from a terminal, or in `/connect`. Remove any X rules you
    copied into your agents' own `permissions`.

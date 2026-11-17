@@ -14,8 +14,8 @@ the plugin classifies it, so a script never reaches one.
 
 `events_list` and `probe` are the plugin's own reads for collectors, X's side of the source contract
 ([Sources](configuration.md#sources)). `events_list` runs `x_events_list`'s own spec as the session and its agent: it
-asserts `x_events_list`, then makes at most `events.maxCalls` reads through OpenCode's executors, each under its own
-rules. `probe` asserts `x_probe`, then reads `get_users_me` once. Their own refusals, such as a cursor from another
+asserts `x_events_list`, then makes at most `events.maxCalls` reads through OpenCode's executors, besides a feed
+source's small reach check, each under its own rules. `probe` asserts `x_probe`, then reads `get_users_me` once. Their own refusals, such as a cursor from another
 account, are the codes in the configuration guide's [Errors](configuration.md#errors); a refused read is
 `PERMISSION_DENIED` naming that read.
 

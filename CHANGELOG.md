@@ -4,6 +4,57 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.6] - 2026-11-17
+
+### Fixed
+
+- A feed source no longer loses posts silently when X stops listing them (released in 0.0.4 and 0.0.5). X lists only
+  a limited number of each feed's most recent posts, and it moves an older `since_id` forward without saying so. A
+  collector that had fallen behind, or a first listing from further back, missed posts with no sign. `mentions`,
+  `timeline` and `bookmarks` now answer the contract's `gap` once per read, on the page where they find it, and the
+  next page carries none:
+  - `mentions` and `timeline`: every call first checks, with one small read (up to five posts), that X still lists a
+    post with an id up to the cursor's, the newest one it listed. When X lists none, the page answers `gap: { reason:
+    "expired", since }` from that post's time, with the posts X still lists. A first listing checks for a post from
+    before its start, and answers `gap: { reason: "window-truncated", since }` from the start when X lists none.
+  - `bookmarks`: a walk that meets none of the bookmarks the cursor knows, after reading 700 or more (X lists only its 800
+    most recent, and may count posts it no longer returns, hence a margin of 100), answers `gap: { reason: "expired",
+    since }` from when they were confirmed. A shorter walk means they were removed: no gap. A false gap needs all five
+    known bookmarks removed and more than 700 added.
+
+  A deleted post or a removed bookmark is not lost history and makes no gap. X can move past a read between any two of
+  its calls (a busy account passes 800 mentions in minutes), so every call checks, by id as the cursor is, and a cut
+  inside one second is seen too. The check costs up to five posts a call that the reader has just been answered,
+  which X charges once in 24 hours, so next to nothing; it is not counted against `events.maxCalls`, so it never takes
+  a read from the listing. A cursor from an earlier version is checked on its first read; the gap's time comes from its
+  post's id. Source `x` (contract 1) is unchanged and answers no gap. `gap` is contract 1's, so Memory and jelly on
+  v0.1.x read it.
+
+### Changed
+
+- The source contract is `@we-the-rebel-alliance/source-contract` v0.2.0 (tag `v0.2.0`, commit `88bdc1e`), bundled into
+  `dist/index.js` as before, with no runtime dependency. The declaration, the event shape, the error codes and the probe
+  are unchanged. X sends none of v0.2.0's new keys, which Memory and jelly on v0.1.x refuse.
+- The conformance report is complete and ok. `npm run conformance` (new; `npm run check` runs it too) runs the kit over
+  each source and writes `reports/conformance-report.json`, which names the contract it ran, v0.2.0. Every check that
+  applies runs. That includes `gap-and-cursor-expired` and `gap-once-per-read`, on a cursor from further back than X
+  still lists and on a first listing from further back than X lists. One check does not apply, and the report says why:
+  `failed-holds-cursor` (`atomicPages`: X answers each feed read in one call, so no single post can fail on its own).
+  `noExpiry` is not declared: X can lose history a reader has not seen.
+- Releases use the family's release kit r4.1 (`1f452e5`). A release runs `npm run conformance` on its parent in a job of
+  its own and attaches the report as the Release asset `conformance-report.json`, listed in `SHA256SUMS`. It also checks
+  that the staged tarball is the one it packed. `docs/jelly.md` carries jelly's shared rules for the family, word for
+  word, and the declaration kit `test/support/jelly-kit.ts` knows jelly's `cost` and `admin` lines. The host range is
+  unchanged, `>=2.2.3 <2.4.0`, tested on OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0.
+
+
+### What Memory and jelly should change
+
+- Treat a feed source's `gap` as the contract says: one resync per `gap`.
+- Nothing else now. Once both are on source-contract v0.2.0, X will declare a price's `conditions` and `min` for the
+  Owned Read rate ($0.001 a post for mentions and bookmarks when you own the X app). It may also declare
+  `permission.readsIdentity`, so a feed can ask X who is signed in and notice a change of account itself.
+
 ## [0.0.5] - 2026-11-15
 
 ### Changed
