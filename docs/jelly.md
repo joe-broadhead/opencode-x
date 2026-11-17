@@ -12,6 +12,19 @@ or outside reference. The mark is X's own logo, as x.com draws it. Jelly's decla
 a top-level key they don't know, and refuse an unknown key inside a tool, sign-in or `contributes`
 entry, so the section uses only the keys Jelly reads.
 
+`jelly.cost` is the line Jelly shows on the plugin's review before it installs, in the plugin's own words, saying what
+it costs with X: "X bills every call to the X developer account that owns the app: about $0.005 a post read, $0.01 a
+user read (each post or user once per UTC day), $0.015 a post created ($0.20 with a link). X sets the prices and can
+change them." It changes nothing Jelly allows.
+
+The line says what every call costs and claims nothing about a tool's answer. On the model path an answer carries a
+cost line only for `x_search_posts_all`, `x_get_posts_by_id`, `x_get_posts_by_ids`, `x_get_posts_counts_recent`,
+`x_get_users_mentions`, `x_get_users_timeline`, `x_get_users_posts`, `x_get_users_bookmarks`,
+`x_get_users_bookmarks_by_folder_id`, `x_get_users_liked_posts`, `x_search_users`, `x_get_users_by_id`,
+`x_get_users_by_username`, `x_get_users_by_usernames`, `x_get_users_me_followers`, `x_get_users_me_following`,
+`x_get_users_list_memberships` and `x_get_users_blocking`; every other read, and every write, ends without one. A
+script's result carries a cost line on every method X prices.
+
 ## Icons and vendor
 
 `jelly.icon` stays `assets/icon.svg`, and `opencode.icons` declares the same mark three ways, in

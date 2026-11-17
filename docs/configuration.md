@@ -181,10 +181,10 @@ Each member runs `/connect` and chooses X, then presses `o` or Enter. Status sho
 
 **The consequences, plainly:**
 
-- Every member's calls bill the team's X developer account. The plugin does not cap a model read; each answer that
-  read ends with its actual cost line, and a script has no
-  budget unless the admin sets `scriptBudgetUsd` (per session) or `scriptDailyBudgetUsd` (per rolling 24 hours), so
-  the app's spending limit in X's Developer Console is what caps many sessions.
+- Every member's calls bill the team's X developer account. The plugin does not cap a model read; the model path's
+  cost line covers the tools the README lists under Cost lines, and a script has no budget unless the admin sets
+  `scriptBudgetUsd` (per session) or `scriptDailyBudgetUsd` (per rolling 24 hours), so the app's spending limit in X's
+  Developer Console is what caps many sessions.
 - The owned-reads discount (about $0.001 a post) applies only when the authenticated user owns the app. Other members'
   timeline, mention and bookmark reads bill at the full rate.
 - X describes pay-per-use as for "applications with limited end-users". A larger team may need X's Enterprise plan.

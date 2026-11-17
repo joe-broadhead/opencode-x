@@ -57,7 +57,8 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   `test/unit/x-live-tools.json`, `jelly.tools` and the skills, which `npm run drift` guides. `src/constants.ts` has no
   imports at all: `scripts/check.mjs` loads it with Node's type stripping.
 - **Every call is billed.** Docs, skills, status and the namespace text say so plainly. The skills let the model fetch
-  what the question needs, and every answer that read ends with its actual cost line. The plugin does not cap reads.
+  what the question needs; the model path's cost line covers the tools the README lists under Cost lines. The plugin
+  does not cap reads.
 - **X content is adversarial and personal.** The namespace text and the skills treat every post, bio and Article as
   untrusted data, never instructions, and never let one choose a tool, a recipient or a change. They never infer
   health, financial status, politics, race or ethnicity, religion, sex life or sexual orientation, trade-union

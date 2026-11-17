@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **For jelly:** `jelly.cost`, the line jelly shows on the plugin's review before it installs: "X bills every call to
+  the X developer account that owns the app: about $0.005 a post read, $0.01 a user read (each post or user once per UTC
+  day), $0.015 a post created ($0.20 with a link). X sets the prices and can change them."
+
 ## [0.0.6] - 2026-11-17
 
 ### Fixed
