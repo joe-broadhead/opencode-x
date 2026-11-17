@@ -54,6 +54,9 @@ describe("jelly.cost", () => {
     expect(cost).toContain(`about ${usd(perResource("search_posts_all"))} a post read`)
     expect(cost).toContain(`${usd(perResource("get_users_by_id"))} a user read`)
     expect(cost).toContain(`${usd(create.perRequestUsd)} a post created (${usd(create.withUrlUsd)} with a link)`)
+    // The sentence a person reads before installing, pinned to what the model path does: `costOf` adds its line to a
+    // post or user read, and to neither a write nor a read it does not price yet.
+    expect(cost).toContain("Each answer that reads posts or users ends with what it cost.")
     // No rate in the line is zero: every call is billed.
     expect(cost).not.toMatch(/\$0(\.0+)?(?![.\d])/)
     // jelly's rule for the line: 1 to 300 characters after trimming, no padding, one line.

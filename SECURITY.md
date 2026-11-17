@@ -46,10 +46,11 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
   forbid automated replies without prior approval and automated or bulk likes. The plugin has no like tool; a reply
   is possible through `x_create_posts`, follows the `access` option, and those reply rules still apply.
 - **Every call is billed** to the X developer account that owns the app. The plugin does not cap reads, and
-  every answer that read ends with its actual cost line. A script pays the same rates, reports its cost on every result, and has no budget unless the user
-  sets `scriptBudgetUsd` per session or `scriptDailyBudgetUsd` per rolling 24 hours: then an estimate above either cap
-  is refused with `X_BUDGET_EXCEEDED` before the call. The daily ledger persists across sessions and reloads either
-  way, and an unpriced method is refused with `X_PRICE_UNKNOWN`. X's own app spending limit caps the account.
+  every answer that reads posts or users ends with its actual cost line. A script pays the same rates, reports its cost
+  on every result, and has no budget unless the user sets `scriptBudgetUsd` per session or `scriptDailyBudgetUsd` per
+  rolling 24 hours: then an estimate above either cap is refused with `X_BUDGET_EXCEEDED` before the call. The daily
+  ledger persists across sessions and reloads either way, and an unpriced method is refused with `X_PRICE_UNKNOWN`.
+  X's own app spending limit caps the account.
 
 ## Permissions
 
