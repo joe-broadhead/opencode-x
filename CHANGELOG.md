@@ -17,9 +17,10 @@ All notable changes to this project are documented in this file. It follows
     post with an id up to the cursor's, the newest one it listed. When X lists none, the page answers `gap: { reason:
     "expired", since }` from that post's time, with the posts X still lists. A first listing checks for a post from
     before its start, and answers `gap: { reason: "window-truncated", since }` from the start when X lists none.
-  - `bookmarks`: a walk that meets none of the bookmarks the cursor knows, after reading 800 (X lists only its 800 most
-    recent), answers `gap: { reason: "expired", since }` from when they were confirmed. A shorter walk means they were
-    removed: no gap.
+  - `bookmarks`: a walk that meets none of the bookmarks the cursor knows, after reading 700 or more (X lists only its 800
+    most recent, and may count posts it no longer returns, hence a margin of 100), answers `gap: { reason: "expired",
+    since }` from when they were confirmed. A shorter walk means they were removed: no gap. A false gap needs all five
+    known bookmarks removed and more than 700 added.
 
   A deleted post or a removed bookmark is not lost history and makes no gap. X can move past a read between any two of
   its calls (a busy account passes 800 mentions in minutes), so every call checks, by id as the cursor is, and a cut

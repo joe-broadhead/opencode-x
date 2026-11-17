@@ -650,9 +650,11 @@ events_list({ since?, cursor?, limit?, account?, source? })
     post's time, with the posts X still lists. The check is by id, as the cursor is, so a cut inside one second is
     seen too. A first listing checks for a post from before its start (`end_time`), and answers `gap: { reason:
     "window-truncated", since }` from the start when X lists none.
-  - `bookmarks`: a walk that ends without meeting any bookmark the cursor knows, after reading 800 (as many as X lists:
-    its 800 most recent), answers `gap: { reason: "expired", since }` from when the known ones were confirmed. A
-    shorter walk means they were removed, and answers no gap.
+  - `bookmarks`: a walk that ends without meeting any bookmark the cursor knows, after reading 700 or more, answers
+    `gap: { reason: "expired", since }` from when the known ones were confirmed. X lists its 800 most recent, and may
+    count toward them posts it no longer returns (deleted, protected or suspended authors), hence a margin of 100. A
+    shorter walk means they were removed, and answers no gap. A false gap needs all five known bookmarks removed and
+    more than 700 added.
   - A deleted post, or a removed bookmark, loses nothing and makes no gap: the check asks for any post from that far
     back, not for one post.
   - X can move past a read between any two of its calls, even minutes apart: a busy account passes X's 800 mentions

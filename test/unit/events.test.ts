@@ -672,6 +672,23 @@ describe("x_events_list's feed sources", () => {
     expect((await list({ source: "bookmarks", account: ACCOUNT, cursor: page.cursor })).gap).toBeUndefined()
   })
 
+  test("R4: bookmarks, 794 of X's 800 returned (6 it no longer returns), known ones pushed out: one gap (review L4)", async () => {
+    const host = x(fixture(), 50)
+    const list = run(host, { maxCalls: 40 })
+    const first = await list({ source: "bookmarks", account: ACCOUNT })
+    const many = Array.from({ length: 794 }, (_, n) => post("2026-11-08T09:00:00Z", n % 2, `Saved ${n}`, n))
+    host.data.bookmarks = many
+    const walked = await read(list, { source: "bookmarks", account: ACCOUNT, cursor: first.cursor, limit: 500 }, { source: "bookmarks", account: ACCOUNT, limit: 500 })
+    expect(walked.gaps).toEqual([{ reason: "expired", since: new Date(NOW).toISOString() }])
+    expect(new Set(walked.ids).size).toBe(794)
+    // Below the margin (699 read): the known ones were removed, nothing lost, no gap.
+    const fewer = x(fixture(), 50)
+    const listFewer = run(fewer, { maxCalls: 40 })
+    const start = await listFewer({ source: "bookmarks", account: ACCOUNT })
+    fewer.data.bookmarks = many.slice(0, 699)
+    expect((await read(listFewer, { source: "bookmarks", account: ACCOUNT, cursor: start.cursor, limit: 500 }, { source: "bookmarks", account: ACCOUNT, limit: 500 })).gaps).toEqual([])
+  })
+
   test("source x answers no gap, as contract 1 lists", async () => {
     const data = fixture()
     data.mentions.shift()

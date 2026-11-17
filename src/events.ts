@@ -426,6 +426,12 @@ const SNOWFLAKE_EPOCH = 1288834974657
 const createdOf = (id: string) => Number(BigInt(id) >> 22n) + SNOWFLAKE_EPOCH
 /** X lists only a user's 800 most recent bookmarks (X staff, on X's developer forum). */
 const BOOKMARK_REACH = 800
+/**
+ * X may count toward its 800 bookmarks posts it no longer returns (deleted, protected or suspended authors), so a walk
+ * that reads this many fewer still counts as reaching X's end. A false gap then needs all the known bookmarks removed
+ * and more than 700 added.
+ */
+const BOOKMARK_MARGIN = 100
 const iso = (time: number) => new Date(time).toISOString()
 
 /**
@@ -561,10 +567,11 @@ async function bookmarkFeed(listing: Listing, state: BookmarkState): Promise<Fee
     if (!commit(budget, fresh.map((post) => postEvent(listing.account, "bookmarks", post, listing.source)))) return { state, more: true }
     if (stop !== -1 || page.next === undefined || followed.has(page.next)) {
       // Done: everything newer than the known bookmarks is listed; the newest become the known ones. A walk that ends
-      // without meeting any known bookmark, after as many as X lists, may have missed the ones X no longer lists, so a
-      // feed source answers `gap` from when the known ones were confirmed. A shorter walk means they were removed.
+      // without meeting any known bookmark, after about as many as X lists (within BOOKMARK_MARGIN), may have missed the
+      // ones X no longer lists, so a feed source answers `gap` from when the known ones were confirmed. A shorter walk
+      // means they were removed.
       const k = [...(newest ?? []), ...state.k!].filter((id, index, all) => all.indexOf(id) === index).slice(0, KNOWN_BOOKMARKS)
-      const lost = listing.gaps && stop === -1 && seen + page.posts.length >= BOOKMARK_REACH
+      const lost = listing.gaps && stop === -1 && seen + page.posts.length >= BOOKMARK_REACH - BOOKMARK_MARGIN
       return lost ? { state: { k, ...confirmed }, more: false, gap: { reason: "expired", since: iso(state.w ?? state.t ?? 0) } } : { state: { k, ...confirmed }, more: false }
     }
     token = page.next
