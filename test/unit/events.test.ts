@@ -339,7 +339,9 @@ describe("x_events_list's feed sources", () => {
     const next = await list({ source: "timeline", account: ACCOUNT, cursor: first.cursor })
     // One small read checks that X still lists a post from at or before the newest one listed, then the timeline since.
     expect(host.calls.slice(before).map((call) => call.tool)).toEqual(["x_get_users_timeline", "x_get_users_timeline"])
-    expect(host.calls[before]!.input).toMatchObject({ max_results: 5, end_time: new Date(Date.parse(fixture().timeline.at(-1)!.created_at) + 1).toISOString() })
+    // By id: any post up to the newest one listed.
+    expect(host.calls[before]!.input).toMatchObject({ max_results: 5, until_id: (BigInt(fixture().timeline.at(-1)!.id) + 1n).toString() })
+    expect(host.calls[before]!.input["end_time"]).toBeUndefined()
     expect(next.events.map((event) => event.title)).toEqual(["Later that week"])
     expect(next.owner).toEqual(OWNER)
     expect(next.gap).toBeUndefined()
@@ -485,26 +487,58 @@ describe("x_events_list's feed sources", () => {
     })
   }
 
-  test("a read checks on every call until it lists a post, then not again within the hour", async () => {
-    for (const feed of ["mentions", "timeline"] as const) {
-      const host = x(fixture(), 1)
-      const list = run(host, { maxCalls: 2 })
-      const first = await read(list, { source: feed, account: ACCOUNT, since: SINCE, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
-      host.data[feed].push(...Array.from({ length: 5 }, (_, n) => post("2026-11-06T09:00:00Z", n % 2, `Wave ${n}`, n)))
-      const checks: boolean[] = []
-      let listedYet = false
-      let page = await list({ source: feed, account: ACCOUNT, cursor: first.cursor, limit: 1 })
-      for (let calls = 0; calls < 100 && page.more; calls++) {
-        listedYet ||= page.events.length > 0
-        const at = host.calls.length
-        page = await list({ source: feed, account: ACCOUNT, cursor: page.cursor, limit: 1 })
-        const checked = host.calls.slice(at).some((call) => call.input["end_time"] !== undefined)
-        // Before any post is listed, the time to reach is unchanged: every call checks it again (the same posts).
-        expect([listedYet, checked]).toEqual([listedYet, !listedYet])
-        checks.push(checked)
+  // Review L1c and L1d, the probes R1e and R1d: X moves past a read between two of its calls, after it listed a post.
+  // R1e's wave is a minute apart; R1d's shares one second with the posts X still lists, so only a check by id sees it.
+  for (const [probe, spaced] of [["R1e", true], ["R1d", false]] as const) {
+    test(`${probe}: X moves past a read between two of its calls, after the read listed a post: gap once`, async () => {
+      for (const feed of ["mentions", "timeline"] as const) {
+        for (const minutes of [1, 30]) {
+          const host = x(fixture(), 10)
+          const list = run(host, { maxCalls: 4 })
+          const first = await read(list, { source: feed, account: ACCOUNT, since: SINCE }, { source: feed, account: ACCOUNT })
+          const wave = Array.from({ length: 5 }, (_, n) => post(spaced ? `2026-11-06T09:0${n}:00Z` : "2026-11-06T09:00:00Z", n % 2, `Wave ${n}`, n))
+          host.data[feed].push(...wave)
+          const p1 = await list({ source: feed, account: ACCOUNT, cursor: first.cursor, limit: 1 })
+          expect([p1.more, p1.gap, p1.events.map((event) => event.title)]).toEqual([true, undefined, ["Wave 0"]])
+          // Between the calls X passes its reach: the read's older remaining posts and everything before are gone, while
+          // posts of the same second as the one listed may remain (R1d).
+          const after = Array.from({ length: 3 }, (_, n) => post("2026-11-07T09:00:00Z", n % 2, `After ${n}`, 50 + n))
+          host.data[feed] = [...wave.slice(3), ...after]
+          const later = run(host, { maxCalls: 4, now: () => NOW + minutes * 60_000 })
+          const resumed = await read(later, { source: feed, account: ACCOUNT, cursor: p1.cursor, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
+          // Wave 1 and 2 are gone, inside a declared gap from the post listed: never lost silently.
+          expect([feed, minutes, resumed.gaps]).toEqual([feed, minutes, [{ reason: "expired", since: wave[0]!.created_at }]])
+          expect(resumed.ids).toEqual(ascending([...wave.slice(3), ...after]))
+        }
       }
-      expect(checks).toContain(true)
-      expect(checks).toContain(false)
+    })
+  }
+
+  test("R6: every call checks by id, and the check never takes a read from maxCalls: 2, page 1, 40 posts drain", async () => {
+    for (const feed of ["mentions", "timeline"] as const) {
+      const data = fixture()
+      data[feed] = [data[feed][0]!, ...Array.from({ length: 40 }, (_, n) => post(`2026-11-0${2 + (n % 6)}T09:00:00Z`, n % 2, `P ${n}`, n))]
+      const host = x(data, 1)
+      const list = run(host, { maxCalls: 2 })
+      let page = await list({ source: feed, account: ACCOUNT, since: SINCE, limit: 3 })
+      const ids: string[] = [...page.events.map((event) => event.external_id)]
+      let calls = 1
+      for (; page.more && calls < 400; calls++) {
+        const at = host.calls.length
+        const listedBefore = ids.length
+        page = await list({ source: feed, account: ACCOUNT, cursor: page.cursor, limit: 3 })
+        ids.push(...page.events.map((event) => event.external_id))
+        const made = host.calls.slice(at)
+        // One check on every call (by id once the read has a post, from its start before), and the two reads maxCalls
+        // allows besides it.
+        const checks = made.filter((call) => call.input["post.fields"] === "created_at")
+        expect(checks).toHaveLength(1)
+        expect(checks[0]!.input[listedBefore > 0 ? "until_id" : "end_time"]).toBeDefined()
+        expect(made.length - checks.length).toBeLessThanOrEqual(2)
+        expect(page.gap).toBeUndefined()
+      }
+      expect(calls).toBeLessThan(400)
+      expect(ids).toEqual(ascending(data[feed].slice(1)))
     }
   })
 
@@ -523,7 +557,7 @@ describe("x_events_list's feed sources", () => {
       host.data[feed].push(post("2026-11-06T09:00:00Z", 0, "New", 1))
       const fine = await list({ source: feed, account: ACCOUNT, cursor: legacy })
       expect([fine.gap, fine.events.map((event) => event.title)]).toEqual([undefined, ["New"]])
-      expect(host.calls.at(-2)!.input["end_time"]).toBe(new Date(Date.parse(fixture()[feed].at(-1)!.created_at) + 1).toISOString())
+      expect(host.calls.at(-2)!.input["until_id"]).toBe((BigInt(state.p.s) + 1n).toString())
       // X moved past it: one gap from that post's own time, read from its id.
       host.data[feed] = Array.from({ length: 2 }, (_, n) => post("2026-11-07T09:00:00Z", 1, `Kept ${n}`, 10 + n))
       const stale = await list({ source: feed, account: ACCOUNT, cursor: legacy })

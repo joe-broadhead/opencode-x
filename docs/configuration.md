@@ -644,10 +644,11 @@ events_list({ since?, cursor?, limit?, account?, source? })
     `ACCOUNT_UNKNOWN`.
 - **Gaps**: a feed source answers `gap` once, on the page where it finds that X no longer lists what is behind its
   cursor; the next page carries none. Source `x` answers no gap, as contract 1 lists.
-  - `mentions` and `timeline`: each read first checks, with one small read (`end_time`, up to five posts, ids and times
-    only), that X still lists a post from at or before the newest one the cursor listed. When X lists none, it no
-    longer reaches back that far, and the page answers `gap: { reason: "expired", since }` from that post's time, with
-    the posts X still lists. A first listing checks for a post from before its start, and answers `gap: { reason:
+  - `mentions` and `timeline`: every call first checks, with one small read (up to five posts, ids and times only),
+    that X still lists a post with an id up to the cursor's (`until_id`), the newest post it listed. When X lists
+    none, it no longer reaches back that far, and the page answers `gap: { reason: "expired", since }` from that
+    post's time, with the posts X still lists. The check is by id, as the cursor is, so a cut inside one second is
+    seen too. A first listing checks for a post from before its start (`end_time`), and answers `gap: { reason:
     "window-truncated", since }` from the start when X lists none.
   - `bookmarks`: a walk that ends without meeting any bookmark the cursor knows, after reading 800 (as many as X lists:
     its 800 most recent), answers `gap: { reason: "expired", since }` from when the known ones were confirmed. A
@@ -655,18 +656,18 @@ events_list({ since?, cursor?, limit?, account?, source? })
   - A deleted post, or a removed bookmark, loses nothing and makes no gap: the check asks for any post from that far
     back, not for one post.
   - X can move past a read between any two of its calls, even minutes apart: a busy account passes X's 800 mentions
-    in minutes. So every call of a read (`more: true`) checks again while the newest listed post is the one it last
-    checked. That check gets the same posts again, which X charges once in 24 hours, so it costs next to nothing. Once
-    the read has listed a newer post, it is checked again an hour after its last check. A cursor from an earlier version, with no time of its own, is checked on its first read from its
-    post's time, which X's post id (a snowflake) holds.
-  - The check costs a read: up to five posts on each read of mentions or the timeline. X charges a resource once in a
-    24-hour UTC window, and the check gets the same posts until a newer one is listed, so a frequent poll pays for few
-    of them.
+    in minutes. So every call checks, not only a read's first. A cursor from an earlier version is checked on its
+    first read too; the gap's time comes from its post's id (a snowflake).
+  - The check's cost: up to five posts a call, the newest at or below the cursor's post. This read or an earlier one
+    has just been answered those posts, and X charges a post once in a 24-hour UTC window, so the check costs next to
+    nothing. It is not counted against `events.maxCalls`, so it never takes a read from the listing; the text the
+    model reads counts it apart.
 - **Refused posts**: a feed source refuses for good a post whose title or text holds a secret (an API key, a token, a
   private key or a password in a URL), with the contract's own detector. It is listed in `refused[]` with `reason:
   "secret"` and never in `events`; the cursor moves past it.
 - **Cost**: X bills every tool call to the X developer account that owns the app, per post and per author returned.
-  One call makes at most `events.maxCalls` reads, an account lookup included, and asks for each author's handle, which
+  One call makes at most `events.maxCalls` reads, an account lookup included, plus a feed source's reach check
+  (Gaps, above), and asks for each author's handle, which
   X bills as a user read. A feed source's page carries `cost.units`: the posts, authors and users X returned for this
   call's reads, per the declared price units. X reports no price itself, so the page has no `usd`. With the default
   feeds and cap, one call costs a few cents for a quiet account. When the cap stops it, the result says `more`, and

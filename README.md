@@ -137,7 +137,7 @@ X's mentions, bookmarks and home timeline are sources under the shared source co
 for their collectors, not for answering questions: it lists, since a cursor, one feed (or, as source `x`, every feed
 `events.feeds` names) as normalised events, oldest first, each with its author's handle and link. The tools RPC's
 `probe` says who is signed in. Every X call is billed, so one call makes at most `events.maxCalls` reads (4 by default,
-an account lookup included) and says there is more when it stops early; a collector picks up the rest on its next
+an account lookup included, besides a feed source's small reach check) and says there is more when it stops early; a collector picks up the rest on its next
 call. A feed's page counts the posts, authors and users X returned, and refuses for good a post holding a secret.
 Leaving a feed out of `events.feeds` turns its source off
 ([configuration](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/configuration.md#sources)).
@@ -237,7 +237,7 @@ Set options with the object form of the plugin entry:
 | `ownsXApp` | `true` or `false` | `false` | Use the $0.001 Owned Read price for the account's own posts, mentions, bookmarks, followers and lists. Set it only if that account owns the developer app. |
 | `allowUntestedHost` | `true` or `false` | `false` | Starts on an OpenCode version outside `>=2.2.3 <2.4.0`, with a warning in status. |
 | `events.feeds` | `mentions`, `bookmarks`, `timeline` | `["mentions", "bookmarks"]` | The feeds `x_events_list` lists, and so which of X's sources are on. Your home timeline is the busiest and dearest feed, so it is listed only when you name it. |
-| `events.maxCalls` | `2` or more | `4` | The most billed X reads one `x_events_list` call makes, an account lookup included. |
+| `events.maxCalls` | `2` or more | `4` | The most billed X reads one `x_events_list` call makes, an account lookup included. A feed source's reach check, up to five posts X has just returned, is besides them. |
 
 `{env:NAME}` is substituted when OpenCode loads the config, so the secret can stay in your environment instead of the
 file. An unset variable arrives as an empty string, which the plugin rejects with `OPTIONS_INVALID`. A variable

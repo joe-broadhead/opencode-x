@@ -341,17 +341,14 @@ export function postEvent(account: string, feed: Feed, post: Post, source: strin
 
 /**
  * Where a timeline or mentions feed stands: after post `s`, or from time `t` before any; `u` caps a narrowed window.
- * A feed source also keeps `w`, the time of the newest post it listed; `c` and `v`, when this read (or a first listing)
- * last checked that X still lists that far back, and the time it checked; and `g` after a gap, until it lists a post,
- * so the gap is answered once.
+ * A feed source also keeps `w`, the time of the newest post it listed (a gap's `since`), and `g` after a gap, until it
+ * lists a post, so the gap is answered once.
  */
 interface WindowState {
   readonly s?: string
   readonly t?: number
   readonly u?: string
   readonly w?: number
-  readonly c?: number
-  readonly v?: number
   readonly g?: 1
 }
 /**
@@ -371,6 +368,8 @@ type FeedState = WindowState | BookmarkState
 /** What one call may still spend: X reads, events and bytes of the result. */
 interface Budget {
   calls: number
+  /** The reach checks made, which `calls` does not count: a check never takes a read from the listing. */
+  checks: number
   events: number
   bytes: number
   readonly costs: ReadCost[]
@@ -408,7 +407,7 @@ interface Listing {
   readonly budget: Budget
 }
 
-const budgetOf = (calls: number, events: number): Budget => ({ calls, events, bytes: PAGE_BYTES - 2_048, costs: [], seen: new Set(), listed: [] })
+const budgetOf = (calls: number, events: number): Budget => ({ calls, checks: 0, events, bytes: PAGE_BYTES - 2_048, costs: [], seen: new Set(), listed: [] })
 
 /** One billed read, counted against the cap. */
 async function billed(listing: Listing, tool: string, input: Data) {
@@ -425,23 +424,25 @@ const X_EARLIEST = Date.parse("2010-11-06T00:00:01Z")
 const SNOWFLAKE_EPOCH = 1288834974657
 /** When post `id` was created, from the id itself. */
 const createdOf = (id: string) => Number(BigInt(id) >> 22n) + SNOWFLAKE_EPOCH
-/**
- * A read whose newest listed post moved since its check is checked again this long after it. While that post has not
- * moved, every call checks: X answers the same posts, which it charges once in 24 hours.
- */
-const RECHECK_MS = 60 * 60_000
 /** X lists only a user's 800 most recent bookmarks (X staff, on X's developer forum). */
 const BOOKMARK_REACH = 800
 const iso = (time: number) => new Date(time).toISOString()
 
 /**
- * Whether X still lists a post of `feed` from before `time`: X keeps only a limited number of each feed's most recent
- * posts, so when it lists none from before a time, what came after that time may no longer all be listed. One small
- * billed read, ids and times only.
+ * Whether X still lists a post of `feed` at or before a point: a post with an id up to `id` (a cursor's post), or from
+ * before `time` (a first listing's start). X keeps only a limited number of each feed's most recent posts, so when it
+ * lists none, what came after that point may no longer all be listed. One small billed read, ids and times only, of
+ * posts the reader was just answered, which X charges once in 24 hours. It is not counted against `maxCalls`, so it
+ * never takes a read from the listing.
  */
-async function reachesBack(listing: Listing, feed: Feed, time: number): Promise<boolean> {
-  const page = await billed(listing, TOOLS[feed], { id: listing.me, max_results: 5, end_time: iso(Math.max(time, X_EARLIEST)), "post.fields": "created_at" })
-  return page.posts.length > 0
+async function reachesBack(listing: Listing, feed: Feed, point: { readonly id: string } | { readonly time: number }): Promise<boolean> {
+  const bound = "id" in point ? { until_id: (BigInt(point.id) + 1n).toString() } : { end_time: iso(Math.max(point.time, X_EARLIEST)) }
+  listing.budget.checks++
+  const tool = TOOLS[feed]
+  const result = await listing.read(tool, { id: listing.me, max_results: 5, ...bound, "post.fields": "created_at" })
+  const cost = costOf(tool, result)
+  if (cost) listing.budget.costs.push(cost)
+  return postsPage(tool, result).posts.length > 0
 }
 
 /** One feed's next state, whether there is more to list, and the gap this read answers, once. */
@@ -456,39 +457,28 @@ interface FeedRead<State> {
  * before the oldest are listed; a window the cap does not let it finish is narrowed to before its oldest post read.
  *
  * X keeps only a limited number of each feed's most recent posts, and moves an older `since_id` forward without saying
- * so. A feed source therefore starts each read by checking that X still lists a post from at or before the newest one
- * it listed (a first listing: from before its start). When X lists none, what came after may be gone, and the read's
- * first page answers `gap`: `expired` from that post's time, or `window-truncated` from the first listing's start. A
- * deleted post loses nothing, and does not make a gap: the check asks for any post from before that time.
+ * so, and it can do so between any two calls of a read. A feed source therefore starts every call by checking that X
+ * still lists a post with an id up to the cursor's (a first listing: from before its start). When X lists none, what
+ * came after may be gone, and the page answers `gap`: `expired` from the newest listed post's time, or
+ * `window-truncated` from the first listing's start. A deleted post loses nothing, and does not make a gap: the check
+ * asks for any post up to that point.
  */
 async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Promise<FeedRead<WindowState>> {
   const { budget } = listing
   if (state.s === undefined && (state.t ?? 0) > listing.now) return { state, more: false }
   let gap: EventsGap | undefined
-  // The time X must still reach: a first listing's start, or the newest post listed. A cursor from an earlier version
-  // has no `w`, so its time comes from its post's id: exactly that post's time. After a gap nothing is checked until a
-  // post is listed (`g`).
-  const at = state.s === undefined ? (state.t ?? 0) : state.g !== undefined ? undefined : (state.w ?? createdOf(state.s))
-  // At the start of a read, and on every call of it while the time to reach is the one last checked (the same posts
-  // again, which X charges once in 24 hours), since X may move past it between two calls; once that time has moved,
-  // an hour after the check.
-  const due = state.c === undefined || state.v === at || listing.now - state.c > RECHECK_MS
-  if (listing.gaps && at !== undefined && state.g === undefined && due) {
-    if (budget.calls <= 0) return { state, more: true }
-    if (!(await reachesBack(listing, feed, state.s === undefined ? at : at + 1))) {
-      gap = state.s === undefined ? { reason: "window-truncated", since: iso(at) } : { reason: "expired", since: iso(at) }
+  // Every call checks (after a gap, only once a post is listed again: `g`). A cursor from an earlier version has no `w`,
+  // so the gap's time comes from its post's id: exactly that post's time.
+  if (listing.gaps && state.g === undefined) {
+    const reached = state.s === undefined ? await reachesBack(listing, feed, { time: state.t ?? 0 }) : await reachesBack(listing, feed, { id: state.s })
+    if (!reached) {
+      gap = state.s === undefined ? { reason: "window-truncated", since: iso(state.t ?? 0) } : { reason: "expired", since: iso(state.w ?? createdOf(state.s)) }
+      // After a gap that point is not checked again, so the gap is answered once.
+      const { w: _w, ...rest } = state
+      state = { ...rest, g: 1 }
     }
-    // After a gap the old time is not checked again, so the gap is answered once.
-    const { w: _w, ...rest } = state
-    state = gap === undefined ? { ...state, c: listing.now, v: at } : { ...rest, c: listing.now, v: at, g: 1 }
   }
-  const inRead = state.c === undefined ? undefined : { c: state.c, ...(state.v === undefined ? {} : { v: state.v }) }
-  // `c` and `v` last for the rest of this read; a first listing keeps them until it lists a post.
-  const answer = (next: WindowState, more: boolean): FeedRead<WindowState> => {
-    const { c: _c, v: _v, ...plain } = next
-    const kept = inRead !== undefined && (more || next.s === undefined) ? { ...plain, ...inRead } : plain
-    return gap === undefined ? { state: kept, more } : { state: kept, more, gap }
-  }
+  const answer = (next: WindowState, more: boolean): FeedRead<WindowState> => (gap === undefined ? { state: next, more } : { state: next, more, gap })
   if (budget.calls <= 0 || budget.events <= 0) return answer(state, true)
   const found = new Map<string, Post>()
   let token: string | undefined
@@ -599,15 +589,13 @@ const count = (value: unknown) => (typeof value === "number" && Number.isSafeInt
 
 function windowState(value: unknown): WindowState | undefined {
   const data = record(value)
-  const [s, t, u, w, c, v, g] = [optional(data["s"], id), optional(data["t"], time), optional(data["u"], id), optional(data["w"], time), optional(data["c"], time), optional(data["v"], time), optional(data["g"], checked)]
-  if (s === false || t === false || u === false || w === false || c === false || v === false || g === false || (s === undefined) === (t === undefined)) return undefined
+  const [s, t, u, w, g] = [optional(data["s"], id), optional(data["t"], time), optional(data["u"], id), optional(data["w"], time), optional(data["g"], checked)]
+  if (s === false || t === false || u === false || w === false || g === false || (s === undefined) === (t === undefined)) return undefined
   return {
     ...(s === undefined ? {} : { s }),
     ...(t === undefined ? {} : { t }),
     ...(u === undefined ? {} : { u }),
     ...(w === undefined ? {} : { w }),
-    ...(c === undefined ? {} : { c }),
-    ...(v === undefined ? {} : { v }),
     ...(g === undefined ? {} : { g }),
   }
 }
@@ -641,6 +629,8 @@ export interface XEventsOptions {
 export interface XEventsAnswer {
   readonly result: EventsListResult
   readonly calls: number
+  /** The small reach checks a feed source made besides them, which `maxCalls` does not count. */
+  readonly checks: number
   readonly costs: readonly ReadCost[]
   /** The feeds the call read. */
   readonly feeds: readonly Feed[]
@@ -701,7 +691,7 @@ async function combinedEvents(read: Read, options: XEventsOptions, request: Even
     more ||= next.more
   }
   const cursor = encodeBoundCursor(binding, { o: hash, f: saved })
-  return { result: eventsListResult({ source: X_SOURCE, account, owner }, oldestFirst(budget.listed), cursor, more), calls: options.maxCalls - budget.calls, costs: budget.costs, feeds: options.feeds }
+  return { result: eventsListResult({ source: X_SOURCE, account, owner }, oldestFirst(budget.listed), cursor, more), calls: options.maxCalls - budget.calls, checks: budget.checks, costs: budget.costs, feeds: options.feeds }
 }
 
 /**
@@ -766,7 +756,7 @@ async function feedEvents(read: Read, options: XEventsOptions, request: EventsLi
     plugin: PACKAGE,
     asOf: new Date(now).toISOString(),
   })
-  return { result, calls: options.maxCalls - budget.calls, costs: budget.costs, feeds: [feed] }
+  return { result, calls: options.maxCalls - budget.calls, checks: budget.checks, costs: budget.costs, feeds: [feed] }
 }
 
 /**
@@ -851,11 +841,11 @@ function reader(options: EventsToolOptions, context: Context, method: string): R
 }
 
 function summary(answer: XEventsAnswer, options: XEventsOptions) {
-  const { result, calls, costs, feeds } = answer
+  const { result, calls, checks, costs, feeds } = answer
   const count = result.events.length
   const refused = result.refused?.length ?? 0
   return [
-    `${count} X ${count === 1 ? "event" : "events"} from ${feeds.join(", ")}, oldest first, in ${calls} billed ${calls === 1 ? "read" : "reads"} of at most ${options.maxCalls}.`,
+    `${count} X ${count === 1 ? "event" : "events"} from ${feeds.join(", ")}, oldest first, in ${calls} billed ${calls === 1 ? "read" : "reads"} of at most ${options.maxCalls}${checks > 0 ? `, and ${checks} small reach ${checks === 1 ? "check" : "checks"}` : ""}.`,
     ...(refused > 0 ? [`${refused} ${refused === 1 ? "post was" : "posts were"} refused for good (refused[] says why).`] : []),
     result.more ? "There are more: call events_list again with this result's cursor." : "That is everything up to now; call again later with this result's cursor.",
     costLine(mergeCosts(costs)),

@@ -13,21 +13,21 @@ All notable changes to this project are documented in this file. It follows
   collector that had fallen behind, or a first listing from further back, missed posts with no sign. `mentions`,
   `timeline` and `bookmarks` now answer the contract's `gap` once per read, on the page where they find it, and the
   next page carries none:
-  - `mentions` and `timeline`: each read first checks, with one small read (up to five posts), that X still lists a
-    post from at or before the newest one the cursor listed. When X lists none, the page answers `gap: { reason:
+  - `mentions` and `timeline`: every call first checks, with one small read (up to five posts), that X still lists a
+    post with an id up to the cursor's, the newest one it listed. When X lists none, the page answers `gap: { reason:
     "expired", since }` from that post's time, with the posts X still lists. A first listing checks for a post from
     before its start, and answers `gap: { reason: "window-truncated", since }` from the start when X lists none.
   - `bookmarks`: a walk that meets none of the bookmarks the cursor knows, after reading 800 (X lists only its 800 most
     recent), answers `gap: { reason: "expired", since }` from when they were confirmed. A shorter walk means they were
     removed: no gap.
 
-  A deleted post or a removed bookmark is not lost history and makes no gap. The check costs up to five posts a read of
-  mentions or the timeline, the same posts until a newer one is listed, which X charges once in 24 hours. X can move
-  past a read between any two of its calls (a busy account passes 800 mentions in minutes), so every call of a read
-  checks again while the newest listed post is the one last checked: the same posts, nearly free. Once the read has
-  listed a newer post, it is checked again an hour after its check. A cursor from an earlier version is checked on its
-  first read, from its post's own time, which X's post id holds. Source `x` (contract 1) is unchanged and answers no
-  gap. `gap` is contract 1's, so Memory and jelly on v0.1.x read it.
+  A deleted post or a removed bookmark is not lost history and makes no gap. X can move past a read between any two of
+  its calls (a busy account passes 800 mentions in minutes), so every call checks, by id as the cursor is, and a cut
+  inside one second is seen too. The check costs up to five posts a call that the reader has just been answered,
+  which X charges once in 24 hours, so next to nothing; it is not counted against `events.maxCalls`, so it never takes
+  a read from the listing. A cursor from an earlier version is checked on its first read; the gap's time comes from its
+  post's id. Source `x` (contract 1) is unchanged and answers no gap. `gap` is contract 1's, so Memory and jelly on
+  v0.1.x read it.
 
 ### Changed
 
