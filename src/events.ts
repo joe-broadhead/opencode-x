@@ -341,15 +341,16 @@ export function postEvent(account: string, feed: Feed, post: Post, source: strin
 
 /**
  * Where a timeline or mentions feed stands: after post `s`, or from time `t` before any; `u` caps a narrowed window.
- * A feed source also keeps `w`, the time of the newest post it listed, and `c` once this read (or a first listing) has
- * checked that X still lists that far back.
+ * A feed source also keeps `w`, the time of the newest post it listed; `c`, when this read (or a first listing) last
+ * checked that X still lists that far back; and `g` after a gap, until it lists a post, so the gap is answered once.
  */
 interface WindowState {
   readonly s?: string
   readonly t?: number
   readonly u?: string
   readonly w?: number
-  readonly c?: 1
+  readonly c?: number
+  readonly g?: 1
 }
 /**
  * Where bookmarks stand: the newest known bookmarks `k`, or the start time `t` before any; `r` and `n` resume a walk,
@@ -418,6 +419,12 @@ async function billed(listing: Listing, tool: string, input: Data) {
 
 /** The earliest time X's v2 reads accept for `start_time` and `end_time`. */
 const X_EARLIEST = Date.parse("2010-11-06T00:00:01Z")
+/** X's post ids are snowflakes: the milliseconds since this epoch, shifted left 22 bits. */
+const SNOWFLAKE_EPOCH = 1288834974657
+/** When post `id` was created, from the id itself. */
+const createdOf = (id: string) => Number(BigInt(id) >> 22n) + SNOWFLAKE_EPOCH
+/** A read resumed this long after its check is checked again: X may have moved past it while it waited. */
+const RECHECK_MS = 60 * 60_000
 /** X lists only a user's 800 most recent bookmarks (X staff, on X's developer forum). */
 const BOOKMARK_REACH = 800
 const iso = (time: number) => new Date(time).toISOString()
@@ -453,16 +460,20 @@ async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Pro
   const { budget } = listing
   if (state.s === undefined && (state.t ?? 0) > listing.now) return { state, more: false }
   let gap: EventsGap | undefined
-  // A cursor from an earlier version has no `w`: it is checked once it has listed a post.
-  const from = state.s === undefined ? (state.t ?? 0) : state.w === undefined ? undefined : state.w + 1
-  if (listing.gaps && state.c === undefined && from !== undefined) {
+  // The time X must still reach: a first listing's start, or the newest post listed. A cursor from an earlier version
+  // has no `w`, so its time comes from its post's id: exactly that post's time. After a gap nothing is checked until a
+  // post is listed (`g`).
+  const at = state.s === undefined ? (state.t ?? 0) : state.g !== undefined ? undefined : (state.w ?? createdOf(state.s))
+  // Once per read; again when a paused read is resumed later, since X may have moved past it meanwhile.
+  const due = state.c === undefined || listing.now - state.c > RECHECK_MS
+  if (listing.gaps && at !== undefined && state.g === undefined && due) {
     if (budget.calls <= 0) return { state, more: true }
-    if (!(await reachesBack(listing, feed, from))) {
-      gap = state.s === undefined ? { reason: "window-truncated", since: iso(state.t ?? 0) } : { reason: "expired", since: iso(state.w!) }
+    if (!(await reachesBack(listing, feed, state.s === undefined ? at : at + 1))) {
+      gap = state.s === undefined ? { reason: "window-truncated", since: iso(at) } : { reason: "expired", since: iso(at) }
     }
     // After a gap the old time is not checked again, so the gap is answered once.
     const { w: _w, ...rest } = state
-    state = { ...(gap === undefined ? state : rest), c: 1 }
+    state = gap === undefined ? { ...state, c: listing.now } : { ...rest, c: listing.now, g: 1 }
   }
   const inRead = state.c
   // `c` lasts for the rest of this read; a first listing keeps it until it lists a post.
@@ -504,7 +515,7 @@ async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Pro
     return answer(posts.length === 0 ? state : { ...state, u: posts[0]!.id }, true)
   }
   const newest = (post: Post) => (listing.gaps ? { w: post.created } : {})
-  const kept = state.w === undefined ? {} : { w: state.w }
+  const kept = state.w !== undefined ? { w: state.w } : state.g !== undefined ? { g: state.g } : {}
   let last: Post | undefined
   for (const post of posts) {
     if (!commit(budget, [postEvent(listing.account, feed, post, listing.source)])) break
@@ -581,14 +592,15 @@ const count = (value: unknown) => (typeof value === "number" && Number.isSafeInt
 
 function windowState(value: unknown): WindowState | undefined {
   const data = record(value)
-  const [s, t, u, w, c] = [optional(data["s"], id), optional(data["t"], time), optional(data["u"], id), optional(data["w"], time), optional(data["c"], checked)]
-  if (s === false || t === false || u === false || w === false || c === false || (s === undefined) === (t === undefined)) return undefined
+  const [s, t, u, w, c, g] = [optional(data["s"], id), optional(data["t"], time), optional(data["u"], id), optional(data["w"], time), optional(data["c"], time), optional(data["g"], checked)]
+  if (s === false || t === false || u === false || w === false || c === false || g === false || (s === undefined) === (t === undefined)) return undefined
   return {
     ...(s === undefined ? {} : { s }),
     ...(t === undefined ? {} : { t }),
     ...(u === undefined ? {} : { u }),
     ...(w === undefined ? {} : { w }),
     ...(c === undefined ? {} : { c }),
+    ...(g === undefined ? {} : { g }),
   }
 }
 

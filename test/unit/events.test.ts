@@ -3,6 +3,7 @@
 // to the last known one, the feed sources' own account, cursor, refusal and cost, the probe, and the refusals. Every
 // handle, post and id below is invented. test/conformance runs the contract's full kit over the declared sources.
 import { describe, expect, test } from "bun:test"
+import { decodeBoundCursor, encodeBoundCursor } from "@we-the-rebel-alliance/source-contract/cursor"
 import { createHash } from "node:crypto"
 import { EVENTS_ACTION, PACKAGE, PROBE_ACTION, eventsMethod, eventsTool, meOf, postEvent, postsPage, probeMethod, type EventsToolOptions, type Feed } from "../../src/events.js"
 import { assertEventsListConformance, encodeCursor, resultProblems, type EventsListInput, type EventsListResult } from "@we-the-rebel-alliance/source-contract/events"
@@ -457,6 +458,55 @@ describe("x_events_list's feed sources", () => {
       const later = run(host, { maxCalls: 2, now: () => NOW + 10 * 60_000 })
       const next = await read(later, { source: feed, account: ACCOUNT, cursor: gapped.cursor, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
       expect([next.gaps, next.ids]).toEqual([[], [late.id]])
+    }
+  })
+
+  test("a read paused mid-way and resumed after X moved past it answers gap once (review L1), and a quick resume makes no check", async () => {
+    for (const feed of ["mentions", "timeline"] as const) {
+      const host = x(fixture(), 1)
+      const list = run(host, { maxCalls: 2 })
+      const first = await read(list, { source: feed, account: ACCOUNT, since: SINCE, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
+      const wave = Array.from({ length: 5 }, (_, n) => post("2026-11-06T09:00:00Z", n % 2, `Wave ${n}`, n))
+      host.data[feed].push(...wave)
+      const paused = await list({ source: feed, account: ACCOUNT, cursor: first.cursor, limit: 1 })
+      expect([paused.more, paused.gap, paused.events]).toEqual([true, undefined, []])
+      // Resumed within the hour: no second check.
+      const calls = host.calls.length
+      await run(host, { maxCalls: 2, now: () => NOW + 30 * 60_000 })({ source: feed, account: ACCOUNT, cursor: paused.cursor, limit: 1 })
+      expect(host.calls.slice(calls).some((call) => call.input["end_time"] !== undefined)).toBe(false)
+      // While paused, X moved past the wave's older part and everything before it.
+      const after = Array.from({ length: 3 }, (_, n) => post("2026-11-07T09:00:00Z", n % 2, `After ${n}`, 50 + n))
+      host.data[feed] = [...wave.slice(3), ...after]
+      const later = run(host, { maxCalls: 2, now: () => NOW + 3 * 86_400_000 })
+      const resumed = await read(later, { source: feed, account: ACCOUNT, cursor: paused.cursor, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
+      expect(resumed.gaps).toEqual([{ reason: "expired", since: fixture()[feed].at(-1)!.created_at }])
+      expect(resumed.ids).toEqual(ascending([...wave.slice(3), ...after]))
+      expect((await read(later, { source: feed, account: ACCOUNT, cursor: resumed.cursor }, { source: feed, account: ACCOUNT })).gaps).toEqual([])
+    }
+  })
+
+  test("a v0.0.5 cursor, with no w, is checked on its first read from its post's own time (review L2)", async () => {
+    for (const feed of ["mentions", "timeline"] as const) {
+      const host = x(fixture(), 10)
+      const list = run(host)
+      const first = await list({ source: feed, account: ACCOUNT, since: SINCE })
+      const binding = { plugin: "x", source: feed, account: ACCOUNT }
+      const decoded = decodeBoundCursor(binding, first.cursor)
+      if (!decoded.ok) throw new Error("the cursor did not decode")
+      const state = decoded.state as { a: string; i: string; l: string; p: { s: string } }
+      // v0.0.5's cursor holds only the post it listed last.
+      const legacy = encodeBoundCursor(binding, { a: state.a, i: state.i, l: state.l, p: { s: state.p.s } })
+      // X still lists that post: no gap, and what came after is listed.
+      host.data[feed].push(post("2026-11-06T09:00:00Z", 0, "New", 1))
+      const fine = await list({ source: feed, account: ACCOUNT, cursor: legacy })
+      expect([fine.gap, fine.events.map((event) => event.title)]).toEqual([undefined, ["New"]])
+      expect(host.calls.at(-2)!.input["end_time"]).toBe(new Date(Date.parse(fixture()[feed].at(-1)!.created_at) + 1).toISOString())
+      // X moved past it: one gap from that post's own time, read from its id.
+      host.data[feed] = Array.from({ length: 2 }, (_, n) => post("2026-11-07T09:00:00Z", 1, `Kept ${n}`, 10 + n))
+      const stale = await list({ source: feed, account: ACCOUNT, cursor: legacy })
+      expect(stale.gap).toEqual({ reason: "expired", since: fixture()[feed].at(-1)!.created_at })
+      expect(stale.events.map((event) => event.title)).toEqual(["Kept 0", "Kept 1"])
+      expect((await list({ source: feed, account: ACCOUNT, cursor: stale.cursor })).gap).toBeUndefined()
     }
   })
 

@@ -22,8 +22,9 @@ All notable changes to this project are documented in this file. It follows
     removed: no gap.
 
   A deleted post or a removed bookmark is not lost history and makes no gap. The check costs up to five posts a read of
-  mentions or the timeline, the same posts until a newer one is listed, which X charges once in 24 hours. A cursor from
-  an earlier version is checked once it has listed a post. Source `x` (contract 1) is unchanged and answers no gap.
+  mentions or the timeline, the same posts until a newer one is listed, which X charges once in 24 hours. A read paused
+  with `more: true` and resumed over an hour later is checked again, since X may have moved past it meanwhile. A cursor
+  from an earlier version is checked on its first read, from its post's own time, which X's post id holds. Source `x` (contract 1) is unchanged and answers no gap.
   `gap` is contract 1's, so Memory and jelly on v0.1.x read it.
 
 ### Changed
