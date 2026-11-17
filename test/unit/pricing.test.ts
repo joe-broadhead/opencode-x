@@ -54,9 +54,11 @@ describe("jelly.cost", () => {
     expect(cost).toContain(`about ${usd(perResource("search_posts_all"))} a post read`)
     expect(cost).toContain(`${usd(perResource("get_users_by_id"))} a user read`)
     expect(cost).toContain(`${usd(create.perRequestUsd)} a post created (${usd(create.withUrlUsd)} with a link)`)
-    // The sentence a person reads before installing, pinned to what the model path does: `costOf` adds its line to a
-    // post or user read, and to neither a write nor a read it does not price yet.
-    expect(cost).toContain("Each answer that reads posts or users ends with what it cost.")
+    // X's deduplication, which the rates rest on: a resource is charged once in a UTC day, not again.
+    expect(cost).toContain("(each post or user once per UTC day)")
+    // The line prices every call and promises nothing about a tool's answer; the test below holds the answers that do
+    // carry a line to `costOf`.
+    expect(cost).not.toMatch(/\bends? with (?:what it cost|its actual cost)/)
     // No rate in the line is zero: every call is billed.
     expect(cost).not.toMatch(/\$0(\.0+)?(?![.\d])/)
     // jelly's rule for the line: 1 to 300 characters after trimming, no padding, one line.
@@ -64,6 +66,31 @@ describe("jelly.cost", () => {
     expect(cost.length).toBeLessThanOrEqual(300)
     expect(cost).toBe(cost.trim())
     expect(cost).not.toMatch(/[\r\n\u2028\u2029]/)
+  })
+})
+
+describe("the answers that carry the cost line", () => {
+  // The model path appends a line only where `costOf` prices the answer, so the list comes from `costOf` itself: a
+  // one-post, one-author, one-user answer for every method. README and docs/jelly.md must name exactly that list, so a
+  // doc cannot promise a cost line for a tool that has none, and a new one there fails here until the docs say so.
+  const sample = { output: { data: [{ id: "1" }], includes: { users: [{ id: "1" }] } } }
+  const priced = METHODS.map((method) => method.name)
+    .filter((name) => costOf(`x_${name}`, sample) !== undefined)
+    .map((name) => `x_${name}`)
+    .sort()
+  const listed = (file: string) => {
+    const paragraphs = readFileSync(join(import.meta.dir, `../../${file}`), "utf8")
+      .split(/\n\s*\n/)
+      .map((paragraph) => paragraph.replace(/\s+/g, " "))
+    const found = paragraphs.filter((paragraph) => paragraph.includes("carries a cost line only for"))
+    if (found.length !== 1) throw new Error(`${file} names the model path's cost-line tools in ${found.length} paragraphs, not one`)
+    return [...new Set([...found[0]!.matchAll(/`(x_[a-z0-9_]+)`/g)].map((match) => match[1]!))].sort()
+  }
+
+  test("are the tools `costOf` prices, and README and docs/jelly.md name every one", () => {
+    expect(priced.length).toBeGreaterThan(0)
+    expect(listed("README.md")).toEqual(priced)
+    expect(listed("docs/jelly.md")).toEqual(priced)
   })
 })
 
