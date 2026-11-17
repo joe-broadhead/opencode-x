@@ -341,8 +341,9 @@ export function postEvent(account: string, feed: Feed, post: Post, source: strin
 
 /**
  * Where a timeline or mentions feed stands: after post `s`, or from time `t` before any; `u` caps a narrowed window.
- * A feed source also keeps `w`, the time of the newest post it listed; `c`, when this read (or a first listing) last
- * checked that X still lists that far back; and `g` after a gap, until it lists a post, so the gap is answered once.
+ * A feed source also keeps `w`, the time of the newest post it listed; `c` and `v`, when this read (or a first listing)
+ * last checked that X still lists that far back, and the time it checked; and `g` after a gap, until it lists a post,
+ * so the gap is answered once.
  */
 interface WindowState {
   readonly s?: string
@@ -350,6 +351,7 @@ interface WindowState {
   readonly u?: string
   readonly w?: number
   readonly c?: number
+  readonly v?: number
   readonly g?: 1
 }
 /**
@@ -423,7 +425,10 @@ const X_EARLIEST = Date.parse("2010-11-06T00:00:01Z")
 const SNOWFLAKE_EPOCH = 1288834974657
 /** When post `id` was created, from the id itself. */
 const createdOf = (id: string) => Number(BigInt(id) >> 22n) + SNOWFLAKE_EPOCH
-/** A read resumed this long after its check is checked again: X may have moved past it while it waited. */
+/**
+ * A read whose newest listed post moved since its check is checked again this long after it. While that post has not
+ * moved, every call checks: X answers the same posts, which it charges once in 24 hours.
+ */
 const RECHECK_MS = 60 * 60_000
 /** X lists only a user's 800 most recent bookmarks (X staff, on X's developer forum). */
 const BOOKMARK_REACH = 800
@@ -464,8 +469,10 @@ async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Pro
   // has no `w`, so its time comes from its post's id: exactly that post's time. After a gap nothing is checked until a
   // post is listed (`g`).
   const at = state.s === undefined ? (state.t ?? 0) : state.g !== undefined ? undefined : (state.w ?? createdOf(state.s))
-  // Once per read; again when a paused read is resumed later, since X may have moved past it meanwhile.
-  const due = state.c === undefined || listing.now - state.c > RECHECK_MS
+  // At the start of a read, and on every call of it while the time to reach is the one last checked (the same posts
+  // again, which X charges once in 24 hours), since X may move past it between two calls; once that time has moved,
+  // an hour after the check.
+  const due = state.c === undefined || state.v === at || listing.now - state.c > RECHECK_MS
   if (listing.gaps && at !== undefined && state.g === undefined && due) {
     if (budget.calls <= 0) return { state, more: true }
     if (!(await reachesBack(listing, feed, state.s === undefined ? at : at + 1))) {
@@ -473,13 +480,13 @@ async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Pro
     }
     // After a gap the old time is not checked again, so the gap is answered once.
     const { w: _w, ...rest } = state
-    state = gap === undefined ? { ...state, c: listing.now } : { ...rest, c: listing.now, g: 1 }
+    state = gap === undefined ? { ...state, c: listing.now, v: at } : { ...rest, c: listing.now, v: at, g: 1 }
   }
-  const inRead = state.c
-  // `c` lasts for the rest of this read; a first listing keeps it until it lists a post.
+  const inRead = state.c === undefined ? undefined : { c: state.c, ...(state.v === undefined ? {} : { v: state.v }) }
+  // `c` and `v` last for the rest of this read; a first listing keeps them until it lists a post.
   const answer = (next: WindowState, more: boolean): FeedRead<WindowState> => {
-    const { c: _c, ...plain } = next
-    const kept = inRead !== undefined && (more || next.s === undefined) ? { ...plain, c: inRead } : plain
+    const { c: _c, v: _v, ...plain } = next
+    const kept = inRead !== undefined && (more || next.s === undefined) ? { ...plain, ...inRead } : plain
     return gap === undefined ? { state: kept, more } : { state: kept, more, gap }
   }
   if (budget.calls <= 0 || budget.events <= 0) return answer(state, true)
@@ -592,14 +599,15 @@ const count = (value: unknown) => (typeof value === "number" && Number.isSafeInt
 
 function windowState(value: unknown): WindowState | undefined {
   const data = record(value)
-  const [s, t, u, w, c, g] = [optional(data["s"], id), optional(data["t"], time), optional(data["u"], id), optional(data["w"], time), optional(data["c"], time), optional(data["g"], checked)]
-  if (s === false || t === false || u === false || w === false || c === false || g === false || (s === undefined) === (t === undefined)) return undefined
+  const [s, t, u, w, c, v, g] = [optional(data["s"], id), optional(data["t"], time), optional(data["u"], id), optional(data["w"], time), optional(data["c"], time), optional(data["v"], time), optional(data["g"], checked)]
+  if (s === false || t === false || u === false || w === false || c === false || v === false || g === false || (s === undefined) === (t === undefined)) return undefined
   return {
     ...(s === undefined ? {} : { s }),
     ...(t === undefined ? {} : { t }),
     ...(u === undefined ? {} : { u }),
     ...(w === undefined ? {} : { w }),
     ...(c === undefined ? {} : { c }),
+    ...(v === undefined ? {} : { v }),
     ...(g === undefined ? {} : { g }),
   }
 }

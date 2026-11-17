@@ -654,8 +654,10 @@ events_list({ since?, cursor?, limit?, account?, source? })
     shorter walk means they were removed, and answers no gap.
   - A deleted post, or a removed bookmark, loses nothing and makes no gap: the check asks for any post from that far
     back, not for one post.
-  - A read paused with `more: true` and resumed over an hour after its check is checked again, since X may have moved
-    past it meanwhile. A cursor from an earlier version, with no time of its own, is checked on its first read from its
+  - X can move past a read between any two of its calls, even minutes apart: a busy account passes X's 800 mentions
+    in minutes. So every call of a read (`more: true`) checks again while the newest listed post is the one it last
+    checked. That check gets the same posts again, which X charges once in 24 hours, so it costs next to nothing. Once
+    the read has listed a newer post, it is checked again an hour after its last check. A cursor from an earlier version, with no time of its own, is checked on its first read from its
     post's time, which X's post id (a snowflake) holds.
   - The check costs a read: up to five posts on each read of mentions or the timeline. X charges a resource once in a
     24-hour UTC window, and the check gets the same posts until a newer one is listed, so a frequent poll pays for few

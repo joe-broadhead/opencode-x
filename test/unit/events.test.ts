@@ -461,27 +461,50 @@ describe("x_events_list's feed sources", () => {
     }
   })
 
-  test("a read paused mid-way and resumed after X moved past it answers gap once (review L1), and a quick resume makes no check", async () => {
+  // Review L1, L1b and the probes R1, R1b and R1c: X may move past a paused read between any two of its calls.
+  for (const [probe, pause] of [["R1c", 60_000], ["R1b", 30 * 60_000], ["R1", 3 * 86_400_000]] as const) {
+    test(`${probe}: a read paused mid-way and resumed ${pause / 60_000} minutes later, after X moved past it, answers gap once`, async () => {
+      for (const feed of ["mentions", "timeline"] as const) {
+        const host = x(fixture(), 1)
+        const list = run(host, { maxCalls: 2 })
+        const first = await read(list, { source: feed, account: ACCOUNT, since: SINCE, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
+        const wave = Array.from({ length: 5 }, (_, n) => post("2026-11-06T09:00:00Z", n % 2, `Wave ${n}`, n))
+        host.data[feed].push(...wave)
+        const paused = await list({ source: feed, account: ACCOUNT, cursor: first.cursor, limit: 1 })
+        expect([paused.more, paused.gap, paused.events]).toEqual([true, undefined, []])
+        // While paused, X moved past the wave's older part and everything before it.
+        const after = Array.from({ length: 3 }, (_, n) => post("2026-11-07T09:00:00Z", n % 2, `After ${n}`, 50 + n))
+        host.data[feed] = [...wave.slice(3), ...after]
+        const later = run(host, { maxCalls: 2, now: () => NOW + pause })
+        const resumed = await read(later, { source: feed, account: ACCOUNT, cursor: paused.cursor, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
+        // Wave 0 to 2 are gone, inside a declared gap from the newest post listed: never lost silently.
+        expect([feed, resumed.gaps]).toEqual([feed, [{ reason: "expired", since: fixture()[feed].at(-1)!.created_at }]])
+        expect(resumed.ids).toEqual(ascending([...wave.slice(3), ...after]))
+        expect((await read(later, { source: feed, account: ACCOUNT, cursor: resumed.cursor }, { source: feed, account: ACCOUNT })).gaps).toEqual([])
+      }
+    })
+  }
+
+  test("a read checks on every call until it lists a post, then not again within the hour", async () => {
     for (const feed of ["mentions", "timeline"] as const) {
       const host = x(fixture(), 1)
       const list = run(host, { maxCalls: 2 })
       const first = await read(list, { source: feed, account: ACCOUNT, since: SINCE, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
-      const wave = Array.from({ length: 5 }, (_, n) => post("2026-11-06T09:00:00Z", n % 2, `Wave ${n}`, n))
-      host.data[feed].push(...wave)
-      const paused = await list({ source: feed, account: ACCOUNT, cursor: first.cursor, limit: 1 })
-      expect([paused.more, paused.gap, paused.events]).toEqual([true, undefined, []])
-      // Resumed within the hour: no second check.
-      const calls = host.calls.length
-      await run(host, { maxCalls: 2, now: () => NOW + 30 * 60_000 })({ source: feed, account: ACCOUNT, cursor: paused.cursor, limit: 1 })
-      expect(host.calls.slice(calls).some((call) => call.input["end_time"] !== undefined)).toBe(false)
-      // While paused, X moved past the wave's older part and everything before it.
-      const after = Array.from({ length: 3 }, (_, n) => post("2026-11-07T09:00:00Z", n % 2, `After ${n}`, 50 + n))
-      host.data[feed] = [...wave.slice(3), ...after]
-      const later = run(host, { maxCalls: 2, now: () => NOW + 3 * 86_400_000 })
-      const resumed = await read(later, { source: feed, account: ACCOUNT, cursor: paused.cursor, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
-      expect(resumed.gaps).toEqual([{ reason: "expired", since: fixture()[feed].at(-1)!.created_at }])
-      expect(resumed.ids).toEqual(ascending([...wave.slice(3), ...after]))
-      expect((await read(later, { source: feed, account: ACCOUNT, cursor: resumed.cursor }, { source: feed, account: ACCOUNT })).gaps).toEqual([])
+      host.data[feed].push(...Array.from({ length: 5 }, (_, n) => post("2026-11-06T09:00:00Z", n % 2, `Wave ${n}`, n)))
+      const checks: boolean[] = []
+      let listedYet = false
+      let page = await list({ source: feed, account: ACCOUNT, cursor: first.cursor, limit: 1 })
+      for (let calls = 0; calls < 100 && page.more; calls++) {
+        listedYet ||= page.events.length > 0
+        const at = host.calls.length
+        page = await list({ source: feed, account: ACCOUNT, cursor: page.cursor, limit: 1 })
+        const checked = host.calls.slice(at).some((call) => call.input["end_time"] !== undefined)
+        // Before any post is listed, the time to reach is unchanged: every call checks it again (the same posts).
+        expect([listedYet, checked]).toEqual([listedYet, !listedYet])
+        checks.push(checked)
+      }
+      expect(checks).toContain(true)
+      expect(checks).toContain(false)
     }
   })
 
