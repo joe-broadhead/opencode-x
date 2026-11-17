@@ -12,6 +12,11 @@ or outside reference. The mark is X's own logo, as x.com draws it. Jelly's decla
 a top-level key they don't know, and refuse an unknown key inside a tool, sign-in or `contributes`
 entry, so the section uses only the keys Jelly reads.
 
+`jelly.cost` is the line Jelly shows on the plugin's review before it installs, in the plugin's own words, saying what
+it costs with X: "X bills every call to the X developer account that owns the app: about $0.005 a post read, $0.01 a
+user read, $0.015 a post created ($0.20 with a link). Each result ends with what it cost. X sets the prices and can
+change them." It changes nothing Jelly allows.
+
 ## Icons and vendor
 
 `jelly.icon` stays `assets/icon.svg`, and `opencode.icons` declares the same mark three ways, in

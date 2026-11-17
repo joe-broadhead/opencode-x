@@ -39,6 +39,31 @@ describe("the sources' declared prices", () => {
   })
 })
 
+describe("jelly.cost", () => {
+  test("states the price table's own rates, and is a line jelly takes", () => {
+    const cost = (JSON.parse(readFileSync(join(import.meta.dir, "../../package.json"), "utf8")) as { jelly: { cost: string } }).jelly.cost
+    // As the line writes dollars: at least two decimals ($0.20), more when the rate needs them ($0.005).
+    const usd = (value: number) => `$${/\.\d$/.test(String(value)) ? `${value}0` : String(value)}`
+    const perResource = (method: string) => {
+      const price = priceOf(method)
+      if (price === undefined || !("perResourceUsd" in price)) throw new Error(`${method} has no per-resource price`)
+      return price.perResourceUsd
+    }
+    const create = priceOf("create_posts")
+    if (create === undefined || create.kind !== "postCreate") throw new Error("create_posts has no post-create price")
+    expect(cost).toContain(`about ${usd(perResource("search_posts_all"))} a post read`)
+    expect(cost).toContain(`${usd(perResource("get_users_by_id"))} a user read`)
+    expect(cost).toContain(`${usd(create.perRequestUsd)} a post created (${usd(create.withUrlUsd)} with a link)`)
+    // No rate in the line is zero: every call is billed.
+    expect(cost).not.toMatch(/\$0(\.0+)?(?![.\d])/)
+    // jelly's rule for the line: 1 to 300 characters after trimming, no padding, one line.
+    expect(cost.length).toBeGreaterThan(0)
+    expect(cost.length).toBeLessThanOrEqual(300)
+    expect(cost).toBe(cost.trim())
+    expect(cost).not.toMatch(/[\r\n\u2028\u2029]/)
+  })
+})
+
 describe("the price table", () => {
   test("has one row for every known method X prices, none for the media methods it does not, and no unknown row", () => {
     const names = METHODS.map((method) => method.name)
