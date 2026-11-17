@@ -7,6 +7,7 @@ import {
   PAGE,
   PROBE,
   type EventsCost,
+  type EventsGap,
   type EventsListRequest,
   type EventsListResult,
   type EventsOwner,
@@ -166,6 +167,12 @@ export const EVENTS_OUTPUT: JsonSchema = {
       description: "A feed source only: what X returned for this call's billed reads, counted per price unit (post, author, user)",
       required: ["units"],
       properties: { units: { type: "array", items: { type: "object", required: ["per", "count"], properties: { per: STRING, count: { type: "integer" } } } } },
+    },
+    gap: {
+      type: "object",
+      description: "A feed source only, once per read: X no longer lists as far back as the cursor (expired) or the first listing's start (window-truncated), so posts from since up to the first event may be missing",
+      required: ["reason", "since"],
+      properties: { reason: { type: "string", enum: ["expired", "window-truncated"] }, since: { type: "string", description: "UTC ISO" } },
     },
     plugin: { type: "string", description: "A feed source only: this plugin's package name" },
     asOf: { type: "string", description: "A feed source only: when the page was read, UTC ISO" },
@@ -332,18 +339,29 @@ export function postEvent(account: string, feed: Feed, post: Post, source: strin
 
 // ── The listing ─────────────────────────────────────────────────────────
 
-/** Where a timeline or mentions feed stands: after post `s`, or from time `t` before any; `u` caps a narrowed window. */
+/**
+ * Where a timeline or mentions feed stands: after post `s`, or from time `t` before any; `u` caps a narrowed window.
+ * A feed source also keeps `w`, the time of the newest post it listed, and `c` once this read (or a first listing) has
+ * checked that X still lists that far back.
+ */
 interface WindowState {
   readonly s?: string
   readonly t?: number
   readonly u?: string
+  readonly w?: number
+  readonly c?: 1
 }
-/** Where bookmarks stand: the newest known bookmarks `k`, or the start time `t` before any; `r` and `n` resume a walk. */
+/**
+ * Where bookmarks stand: the newest known bookmarks `k`, or the start time `t` before any; `r` and `n` resume a walk,
+ * and `m` counts the bookmarks it has read. A feed source also keeps `w`, when the known bookmarks were confirmed.
+ */
 interface BookmarkState {
   readonly k?: readonly string[]
   readonly t?: number
   readonly r?: string
   readonly n?: readonly string[]
+  readonly m?: number
+  readonly w?: number
 }
 type FeedState = WindowState | BookmarkState
 
@@ -374,6 +392,11 @@ function commit(budget: Budget, events: readonly SourceEvent[]): boolean {
 
 interface Listing {
   readonly read: Read
+  /**
+   * A feed source's listing: it answers `gap` when X no longer lists as far back as its cursor or its first start.
+   * Source `x` (contract 1) does neither, and lists as it always has.
+   */
+  readonly gaps: boolean
   readonly me: string
   readonly account: string
   /** The source each event names: `x`, or the feed. */
@@ -393,14 +416,62 @@ async function billed(listing: Listing, tool: string, input: Data) {
   return postsPage(tool, result)
 }
 
+/** The earliest time X's v2 reads accept for `start_time` and `end_time`. */
+const X_EARLIEST = Date.parse("2010-11-06T00:00:01Z")
+/** X lists only a user's 800 most recent bookmarks (X staff, on X's developer forum). */
+const BOOKMARK_REACH = 800
+const iso = (time: number) => new Date(time).toISOString()
+
+/**
+ * Whether X still lists a post of `feed` from before `time`: X keeps only a limited number of each feed's most recent
+ * posts, so when it lists none from before a time, what came after that time may no longer all be listed. One small
+ * billed read, ids and times only.
+ */
+async function reachesBack(listing: Listing, feed: Feed, time: number): Promise<boolean> {
+  const page = await billed(listing, TOOLS[feed], { id: listing.me, max_results: 5, end_time: iso(Math.max(time, X_EARLIEST)), "post.fields": "created_at" })
+  return page.posts.length > 0
+}
+
+/** One feed's next state, whether there is more to list, and the gap this read answers, once. */
+interface FeedRead<State> {
+  readonly state: State
+  readonly more: boolean
+  readonly gap?: EventsGap
+}
+
 /**
  * Mentions or the timeline after the state's post (or time), oldest first. The whole window is read, newest first,
  * before the oldest are listed; a window the cap does not let it finish is narrowed to before its oldest post read.
+ *
+ * X keeps only a limited number of each feed's most recent posts, and moves an older `since_id` forward without saying
+ * so. A feed source therefore starts each read by checking that X still lists a post from at or before the newest one
+ * it listed (a first listing: from before its start). When X lists none, what came after may be gone, and the read's
+ * first page answers `gap`: `expired` from that post's time, or `window-truncated` from the first listing's start. A
+ * deleted post loses nothing, and does not make a gap: the check asks for any post from before that time.
  */
-async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Promise<{ state: WindowState; more: boolean }> {
+async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Promise<FeedRead<WindowState>> {
   const { budget } = listing
   if (state.s === undefined && (state.t ?? 0) > listing.now) return { state, more: false }
-  if (budget.calls <= 0 || budget.events <= 0) return { state, more: true }
+  let gap: EventsGap | undefined
+  // A cursor from an earlier version has no `w`: it is checked once it has listed a post.
+  const from = state.s === undefined ? (state.t ?? 0) : state.w === undefined ? undefined : state.w + 1
+  if (listing.gaps && state.c === undefined && from !== undefined) {
+    if (budget.calls <= 0) return { state, more: true }
+    if (!(await reachesBack(listing, feed, from))) {
+      gap = state.s === undefined ? { reason: "window-truncated", since: iso(state.t ?? 0) } : { reason: "expired", since: iso(state.w!) }
+    }
+    // After a gap the old time is not checked again, so the gap is answered once.
+    const { w: _w, ...rest } = state
+    state = { ...(gap === undefined ? state : rest), c: 1 }
+  }
+  const inRead = state.c
+  // `c` lasts for the rest of this read; a first listing keeps it until it lists a post.
+  const answer = (next: WindowState, more: boolean): FeedRead<WindowState> => {
+    const { c: _c, ...plain } = next
+    const kept = inRead !== undefined && (more || next.s === undefined) ? { ...plain, c: inRead } : plain
+    return gap === undefined ? { state: kept, more } : { state: kept, more, gap }
+  }
+  if (budget.calls <= 0 || budget.events <= 0) return answer(state, true)
   const found = new Map<string, Post>()
   let token: string | undefined
   // Every page token this call followed: a token X hands back again leads nowhere new, so it ends the walk.
@@ -430,20 +501,22 @@ async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Pro
   const posts = [...found.values()].sort(byId)
   if (!complete) {
     // Out of reads before the window ended: what was read is its newest part, so keep only the older part for later.
-    return { state: posts.length === 0 ? state : { ...state, u: posts[0]!.id }, more: true }
+    return answer(posts.length === 0 ? state : { ...state, u: posts[0]!.id }, true)
   }
-  let last: string | undefined
+  const newest = (post: Post) => (listing.gaps ? { w: post.created } : {})
+  const kept = state.w === undefined ? {} : { w: state.w }
+  let last: Post | undefined
   for (const post of posts) {
     if (!commit(budget, [postEvent(listing.account, feed, post, listing.source)])) break
-    last = post.id
+    last = post
   }
   // A window read to its end: everything before its cap is listed, and the next read goes up to now.
   const capped = state.u === undefined ? undefined : (BigInt(state.u) - 1n).toString()
-  if (posts.length === 0) return capped === undefined ? { state, more: false } : { state: { s: capped }, more: true }
-  if (last === undefined) return { state, more: true }
-  if (last === posts.at(-1)!.id) return { state: { s: capped === undefined || BigInt(last) > BigInt(capped) ? last : capped }, more: capped !== undefined }
+  if (posts.length === 0) return capped === undefined ? answer(state, false) : answer({ s: capped, ...kept }, true)
+  if (last === undefined) return answer(state, true)
+  if (last.id === posts.at(-1)!.id) return answer({ s: capped === undefined || BigInt(last.id) > BigInt(capped) ? last.id : capped, ...newest(last) }, capped !== undefined)
   // Listed up to `last`: the rest of this window waits for the next call, capped where it was read.
-  return { state: { s: last, u: state.u ?? (BigInt(posts.at(-1)!.id) + 1n).toString() }, more: true }
+  return answer({ s: last.id, u: state.u ?? (BigInt(posts.at(-1)!.id) + 1n).toString(), ...newest(last) }, true)
 }
 
 /**
@@ -451,17 +524,20 @@ async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Pro
  * resumes from X's page token. A bookmark has no time of its own, so the first listing lists none: it notes the newest
  * bookmarks, and every bookmark added after them is listed.
  */
-async function bookmarkFeed(listing: Listing, state: BookmarkState): Promise<{ state: BookmarkState; more: boolean }> {
+async function bookmarkFeed(listing: Listing, state: BookmarkState): Promise<FeedRead<BookmarkState>> {
   const { budget } = listing
+  const confirmed = listing.gaps ? { w: listing.now } : {}
   if (budget.calls <= 0) return { state, more: true }
   if (state.k === undefined) {
     // Only the ids are needed, so no expansion: X bills each author it includes.
     const page = await billed(listing, TOOLS.bookmarks, { id: listing.me, max_results: KNOWN_BOOKMARKS })
     const k = page.posts.slice(0, KNOWN_BOOKMARKS).map((post) => post.id)
-    return { state: k.length === 0 ? state : { k }, more: false }
+    return { state: k.length === 0 ? state : { k, ...confirmed }, more: false }
   }
   if (budget.events <= 0) return { state, more: true }
   const known = new Set(state.k)
+  // The bookmarks this walk has read, across the calls it took.
+  let seen = state.m ?? 0
   let token = state.r
   let newest = state.n
   // A page token X hands back again, within this call, leads nowhere new: it ends the walk like a last page.
@@ -476,18 +552,22 @@ async function bookmarkFeed(listing: Listing, state: BookmarkState): Promise<{ s
     const fresh = stop === -1 ? page.posts : page.posts.slice(0, stop)
     if (!commit(budget, fresh.map((post) => postEvent(listing.account, "bookmarks", post, listing.source)))) return { state, more: true }
     if (stop !== -1 || page.next === undefined || followed.has(page.next)) {
-      // Done: everything newer than the known bookmarks is listed; the newest become the known ones.
+      // Done: everything newer than the known bookmarks is listed; the newest become the known ones. A walk that ends
+      // without meeting any known bookmark, after as many as X lists, may have missed the ones X no longer lists, so a
+      // feed source answers `gap` from when the known ones were confirmed. A shorter walk means they were removed.
       const k = [...(newest ?? []), ...state.k!].filter((id, index, all) => all.indexOf(id) === index).slice(0, KNOWN_BOOKMARKS)
-      return { state: { k }, more: false }
+      const lost = listing.gaps && stop === -1 && seen + page.posts.length >= BOOKMARK_REACH
+      return lost ? { state: { k, ...confirmed }, more: false, gap: { reason: "expired", since: iso(state.w ?? state.t ?? 0) } } : { state: { k, ...confirmed }, more: false }
     }
     token = page.next
     followed.add(token)
-    state = { k: state.k!, r: token, ...(newest === undefined ? {} : { n: newest }) }
+    seen += page.posts.length
+    state = { k: state.k!, r: token, ...(newest === undefined ? {} : { n: newest }), ...(listing.gaps ? { m: seen } : {}), ...(state.w === undefined ? {} : { w: state.w }) }
   }
   return { state, more: true }
 }
 
-const readFeed = (listing: Listing, feed: Feed, state: FeedState) =>
+const readFeed = (listing: Listing, feed: Feed, state: FeedState): Promise<FeedRead<FeedState>> =>
   feed === "bookmarks" ? bookmarkFeed(listing, state as BookmarkState) : windowFeed(listing, feed, state as WindowState)
 
 const ids = (value: unknown): string[] | undefined => (Array.isArray(value) && value.length <= KNOWN_BOOKMARKS && value.every((id) => typeof id === "string" && POST_ID.test(id)) ? value : undefined)
@@ -496,18 +576,34 @@ const id = (value: unknown) => (typeof value === "string" && POST_ID.test(value)
 const time = (value: unknown) => (typeof value === "number" && Number.isSafeInteger(value) ? value : undefined)
 const token = (value: unknown) => (typeof value === "string" && /^[\w-]{1,200}$/.test(value) ? value : undefined)
 
+const checked = (value: unknown) => (value === 1 ? (1 as const) : undefined)
+const count = (value: unknown) => (typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined)
+
 function windowState(value: unknown): WindowState | undefined {
   const data = record(value)
-  const [s, t, u] = [optional(data["s"], id), optional(data["t"], time), optional(data["u"], id)]
-  if (s === false || t === false || u === false || (s === undefined) === (t === undefined)) return undefined
-  return { ...(s === undefined ? {} : { s }), ...(t === undefined ? {} : { t }), ...(u === undefined ? {} : { u }) }
+  const [s, t, u, w, c] = [optional(data["s"], id), optional(data["t"], time), optional(data["u"], id), optional(data["w"], time), optional(data["c"], checked)]
+  if (s === false || t === false || u === false || w === false || c === false || (s === undefined) === (t === undefined)) return undefined
+  return {
+    ...(s === undefined ? {} : { s }),
+    ...(t === undefined ? {} : { t }),
+    ...(u === undefined ? {} : { u }),
+    ...(w === undefined ? {} : { w }),
+    ...(c === undefined ? {} : { c }),
+  }
 }
 
 function bookmarkState(value: unknown): BookmarkState | undefined {
   const data = record(value)
-  const [k, t, r, n] = [optional(data["k"], ids), optional(data["t"], time), optional(data["r"], token), optional(data["n"], ids)]
-  if (k === false || t === false || r === false || n === false || (k === undefined && t === undefined)) return undefined
-  return { ...(k === undefined ? {} : { k }), ...(t === undefined ? {} : { t }), ...(r === undefined ? {} : { r }), ...(n === undefined ? {} : { n }) }
+  const [k, t, r, n, m, w] = [optional(data["k"], ids), optional(data["t"], time), optional(data["r"], token), optional(data["n"], ids), optional(data["m"], count), optional(data["w"], time)]
+  if (k === false || t === false || r === false || n === false || m === false || w === false || (k === undefined && t === undefined)) return undefined
+  return {
+    ...(k === undefined ? {} : { k }),
+    ...(t === undefined ? {} : { t }),
+    ...(r === undefined ? {} : { r }),
+    ...(n === undefined ? {} : { n }),
+    ...(m === undefined ? {} : { m }),
+    ...(w === undefined ? {} : { w }),
+  }
 }
 
 const feedState = (feed: Feed, value: unknown) => (feed === "bookmarks" ? bookmarkState(value) : windowState(value))
@@ -576,7 +672,7 @@ async function combinedEvents(read: Read, options: XEventsOptions, request: Even
       states.set(feed, parsed)
     }
   }
-  const listing: Listing = { read, me: me.id, account, source: X_SOURCE, now, budget }
+  const listing: Listing = { read, gaps: false, me: me.id, account, source: X_SOURCE, now, budget }
   let more = false
   const saved: Record<string, unknown> = {}
   for (const feed of options.feeds) {
@@ -638,13 +734,14 @@ async function feedEvents(read: Read, options: XEventsOptions, request: EventsLi
     state = { t: startTime(request, now) }
   }
   const budget = budgetOf(calls, request.limit)
-  const listing: Listing = { read, me: user.id, account: user.account, source: feed, now, budget }
+  const listing: Listing = { read, gaps: true, me: user.id, account: user.account, source: feed, now, budget }
   const next = await readFeed(listing, feed, state)
   const screened = screenEvents(oldestFirst(budget.listed))
   const binding: CursorBinding = { plugin: NAMESPACE, source: feed, account: user.account }
   const cursor = encodeBoundCursor(binding, { a: user.account, i: user.id, l: user.owner.label, p: next.state })
   const result = eventsListResult({ source: feed, account: user.account, owner: user.owner }, screened.events, cursor, next.more, {
     refused: screened.refused,
+    ...(next.gap === undefined ? {} : { gap: next.gap }),
     cost: pageCost(budget.costs, lookups),
     plugin: PACKAGE,
     asOf: new Date(now).toISOString(),

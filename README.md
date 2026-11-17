@@ -339,6 +339,12 @@ A script's errors from the tools RPC have their own codes, listed in
 - **Media uploads have no published price.** X's pricing page gives none for `x_media_upload` or the chat media tools,
   so the plugin does not guess one: a script with a budget set is refused them (`X_PRICE_UNKNOWN`), and without a
   budget their cost line says the price is unknown. X's Developer Console has the real bill.
+- **X lists only each feed's most recent posts.** X keeps a limited number of each feed's newest mentions, timeline posts
+  and bookmarks (its 800 most recent bookmarks). A collector that falls behind, or a first listing from further back,
+  could miss posts. A feed source answers the contract's `gap` once when that may have happened ([configuration](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/configuration.md#events_list)).
+  Source `x` answers no gap.
+- **A deleted post is not reported.** A post X stops listing because its author deleted it, or a bookmark you removed,
+  is simply not listed again; an event already listed stays with the consumer. It makes no gap: nothing was lost.
 - **A feed source notices a change of X account only when told.** `x_events_list`'s feed sources never ask X who is
   signed in, because that identity read is `probe`'s until Memory and jelly accept a source that declares it
   (`permission.readsIdentity`, in the source contract they pin). If you sign in to X as another account,

@@ -11,6 +11,7 @@ import type { Status } from "../../src/status.js"
 
 const NOW = Date.parse("2026-11-08T12:00:00Z")
 const SINCE = "2026-11-01T00:00:00Z"
+const SINCE_ISO = new Date(SINCE).toISOString()
 const ME = "1000000000000000001"
 const OWNER = { id: "x:@samrivera", label: "Sam Rivera (@SamRivera)" }
 const EPOCH = 1288834974657n
@@ -52,7 +53,8 @@ const TOOL: Record<string, keyof ReturnType<typeof fixture>> = { x_get_users_men
 
 /**
  * The host's executors for X's reads, answering from `data` as X does: v2 JSON with `data`, `includes.users` and
- * `meta.next_token`; mentions and the timeline newest first, after `since_id` or from `start_time`, before `until_id`;
+ * `meta.next_token`; mentions and the timeline newest first, after `since_id` or from `start_time`, before `until_id` or
+ * `end_time`;
  * bookmarks in their own order. Pages hold at most `pageSize` posts.
  */
 function x(data = fixture(), pageSize = 2) {
@@ -70,7 +72,14 @@ function x(data = fixture(), pageSize = 2) {
       const since = input["since_id"] === undefined ? undefined : BigInt(String(input["since_id"]))
       const start = input["start_time"] === undefined ? undefined : Date.parse(String(input["start_time"]))
       const until = input["until_id"] === undefined ? undefined : BigInt(String(input["until_id"]))
-      posts = posts.filter((item) => (since === undefined || BigInt(item.id) > since) && (start === undefined || Date.parse(item.created_at) >= start) && (until === undefined || BigInt(item.id) < until))
+      const end = input["end_time"] === undefined ? undefined : Date.parse(String(input["end_time"]))
+      posts = posts.filter(
+        (item) =>
+          (since === undefined || BigInt(item.id) > since) &&
+          (start === undefined || Date.parse(item.created_at) >= start) &&
+          (end === undefined || Date.parse(item.created_at) < end) &&
+          (until === undefined || BigInt(item.id) < until),
+      )
       posts.sort((a, b) => (BigInt(b.id) > BigInt(a.id) ? 1 : -1))
     }
     const from = Number(input["pagination_token"] ?? 0)
@@ -305,13 +314,18 @@ describe("x_events_list's feed sources", () => {
     const host = x(fixture(), 10)
     const asserts: unknown[] = []
     const result = (await eventsTool(options(host, {}, asserts)).execute({ source: "mentions", account: "@SamRivera", since: SINCE }, context)).output
-    expect(host.calls.map((call) => call.tool)).toEqual(["x_get_users_by_username", "x_get_users_mentions"])
+    // The lookup, then one small read that checks X still lists a mention from before SINCE (it does: no gap), then the
+    // mentions since SINCE.
+    expect(host.calls.map((call) => call.tool)).toEqual(["x_get_users_by_username", "x_get_users_mentions", "x_get_users_mentions"])
     expect(host.calls[0]!.input).toEqual({ username: ACCOUNT, "user.fields": "username,name" })
+    expect(host.calls[1]!.input).toMatchObject({ max_results: 5, end_time: SINCE_ISO, "post.fields": "created_at" })
+    expect(result.gap).toBeUndefined()
     expect(asserts).toEqual([{ sessionID: "ses_1", agent: "build", action: EVENTS_ACTION, resources: ["*"], source: { type: "tool", messageID: "msg_1", id: "call_1" } }])
     expect(result).toMatchObject({ source: "mentions", account: ACCOUNT, owner: OWNER, plugin: PACKAGE, asOf: new Date(NOW).toISOString(), more: false, trust: "untrusted" })
     expect(result.events.map((event) => [event.source, event.external_id])).toEqual(fixture().mentions.slice(1).map((item) => ["mentions", item.id]))
-    // Three mentions by two authors, and the one user the lookup returned.
-    expect(result.cost).toEqual({ units: [{ per: "post", count: 3 }, { per: "author", count: 2 }, { per: "user", count: 1 }] })
+    // Three mentions by two authors, the one mention from before SINCE that shows X still reaches back (no author: that
+    // read asks for none), and the one user the lookup returned.
+    expect(result.cost).toEqual({ units: [{ per: "post", count: 4 }, { per: "author", count: 2 }, { per: "user", count: 1 }] })
     expect(resultProblems(result)).toEqual([])
   })
 
@@ -322,10 +336,15 @@ describe("x_events_list's feed sources", () => {
     host.data.timeline.push(post("2026-11-06T09:00:00Z", 0, "Later that week"))
     const before = host.calls.length
     const next = await list({ source: "timeline", account: ACCOUNT, cursor: first.cursor })
-    expect(host.calls.slice(before).map((call) => call.tool)).toEqual(["x_get_users_timeline"])
+    // One small read checks that X still lists a post from at or before the newest one listed, then the timeline since.
+    expect(host.calls.slice(before).map((call) => call.tool)).toEqual(["x_get_users_timeline", "x_get_users_timeline"])
+    expect(host.calls[before]!.input).toMatchObject({ max_results: 5, end_time: new Date(Date.parse(fixture().timeline.at(-1)!.created_at) + 1).toISOString() })
     expect(next.events.map((event) => event.title)).toEqual(["Later that week"])
     expect(next.owner).toEqual(OWNER)
-    expect(next.cost).toEqual({ units: [{ per: "post", count: 1 }, { per: "author", count: 1 }] })
+    expect(next.gap).toBeUndefined()
+    // The posts the check got back (a page of this fake holds two; no authors: it asks for none), and the new one with
+    // its author.
+    expect(next.cost).toEqual({ units: [{ per: "post", count: 3 }, { per: "author", count: 1 }] })
     expect((await list({ source: "timeline", account: ACCOUNT, cursor: next.cursor })).events).toEqual([])
   })
 
@@ -357,6 +376,199 @@ describe("x_events_list's feed sources", () => {
     const other = Buffer.from(JSON.stringify({ ...state, b: "0000000000000000" }), "utf8").toString("base64url")
     await expect(list({ source: "mentions", account: ACCOUNT, cursor: other })).rejects.toThrow(/^CURSOR_INVALID: /)
     expect(host.calls.length).toBe(before)
+  })
+
+  test("a feed walked page by page in narrowed windows lists every post once, oldest first, and answers no gap", async () => {
+    const many = { ...fixture(), mentions: [fixture().mentions[0]!, ...Array.from({ length: 13 }, (_, n) => post(`2026-11-0${2 + (n % 6)}T09:00:00Z`, n % 2, `Mention ${n}`, n))] }
+    const host = x(many, 2)
+    const list = run(host, { maxCalls: 3 })
+    const ids: string[] = []
+    const gaps: unknown[] = []
+    let page = await list({ source: "mentions", account: ACCOUNT, since: SINCE, limit: 2 })
+    for (let calls = 0; calls < 60; calls++) {
+      ids.push(...page.events.map((event) => event.external_id))
+      if (page.gap !== undefined) gaps.push(page.gap)
+      if (!page.more) break
+      page = await list({ source: "mentions", account: ACCOUNT, cursor: page.cursor, limit: 2 })
+    }
+    expect(gaps).toEqual([])
+    expect(ids).toEqual(many.mentions.slice(1).sort((a, b) => (BigInt(a.id) < BigInt(b.id) ? -1 : 1)).map((item) => item.id))
+    expect(host.calls.some((call) => call.input["until_id"] !== undefined)).toBe(true)
+  })
+
+  test("over every call cap, page size, limit and window size, with posts arriving mid-read, nothing repeats, nothing is skipped, and no gap", async () => {
+    for (const maxCalls of [2, 3, 4]) {
+      for (const pageSize of [1, 2, 3]) {
+        for (const limit of [1, 2, 5]) {
+          for (const n of [1, 5, 13]) {
+            const data = { ...fixture(), mentions: [fixture().mentions[0]!, ...Array.from({ length: n }, (_, k) => post(`2026-11-0${2 + (k % 6)}T09:00:00Z`, k % 2, `Mention ${k}`, k))] }
+            const host = x(data, pageSize)
+            const list = run(host, { maxCalls })
+            const ids: string[] = []
+            let page = await list({ source: "mentions", account: ACCOUNT, since: SINCE, limit })
+            let calls = 0
+            for (; calls < 400; calls++) {
+              expect(page.gap).toBeUndefined()
+              ids.push(...page.events.map((event) => event.external_id))
+              if (calls === 3) host.data.mentions.push(post("2026-11-09T09:00:00Z", 0, "Arrived mid-read", 90), post("2026-11-09T10:00:00Z", 1, "Arrived too", 91))
+              if (!page.more && calls > 3) break
+              page = await list({ source: "mentions", account: ACCOUNT, cursor: page.cursor, limit })
+            }
+            expect(calls).toBeLessThan(400)
+            const want = host.data.mentions.slice(1).map((item) => item.id).sort((a, b) => (BigInt(a) < BigInt(b) ? -1 : 1))
+            expect([maxCalls, pageSize, limit, n, ids]).toEqual([maxCalls, pageSize, limit, n, want])
+          }
+        }
+      }
+    }
+  })
+
+  /** Every page of one read, from `first` until `more` is false: the ids in order and every gap answered. */
+  async function read(list: (input: EventsListInput) => Promise<EventsListResult>, first: EventsListInput, rest: EventsListInput) {
+    const ids: string[] = []
+    const gaps: unknown[] = []
+    let page = await list(first)
+    for (let calls = 0; calls < 500; calls++) {
+      ids.push(...page.events.map((event) => event.external_id))
+      if (page.gap !== undefined) gaps.push(page.gap)
+      if (!page.more) return { ids, gaps, cursor: page.cursor }
+      page = await list({ ...rest, cursor: page.cursor })
+    }
+    throw new Error("the read did not end")
+  }
+  const ascending = (items: readonly { id: string }[]) => items.map((item) => item.id).sort((a, b) => (BigInt(a) < BigInt(b) ? -1 : 1))
+
+  test("a gap is answered once per read across many small pages, and the next read minutes later neither gaps nor skips", async () => {
+    for (const feed of ["mentions", "timeline"] as const) {
+      const host = x(fixture(), 1)
+      const list = run(host, { maxCalls: 2 })
+      const first = await read(list, { source: feed, account: ACCOUNT, since: SINCE, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
+      expect(first.gaps).toEqual([])
+      // X moved on past everything listed: nine newer posts, and nothing from as far back as the newest one listed.
+      const newer = Array.from({ length: 9 }, (_, n) => post("2026-11-06T09:00:00Z", n % 2, `Newer ${n}`, n))
+      host.data[feed] = [...newer]
+      const gapped = await read(list, { source: feed, account: ACCOUNT, cursor: first.cursor, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
+      expect(gapped.gaps).toEqual([{ reason: "expired", since: fixture()[feed].at(-1)!.created_at }])
+      expect(gapped.ids).toEqual(ascending(newer))
+      // Minutes later one more post arrives: the read starts from the cursor, not from now, so it lists that post and
+      // answers no gap.
+      const late = post("2026-11-06T09:05:00Z", 1, "Minutes later", 20)
+      host.data[feed].push(late)
+      const later = run(host, { maxCalls: 2, now: () => NOW + 10 * 60_000 })
+      const next = await read(later, { source: feed, account: ACCOUNT, cursor: gapped.cursor, limit: 1 }, { source: feed, account: ACCOUNT, limit: 1 })
+      expect([next.gaps, next.ids]).toEqual([[], [late.id]])
+    }
+  })
+
+  test("a first listing's window-truncated gap is answered once across small pages, from its own start, never from now", async () => {
+    const data = fixture()
+    data.mentions.shift()
+    const host = x(data, 1)
+    const list = run(host, { maxCalls: 2 })
+    const first = await read(list, { source: "mentions", account: ACCOUNT, since: SINCE, limit: 1 }, { source: "mentions", account: ACCOUNT, limit: 1 })
+    expect(first.gaps).toEqual([{ reason: "window-truncated", since: SINCE_ISO }])
+    expect(first.ids).toEqual(ascending(data.mentions))
+    const late = post("2026-11-03T09:00:00Z", 0, "Later", 30)
+    host.data.mentions.push(late)
+    const next = await read(run(host, { maxCalls: 2, now: () => NOW + 10 * 60_000 }), { source: "mentions", account: ACCOUNT, cursor: first.cursor, limit: 1 }, { source: "mentions", account: ACCOUNT, limit: 1 })
+    expect([next.gaps, next.ids]).toEqual([[], [late.id]])
+  })
+
+  test("a burst of posts with one timestamp, larger than a page and the call cap, drains: the cursor walks by post id", async () => {
+    for (const feed of ["mentions", "timeline"] as const) {
+      for (const [pageSize, maxCalls, limit] of [[1, 2, 1], [2, 2, 3], [3, 3, 2], [5, 4, 100]] as const) {
+        const data = fixture()
+        const burst = Array.from({ length: 17 }, (_, n) => post("2026-11-03T09:00:00Z", n % 2, `Same second ${n}`, n))
+        data[feed] = [data[feed][0]!, ...burst]
+        const host = x(data, pageSize)
+        const list = run(host, { maxCalls })
+        const first = await read(list, { source: feed, account: ACCOUNT, since: SINCE, limit }, { source: feed, account: ACCOUNT, limit })
+        expect([pageSize, maxCalls, limit, first.gaps, first.ids]).toEqual([pageSize, maxCalls, limit, [], ascending(burst)])
+        // Another burst at the same second as the last one listed, after the cursor: it drains too.
+        const more = Array.from({ length: 11 }, (_, n) => post("2026-11-03T09:00:00Z", n % 2, `Same second again ${n}`, 100 + n))
+        host.data[feed].push(...more)
+        const next = await read(list, { source: feed, account: ACCOUNT, cursor: first.cursor, limit }, { source: feed, account: ACCOUNT, limit })
+        expect([next.gaps, next.ids]).toEqual([[], ascending(more)])
+      }
+    }
+  })
+
+  test("bookmarks: a walk of X's whole 800 in small pages answers its gap once, and drains", async () => {
+    const host = x(fixture(), 7)
+    const list = run(host, { maxCalls: 3 })
+    const first = await list({ source: "bookmarks", account: ACCOUNT })
+    const many = Array.from({ length: 800 }, (_, n) => post("2026-11-08T09:00:00Z", n % 2, `Saved ${n}`, n))
+    host.data.bookmarks = many
+    const walked = await read(list, { source: "bookmarks", account: ACCOUNT, cursor: first.cursor, limit: 13 }, { source: "bookmarks", account: ACCOUNT, limit: 13 })
+    expect(walked.gaps).toEqual([{ reason: "expired", since: new Date(NOW).toISOString() }])
+    expect(new Set(walked.ids).size).toBe(800)
+    const next = await read(run(host, { maxCalls: 3, now: () => NOW + 10 * 60_000 }), { source: "bookmarks", account: ACCOUNT, cursor: walked.cursor }, { source: "bookmarks", account: ACCOUNT })
+    expect([next.gaps, next.ids]).toEqual([[], []])
+  })
+
+  test("a cursor from further back than X still lists answers gap expired once, with what X still lists", async () => {
+    const host = x()
+    const list = run(host)
+    const first = await list({ source: "timeline", account: ACCOUNT, since: SINCE })
+    const newest = fixture().timeline.at(-1)!
+    // X moved on: it lists nothing from as far back as the newest post listed, and two newer posts arrived.
+    host.data.timeline = [post("2026-11-06T09:00:00Z", 0, "Newer one"), post("2026-11-07T09:00:00Z", 1, "Newer two")]
+    const next = await list({ source: "timeline", account: ACCOUNT, cursor: first.cursor })
+    expect(next.gap).toEqual({ reason: "expired", since: newest.created_at })
+    expect(next.events.map((event) => event.title)).toEqual(["Newer one", "Newer two"])
+    const after = await list({ source: "timeline", account: ACCOUNT, cursor: next.cursor })
+    expect([after.gap, after.events]).toEqual([undefined, []])
+  })
+
+  test("a deleted post loses nothing: no gap when X still lists an older one", async () => {
+    const host = x()
+    const list = run(host)
+    const first = await list({ source: "mentions", account: ACCOUNT, since: SINCE })
+    // The newest mention listed is deleted; the older ones are still listed.
+    host.data.mentions.pop()
+    host.data.mentions.push(post("2026-11-06T09:00:00Z", 1, "A new mention"))
+    const next = await list({ source: "mentions", account: ACCOUNT, cursor: first.cursor })
+    expect(next.gap).toBeUndefined()
+    expect(next.events.map((event) => event.title)).toEqual(["A new mention"])
+  })
+
+  test("a first listing from further back than X still lists answers gap window-truncated from its start", async () => {
+    const data = fixture()
+    data.mentions.shift()
+    const page = await run(x(data))({ source: "mentions", account: ACCOUNT, since: SINCE })
+    expect(page.gap).toEqual({ reason: "window-truncated", since: SINCE_ISO })
+    expect(page.events.map((event) => event.external_id)).toEqual(data.mentions.map((item) => item.id))
+  })
+
+  test("bookmarks: a walk that meets none of the known ones answers gap only after as many as X lists", async () => {
+    const host = x(fixture(), 2)
+    const list = run(host)
+    const first = await list({ source: "bookmarks", account: ACCOUNT })
+    // Every known bookmark removed and one added: a short walk, so they were removed, and nothing is lost.
+    host.data.bookmarks = [post("2026-11-07T09:00:00Z", 0, "New bookmark")]
+    const next = await list({ source: "bookmarks", account: ACCOUNT, cursor: first.cursor })
+    expect([next.gap, next.events.map((event) => event.title)]).toEqual([undefined, ["New bookmark"]])
+    // 800 bookmarks added, as many as X lists: the walk meets no known one, so older ones may be missing.
+    const many = Array.from({ length: 800 }, (_, n) => post("2026-11-08T09:00:00Z", n % 2, `Saved ${n}`, n))
+    host.data.bookmarks = many
+    const ids: string[] = []
+    const gaps: unknown[] = []
+    let page = await list({ source: "bookmarks", account: ACCOUNT, cursor: next.cursor, limit: 500 })
+    for (let calls = 0; calls < 400; calls++) {
+      ids.push(...page.events.map((event) => event.external_id))
+      if (page.gap !== undefined) gaps.push(page.gap)
+      if (!page.more) break
+      page = await list({ source: "bookmarks", account: ACCOUNT, cursor: page.cursor, limit: 500 })
+    }
+    expect(gaps).toEqual([{ reason: "expired", since: new Date(NOW).toISOString() }])
+    expect(ids).toHaveLength(800)
+    expect((await list({ source: "bookmarks", account: ACCOUNT, cursor: page.cursor })).gap).toBeUndefined()
+  })
+
+  test("source x answers no gap, as contract 1 lists", async () => {
+    const data = fixture()
+    data.mentions.shift()
+    expect((await run(x(data))({ since: SINCE })).gap).toBeUndefined()
   })
 
   test("refuses for good a post that holds a secret, and moves its cursor past it", async () => {

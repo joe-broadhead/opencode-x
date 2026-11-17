@@ -619,6 +619,9 @@ events_list({ since?, cursor?, limit?, account?, source? })
     cursor's last one (`since_id`), or from the start time on the first listing (`start_time`). X lists them newest
     first, so the whole window is read before its oldest posts are listed; a window the call cap does not let it
     finish is narrowed with `until_id` to its older part and read on the next call, so nothing is skipped.
+  - `bookmarks` and the two above as feed sources: X lists only a limited number of each feed's most recent posts, and
+    moves an older `since_id` forward without saying so. A feed source therefore says when it may have missed posts,
+    once, with the contract's `gap` (below).
   - `bookmarks` (`get_users_bookmarks`): X gives bookmarks no time, so they are read newest first until one the
     cursor knows (it keeps the five newest), page by page; a walk the cap stops continues from X's page token. The
     first listing lists no bookmark: it notes the newest, and every bookmark added after them is listed.
@@ -639,6 +642,21 @@ events_list({ since?, cursor?, limit?, account?, source? })
     the home timeline of anyone but the signed-in user, and mentions are public posts.
   - Source `x` looks up who is signed in with `get_users_me` on every call; another handle in `account` is
     `ACCOUNT_UNKNOWN`.
+- **Gaps**: a feed source answers `gap` once, on the page where it finds that X no longer lists what is behind its
+  cursor; the next page carries none. Source `x` answers no gap, as contract 1 lists.
+  - `mentions` and `timeline`: each read first checks, with one small read (`end_time`, up to five posts, ids and times
+    only), that X still lists a post from at or before the newest one the cursor listed. When X lists none, it no
+    longer reaches back that far, and the page answers `gap: { reason: "expired", since }` from that post's time, with
+    the posts X still lists. A first listing checks for a post from before its start, and answers `gap: { reason:
+    "window-truncated", since }` from the start when X lists none.
+  - `bookmarks`: a walk that ends without meeting any bookmark the cursor knows, after reading 800 (as many as X lists:
+    its 800 most recent), answers `gap: { reason: "expired", since }` from when the known ones were confirmed. A
+    shorter walk means they were removed, and answers no gap.
+  - A deleted post, or a removed bookmark, loses nothing and makes no gap: the check asks for any post from that far
+    back, not for one post.
+  - The check costs a read: up to five posts on each read of mentions or the timeline. X charges a resource once in a
+    24-hour UTC window, and the check gets the same posts until a newer one is listed, so a frequent poll pays for few
+    of them.
 - **Refused posts**: a feed source refuses for good a post whose title or text holds a secret (an API key, a token, a
   private key or a password in a URL), with the contract's own detector. It is listed in `refused[]` with `reason:
   "secret"` and never in `events`; the cursor moves past it.
@@ -672,11 +690,10 @@ It asserts `x_probe`, then makes one billed read, `get_users_me`. `source` is `x
 
 `npm run conformance` (and `npm run check`) runs the contract's conformance kit over each source with recorded, invented
 X answers (no X call), and writes its report to `reports/conformance-report.json`, which a release attaches. The report
-is complete and ok: every check that applies runs. Two do not apply, and each says why in the report: `failed-holds-cursor`
-(`atomicPages`: X answers each feed read in one call, so no single post can fail on its own) and `gap-and-cursor-expired`
-(`noExpiry`: a feed cursor holds X post ids, which never expire, and X answers an old `since_id` without refusing it, so
-the plugin never answers `CURSOR_EXPIRED`). X's reach-back window can still skip posts older than it, with no sign from
-X, so no gap can be said; see the README's Known limits.
+is complete and ok: every check that applies runs, `gap-and-cursor-expired` and `gap-once-per-read` included, on a
+cursor from further back than X still lists and a first listing from further back than X lists. One does not apply, and the
+report says why: `failed-holds-cursor` (`atomicPages`: X answers each feed read in one call, so no single post can fail
+on its own).
 
 ## Errors
 

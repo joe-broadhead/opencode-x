@@ -31,12 +31,6 @@ const SINCE = "2026-11-01T00:00:00Z"
 const ACCOUNT = "samrivera"
 /** Each feed answers one page at a time from X, so no single post can fail on its own. */
 const ATOMIC = "X answers each feed read (get_users_mentions, get_users_timeline, get_users_bookmarks) as one page in one call, so no single post can fail on its own"
-/**
- * A feed's cursor holds X post ids, and X answers an old `since_id` without refusing it, so the plugin never answers
- * CURSOR_EXPIRED. X's reach-back limit is not an expiry: it can skip posts older than X's window, and X gives no sign of
- * it, so the plugin cannot say a gap. The report shows the reason.
- */
-const NO_EXPIRY = "X's ids never expire: a feed cursor holds X post ids, X answers an old since_id without refusing it, and the plugin never answers CURSOR_EXPIRED. X's reach-back window can skip posts older than it with no sign from X, so no gap can be said"
 const TOOL_FEED: Record<string, Feed> = { x_get_users_mentions: "mentions", x_get_users_timeline: "timeline", x_get_users_bookmarks: "bookmarks" }
 
 const answer = (value: unknown) => ({ output: value, content: [{ type: "text", text: JSON.stringify(value) }] })
@@ -60,7 +54,14 @@ function executors(permission: SessionContext["permission"], noted = false) {
       const since = input["since_id"] === undefined ? undefined : BigInt(String(input["since_id"]))
       const start = input["start_time"] === undefined ? undefined : Date.parse(String(input["start_time"]))
       const until = input["until_id"] === undefined ? undefined : BigInt(String(input["until_id"]))
-      posts = posts.filter((item) => (since === undefined || BigInt(item.id) > since) && (start === undefined || Date.parse(item.created_at) >= start) && (until === undefined || BigInt(item.id) < until))
+      const end = input["end_time"] === undefined ? undefined : Date.parse(String(input["end_time"]))
+      posts = posts.filter(
+        (item) =>
+          (since === undefined || BigInt(item.id) > since) &&
+          (start === undefined || Date.parse(item.created_at) >= start) &&
+          (end === undefined || Date.parse(item.created_at) < end) &&
+          (until === undefined || BigInt(item.id) < until),
+      )
     }
     const page = posts.slice(0, Number(input["max_results"] ?? 100))
     const users = String(input["expansions"] ?? "").includes("author_id") ? X["users"].filter((user: { id: string }) => page.some((item) => item.author_id === user.id)) : []
@@ -92,6 +93,17 @@ const options = (context: SessionContext, noted = false): EventsToolOptions => (
 const open: SessionContext = { account: ACCOUNT, permission: { assert: async () => {} } }
 const list = (input: Record<string, unknown>, context: SessionContext = open, noted = false) => eventsMethod(options(context, noted)).run(input, call()) as Promise<Record<string, any>>
 
+/**
+ * A cursor a reader kept while X moved on. Mentions and the timeline: the newest post it listed is older than anything X
+ * still lists. Bookmarks: a walk resumed at its last page, after X's 800 most recent, none of which it knew.
+ */
+const STALE = { id: "2000000000000000000", at: Date.parse("2026-09-01T09:00:00Z") }
+const staleCursor = (feed: Feed) =>
+  encodeBoundCursor(
+    { plugin: NAMESPACE, source: feed, account: ACCOUNT },
+    { a: ACCOUNT, i: X["me"].id, l: "Sam Rivera (@SamRivera)", p: feed === "bookmarks" ? { k: [STALE.id], r: "last-page", m: 799, w: STALE.at } : { s: STALE.id, w: STALE.at } },
+  )
+
 /** The cursor a source's first listing answers, against the data a first listing sees. */
 const firstCursor = async (feed: Feed) => (await list({ source: feed, account: ACCOUNT, since: SINCE }, open, true))["cursor"] as string
 
@@ -104,6 +116,10 @@ async function casesFor(feed: Feed): Promise<PageCase[]> {
     { name: "what came after the first listing, one post refused for a secret", input: { source: feed, account: ACCOUNT, cursor: first }, expect: "page" },
     { name: "the same, two at a time", input: { source: feed, account: ACCOUNT, cursor: first, limit: 2 }, expect: "page" },
     { name: "nothing new since the last listing", input: { source: feed, account: ACCOUNT, cursor: done }, expect: "empty" },
+    { name: "a cursor from further back than X still lists", input: { source: feed, account: ACCOUNT, cursor: staleCursor(feed) }, expect: "expired" },
+    ...(feed === "bookmarks"
+      ? []
+      : [{ name: "a first listing from before anything X still lists", input: { source: feed, account: ACCOUNT, since: "2026-09-01T00:00:00Z" }, expect: "page" as const }]),
     { name: "a cursor without the account it reads", input: { source: feed, cursor: first }, expect: { refuses: "INPUT_INVALID" } },
     { name: "a first listing that names no account", input: { source: feed, since: SINCE }, expect: { refuses: "INPUT_INVALID" } },
     { name: "a cursor passed for another account", input: { source: feed, account: "someoneelse", cursor: first }, expect: { refuses: "ACCOUNT_MISMATCH" } },
@@ -146,21 +162,39 @@ describe("the source contract's conformance kit", () => {
         sources,
         describe: { id: TOOLS_RPC_ID },
         atomicPages: { reason: ATOMIC },
-        noExpiry: { reason: NO_EXPIRY },
       })
       reports.push(report)
       expect(report.problems).toEqual([])
-      // Complete: every check that applies ran. The two the source says cannot apply carry its reason, and nothing else
-      // is left out but the ones whose subject never appears (no gap, no removals) and a snapshot's.
+      // Complete: every check that applies ran, the expired cursor's gap and its once-per-read rule included. Only
+      // atomicPages' check is left out, with its reason, and the checks whose subject never appears here.
       expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
+      expect(report.checks.filter((check) => check.ran).map((check) => check.name)).toEqual(expect.arrayContaining(["gap-and-cursor-expired", "gap-once-per-read", "refused-is-final"]))
+      expect(report.checks.filter((check) => check.notApplicable).map((check) => check.name).sort()).toEqual(["details", "failed-holds-cursor", "output-schema", "removals-are-final", "suggest"])
       expect(report.incomplete).toBe(false)
       expect(report.ok).toBe(true)
       expect(Object.fromEntries(report.checks.filter((check) => check.reason !== undefined).map((check) => [check.name, check.reason]))).toEqual({
         "failed-holds-cursor": ATOMIC,
-        "gap-and-cursor-expired": NO_EXPIRY,
       })
     })
   }
+
+  test("a reader that falls behind X's window is told, once", async () => {
+    for (const feed of FEEDS) {
+      const stale = await list({ source: feed, account: ACCOUNT, cursor: staleCursor(feed) })
+      expect(stale["gap"]).toEqual({ reason: "expired", since: new Date(STALE.at).toISOString() })
+      expect(stale["events"].length).toBeGreaterThan(0)
+      const next = await list({ source: feed, account: ACCOUNT, cursor: stale["cursor"] })
+      expect(next["gap"]).toBeUndefined()
+      expect(next["events"]).toEqual([])
+    }
+    for (const feed of ["mentions", "timeline"] as const) {
+      const early = await list({ source: feed, account: ACCOUNT, since: "2026-09-01T00:00:00Z" })
+      expect(early["gap"]).toEqual({ reason: "window-truncated", since: "2026-09-01T00:00:00.000Z" })
+      expect((await list({ source: feed, account: ACCOUNT, cursor: early["cursor"] }))["gap"]).toBeUndefined()
+      // X still lists a post from before SINCE, so a first listing from SINCE has lost nothing.
+      expect((await list({ source: feed, account: ACCOUNT, since: SINCE }))["gap"]).toBeUndefined()
+    }
+  })
 
   test("writes the report a release attaches", () => {
     expect(reports.map((report) => report.source).sort()).toEqual(FEEDS.map((feed) => `${NAMESPACE}.${feed}`).sort())

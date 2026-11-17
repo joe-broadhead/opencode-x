@@ -82,7 +82,9 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   its `conformance` and `descriptor`. `package.json`'s top-level `sources` declares X's three sources, and the
   `conformance` stage runs the kit over each, on recorded invented X answers, and writes
   `reports/conformance-report.json` (`npm run conformance`, which a release runs; complete, with the kit's `atomicPages`
-  and `noExpiry` and their reasons). Declare or send none of v0.2.0's new keys (`removals[]`, `owner.verified`,
+  and its reason). X keeps only each feed's most recent posts, so never declare `noExpiry`: a feed source answers `gap`
+  (`expired` when X no longer lists as far back as the newest post the cursor listed, `window-truncated` when a first
+  listing starts further back than X lists), once per read. A deleted post is not lost history and makes no gap. Declare or send none of v0.2.0's new keys (`removals[]`, `owner.verified`,
   `permission.readsIdentity`, a price's `conditions` and `min`, among others) until Memory and jelly are on v0.2.0. A feed source never asserts `x_get_users_me`: that identity read is `probe`'s
   alone. Every `usd` in `sources` is the standard rate in `src/prices.ts` (a test keeps them equal); the `ownsXApp`
   Owned Read rate waits for those consumers, so $0.005 stays the most a post costs.
