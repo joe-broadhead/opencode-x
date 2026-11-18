@@ -216,9 +216,15 @@ describe("docs", () => {
     ["AGENTS.md", "AGENTS.md"],
     ["SECURITY.md", "SECURITY.md"],
     ["docs/configuration.md", "docs/configuration.md"],
-    ["CHANGELOG.md (Unreleased)", "CHANGELOG.md"],
+    ["CHANGELOG.md (Unreleased or newest release)", "CHANGELOG.md"],
   ])("%s names exactly TESTED_HOSTS wherever it says what is tested", (_label, file) => {
-    const body = readFileSync(join(ROOT, file), "utf8")
+    const full = readFileSync(join(ROOT, file), "utf8")
+    // While a release is prepared, its Unreleased section; otherwise the newest released one. Older released
+    // sections are history and keep their own list.
+    const sections = full.split(/\n(?=## \[)/)
+    const unreleased = sections.find((section) => section.startsWith("## [Unreleased]"))
+    const newest = sections.find((section) => /^## \[\d+\.\d+\.\d+\]/.test(section))
+    const body = file === "CHANGELOG.md" ? [sections[0], unreleased ?? newest].join("\n") : full
     const mentions = body
       .split("\n")
       .flatMap((line) => line.split(/\.\s+/))
@@ -233,7 +239,9 @@ describe("docs", () => {
   test("the untested example is 2.2.99, and no doc names an untested later 2.2 or 2.3 release as tested", () => {
     const all = ["README.md", "AGENTS.md", "SECURITY.md", "docs/configuration.md", "CHANGELOG.md"].map((file) => readFileSync(join(ROOT, file), "utf8")).join("\n")
     expect(all).toContain("2.2.99")
-    expect(all).not.toMatch(/\b2\.(?:2\.(?:[89]|9[0-8])|3\.(?:[1-9]|[1-9]\d))\b(?!\d)/)
+    // Every 2.2 or 2.3 release a doc names is one the checks run on, apart from the example outside the list.
+    const named = [...new Set([...all.matchAll(/\b2\.[23]\.\d+\b/g)].map((match) => match[0]!))]
+    expect(named.filter((version) => version !== "2.2.99" && !TESTED_HOSTS.includes(version))).toEqual([])
   })
 
   test("every call is billed, in the README, the skills, the namespace and status", () => {

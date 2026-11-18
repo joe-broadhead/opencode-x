@@ -12,6 +12,14 @@ All notable changes to this project are documented in this file. It follows
   the X developer account that owns the app: about $0.005 a post read, $0.01 a user read (each post or user once per UTC
   day), $0.015 a post created ($0.20 with a link). X sets the prices and can change them."
 
+### Changed
+
+- Tested on OpenCode 2.3.1 and 2.3.2, so `TESTED_HOSTS` now holds 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and
+  2.3.2. The supported range is unchanged (`>=2.2.3 <2.4.0`). The host and pack stages, CI and the release's install
+  check run on every one; the plugin is tested on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2. They need
+  nothing else from this plugin: between 2.3.0 and 2.3.2 the only API changes are that `experimental.generate`
+  excludes video jobs and a new `codemode` session event kind.
+
 ## [0.0.6] - 2026-11-17
 
 ### Fixed
