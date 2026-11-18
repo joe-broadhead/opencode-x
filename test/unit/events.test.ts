@@ -50,7 +50,7 @@ const fixture = () => ({
 const FEEDS: Feed[] = ["mentions", "timeline", "bookmarks"]
 const LISTED = [...fixture().mentions.slice(1), ...fixture().timeline.slice(1)].map((item) => item.id)
 
-const TOOL: Record<string, keyof ReturnType<typeof fixture>> = { x_get_users_mentions: "mentions", x_get_users_timeline: "timeline", x_get_users_bookmarks: "bookmarks" }
+const TOOL: Record<string, keyof ReturnType<typeof fixture>> = { x_get_users_mentions: "mentions", x_get_users_timeline: "timeline", x_get_users_bookmarks: "bookmarks", x_get_users_posts: "timeline" }
 
 /**
  * The host's executors for X's reads, answering from `data` as X does: v2 JSON with `data`, `includes.users` and
@@ -109,7 +109,7 @@ function options(host = x(), more: Partial<EventsToolOptions> = {}, asserts: unk
 }
 const run = (host = x(), more: Partial<EventsToolOptions> = {}) => {
   const tool = eventsTool(options(host, more))
-  return async (input: EventsListInput) => (await tool.execute(input, context)).output
+  return async (input: EventsListInput) => (await tool.execute(input, context)).output as EventsListResult
 }
 
 /** Calls with each result's cursor until `more` is false, and the ids listed. */
@@ -233,7 +233,7 @@ describe("x_events_list", () => {
     expect(host.calls.filter((call) => call.tool === "x_get_users_mentions")).toHaveLength(2)
     expect(host.calls.filter((call) => call.tool === "x_get_users_timeline")).toHaveLength(2)
     const before = host.calls.filter((call) => call.tool === "x_get_users_bookmarks").length
-    await tool.execute({ cursor: first.output.cursor }, context)
+    await tool.execute({ cursor: (first.output as EventsListResult).cursor }, context)
     // The bookmarks walk, now with a known bookmark, also stops when the token comes back.
     expect(host.calls.filter((call) => call.tool === "x_get_users_bookmarks").length - before).toBe(2)
     expect(host.calls.length).toBeLessThan(20)
@@ -314,7 +314,7 @@ describe("x_events_list's feed sources", () => {
   test("a first listing looks the named account up by its handle, never asks who is signed in, and says what X returned", async () => {
     const host = x(fixture(), 10)
     const asserts: unknown[] = []
-    const result = (await eventsTool(options(host, {}, asserts)).execute({ source: "mentions", account: "@SamRivera", since: SINCE }, context)).output
+    const result = (await eventsTool(options(host, {}, asserts)).execute({ source: "mentions", account: "@SamRivera", since: SINCE }, context)).output as EventsListResult
     // The lookup, then one small read that checks X still lists a mention from before SINCE (it does: no gap), then the
     // mentions since SINCE.
     expect(host.calls.map((call) => call.tool)).toEqual(["x_get_users_by_username", "x_get_users_mentions", "x_get_users_mentions"])
@@ -705,6 +705,27 @@ describe("x_events_list's feed sources", () => {
     expect((await list({ source: "mentions", account: ACCOUNT, cursor: result.cursor })).events).toEqual([])
     // Source x keeps contract 1's answers: it lists the post.
     expect((await list({ since: SINCE })).events.map((event) => event.external_id)).toContain(data.mentions[0]!.id)
+  })
+})
+
+describe("list snapshots", () => {
+  test("reads the signed-in account's posts through the existing posts read and returns the list shape", async () => {
+    const host = x(fixture(), 50)
+    const output = await eventsTool(options(host)).execute({ list: "posts", source: "posts", account: "samrivera" }, context)
+    const snapshot = output.output as { data: { items: { id: string; text: string }[]; editable: boolean }; trust: string; account: string }
+    expect(snapshot.trust).toBe("untrusted")
+    expect(snapshot.account).toBe("samrivera")
+    expect(snapshot.data.editable).toBe(false)
+    expect(snapshot.data.items.map((item) => item.text)).toEqual(["A week later", "Notes from the launch", "Launch day", "Before since"])
+    expect(host.calls.map((call) => call.tool)).toEqual(["x_get_users_by_username", "x_get_users_posts"])
+  })
+
+  test("leaves out a bookmark whose text holds a secret", async () => {
+    const secret = post("2026-11-06T09:00:00Z", 0, "the files are at https://pilot:Wq7rZp4xLm9@files.example.net/share")
+    const host = x({ ...fixture(), bookmarks: [secret, post("2026-11-02T12:00:00Z", 0, "Worth keeping")] }, 50)
+    const output = await eventsTool(options(host)).execute({ list: "bookmarks", source: "bookmarks", account: "samrivera" }, context)
+    const snapshot = output.output as { data: { items: { text: string }[] } }
+    expect(snapshot.data.items.map((item) => item.text)).toEqual(["Worth keeping"])
   })
 })
 
