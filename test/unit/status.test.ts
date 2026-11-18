@@ -307,7 +307,7 @@ describe("buildStatus", () => {
     const status = buildStatus({ ...base, host: outside, problems: [problem] })
     expect(status.nextStep).toBe("Reinstall the plugin.")
     expect(formatStatus(status)).toContain(
-      `- OpenCode: 2.4.0 (untested; supported range >=2.2.3 <2.4.0). It is outside the supported range; the plugin runs because allowUntestedHost is true. If X misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0. ${problem}`,
+      `- OpenCode: 2.4.0 (untested; supported range >=2.2.3 <2.4.0). It is outside the supported range; the plugin runs because allowUntestedHost is true. If X misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2. ${problem}`,
     )
     expect(buildStatus({ ...base, host: outside }).nextStep).toBe(NOTHING_TO_DO)
     const inside = buildStatus({ ...base, host: checkHost("2.2.99", false) })

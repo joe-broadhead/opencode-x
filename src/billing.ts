@@ -140,7 +140,7 @@ const append = (result: Result, line: string) => {
 /**
  * Registers the cost line. A read's arguments pass to X unchanged, page size and next-page token included: X
  * validates them against its own limits. `execute.before` marks a Code Mode program; `execute.after` adds the line to
- * the result. Both are checked on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0. In Code
+ * the result. Both are checked on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2. In Code
  * Mode the inner calls are summed and one line goes on the `execute` result the model reads.
  */
 export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">, managed: () => boolean, owns = ownsXApp) {
