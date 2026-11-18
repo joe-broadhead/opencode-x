@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **List snapshots** `x.bookmarks.list` and `x.posts` (`output: "list"`). An app can bind them and render a list without knowing X. They call the existing `events_list` read (`get_users_bookmarks`, `get_users_posts`), not a second client. `x.bookmarks`, `x.mentions` and `x.timeline` stay events sources and are not renamed. No write is declared. The source-contract pin stays v0.2.0: `list` is already in that pin, and this change sends none of v0.3.0's new fields.
+
 ## [0.0.7] - 2026-11-18
 
 ### Added
