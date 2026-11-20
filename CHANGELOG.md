@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file. It follows
 ### Added
 
 - **List snapshots** `x.bookmarks.list` and `x.posts` (`output: "list"`), for an app and not for an agent. An app can bind them and render a list without knowing X: the tools RPC method `events_list` with `list` `bookmarks` or `posts` answers the contract's list output, through the same `get_users_bookmarks` and `get_users_posts` reads as the feeds, not a second client. Posts are listed newest first, once each, and a post whose text holds a secret is screened whole and left out before any of it is cut; the answer stays inside the source's 64 KB, dropping whole items from its end and marking `shortened: true` rather than cutting an item's bytes. The method declares both answers, so the host accepts the list; `x_events_list`, the model's tool, keeps its events-only input and output. `x.bookmarks`, `x.mentions` and `x.timeline` stay events sources and are not renamed. No write is declared, and this change sends none of v0.3.0's new fields.
+- **For jelly:** `sources` gains `x.bookmarks.list` and `x.posts`, so Jelly asks for consent again; `x.mentions`, `x.bookmarks` and `x.timeline` are unchanged.
 
 ### Changed
 

@@ -757,6 +757,18 @@ describe("list snapshots", () => {
     expect(cut.data.items[0].text).toBe(`${"y".repeat(199)}…`)
   })
 
+  test("50 maximal items fit inside the source's 64 KB, with three-byte text and ids", async () => {
+    // A post's id is X's (digits and underscores) and its text at most 200 characters, so 50 items cannot reach 64 KB;
+    // this pins the bound with the widest text the source keeps, and that the answer is not marked shortened.
+    const many = Array.from({ length: 50 }, (_, index) => post(new Date(Date.parse("2026-11-01T00:00:00Z") + index * 60_000).toISOString().replace(".000Z", "Z"), 0, "字".repeat(200)))
+    const host = x({ ...fixture(), bookmarks: many }, 100)
+    const output = await snapshot(host, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
+    expect(output.shortened).toBeUndefined()
+    expect(output.data.items).toHaveLength(50)
+    for (const item of output.data.items) expect([...item.text]).toHaveLength(200)
+    expect(new TextEncoder().encode(JSON.stringify(output)).length).toBeLessThanOrEqual(65_536)
+  })
+
   test("refuses a list it does not have and a list read with no account, before any X call", async () => {
     const host = x()
     await expect(eventsMethod(options(host)).run({ list: "timeline", account: "samrivera" }, call)).rejects.toThrow(/^SOURCE_UNKNOWN: /)
