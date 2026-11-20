@@ -581,7 +581,7 @@ is the shipped minimum; X may change an endpoint's scope, in which case the `403
 ## Sources
 
 This plugin's sources are declared in `package.json`'s `sources` key, by the shared source contract
-(`@we-the-rebel-alliance/source-contract` v0.2.0), so Memory, jelly and any other project read them the same way:
+(`@we-the-rebel-alliance/source-contract` v0.3.0), so Memory, jelly and any other project read them the same way:
 
 | Source | Kind | Reads | `events_list` source | X reads | Price units |
 | --- | --- | --- | --- | --- | --- |
@@ -595,9 +595,9 @@ Each also names `get_users_by_username` (a first listing's account lookup, and a
 identity read) among its operations. All five are billed (`cost.class: "billed"`) at X's standard rates from this
 plugin's price table (`src/prices.ts`), and a test keeps each `usd` equal to its row there. The declared post price,
 $0.005, is the most a post costs: mentions, bookmarks and the account's own posts cost $0.001 a post when you own the X app (`ownsXApp`), but
-the Owned Read rate is not declared: source-contract v0.2.0 can state it (a price's `conditions` and `min`), but
+the Owned Read rate is not declared: v0.2.0 and later state it (a price's `conditions` and `min`), but
 Memory and jelly on v0.1.x refuse those keys, so it waits until both are on v0.2.0. A probe costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` and `x.bookmarks.list` are private; the other
-sources read public posts. `x.bookmarks` is not renamed: it stays the events feed. `x.bookmarks.list` is that same read as the contract's `list` output, so an app can render it without knowing X. `x.posts` is the signed-in account's own posts, the same way. A list snapshot is read with `events_list` and `{ "list": "bookmarks" }` or `{ "list": "posts" }`, plus `account`. It does not replace the events feeds.
+sources read public posts. `x.bookmarks` is not renamed: it stays the events feed. `x.bookmarks.list` is that same read as the contract's `list` output, so an app can render it without knowing X. `x.posts` is the signed-in account's own posts, the same way. A list snapshot is read through the tools RPC method `events_list` with `{ "list": "bookmarks" }` or `{ "list": "posts" }`, plus `account`; the model's tool `x_events_list` takes no `list` and never answers a list. It does not replace the events feeds. Posts are listed newest first, once each; a post whose text holds a secret is screened whole and left out before any of it is cut; the answer stays inside the source's 64 KB, and whole items would be dropped from its end (marked `shortened: true`) rather than cut. The method declares both answers, the events page and the list, so the host accepts the list.
 
 A feed the `events.feeds` option leaves out is `SOURCE_DISABLED`, which is how you turn a source off: the home
 timeline is off unless you name it.

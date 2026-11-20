@@ -5,7 +5,7 @@
 import { describe, expect, test } from "bun:test"
 import { decodeBoundCursor, encodeBoundCursor } from "@we-the-rebel-alliance/source-contract/cursor"
 import { createHash } from "node:crypto"
-import { EVENTS_ACTION, PACKAGE, PROBE_ACTION, eventsMethod, eventsTool, meOf, postEvent, postsPage, probeMethod, type EventsToolOptions, type Feed } from "../../src/events.js"
+import { EVENTS_ACTION, EVENTS_INPUT, EVENTS_METHOD_INPUT, EVENTS_METHOD_OUTPUT, EVENTS_OUTPUT, PACKAGE, PROBE_ACTION, eventsMethod, eventsTool, meOf, postEvent, postsPage, probeMethod, type EventsToolOptions, type Feed } from "../../src/events.js"
 import { assertEventsListConformance, encodeCursor, resultProblems, type EventsListInput, type EventsListResult } from "@we-the-rebel-alliance/source-contract/events"
 import type { ToolCall } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import type { Status } from "../../src/status.js"
@@ -709,23 +709,59 @@ describe("x_events_list's feed sources", () => {
 })
 
 describe("list snapshots", () => {
+  const call: ToolCall = { sessionID: "ses_1", agent: "build", messageID: "msg_1", id: "call_1", signal: new AbortController().signal, progress: async () => {} }
+  const snapshot = async (host: ReturnType<typeof x>, input: Record<string, unknown>) => (await eventsMethod(options(host)).run(input, call)) as Record<string, any>
+
+  test("the model's tool has no list input and the tools RPC method does; the tool's output is the events page", () => {
+    const opts = options()
+    expect(eventsTool(opts).input).toBe(EVENTS_INPUT)
+    expect("list" in (EVENTS_INPUT.properties as Record<string, unknown>)).toBe(false)
+    const method = eventsMethod(opts)
+    expect(method.input).toBe(EVENTS_METHOD_INPUT)
+    expect((EVENTS_METHOD_INPUT.properties as Record<string, unknown>)["list"]).toMatchObject({ enum: ["bookmarks", "posts"] })
+    expect(method.output).toBe(EVENTS_METHOD_OUTPUT)
+    expect((EVENTS_METHOD_OUTPUT.anyOf as unknown[])[0]).toBe(EVENTS_OUTPUT)
+  })
+
   test("reads the signed-in account's posts through the existing posts read and returns the list shape", async () => {
     const host = x(fixture(), 50)
-    const output = await eventsTool(options(host)).execute({ list: "posts", source: "posts", account: "samrivera" }, context)
-    const snapshot = output.output as { data: { items: { id: string; text: string }[]; editable: boolean }; trust: string; account: string }
-    expect(snapshot.trust).toBe("untrusted")
-    expect(snapshot.account).toBe("samrivera")
-    expect(snapshot.data.editable).toBe(false)
-    expect(snapshot.data.items.map((item) => item.text)).toEqual(["A week later", "Notes from the launch", "Launch day", "Before since"])
-    expect(host.calls.map((call) => call.tool)).toEqual(["x_get_users_by_username", "x_get_users_posts"])
+    const output = await snapshot(host, { list: "posts", source: "posts", account: "samrivera" })
+    expect(output.trust).toBe("untrusted")
+    expect(output.account).toBe("samrivera")
+    expect(output.source).toBe("posts")
+    expect(output.data.editable).toBe(false)
+    expect(output.data.items.map((item: { text: string }) => item.text)).toEqual(["A week later", "Notes from the launch", "Launch day", "Before since"])
+    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_by_username", "x_get_users_posts"])
   })
 
   test("leaves out a bookmark whose text holds a secret", async () => {
     const secret = post("2026-11-06T09:00:00Z", 0, "the files are at https://pilot:Wq7rZp4xLm9@files.example.net/share")
     const host = x({ ...fixture(), bookmarks: [secret, post("2026-11-02T12:00:00Z", 0, "Worth keeping")] }, 50)
-    const output = await eventsTool(options(host)).execute({ list: "bookmarks", source: "bookmarks", account: "samrivera" }, context)
-    const snapshot = output.output as { data: { items: { text: string }[] } }
-    expect(snapshot.data.items.map((item) => item.text)).toEqual(["Worth keeping"])
+    const output = await snapshot(host, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
+    expect(output.data.items.map((item: { text: string }) => item.text)).toEqual(["Worth keeping"])
+  })
+
+  test("screens the whole text before it cuts, sorts newest first and lists a post once", async () => {
+    // 195 characters, then a secret that starts at 196: cut first, the answer would hold " password=hu".
+    const secret = post("2026-11-06T09:00:00Z", 0, "x".repeat(195) + " password=hunter2 and more")
+    const older = post("2026-11-02T12:00:00Z", 0, "Older post")
+    const newest = post("2026-11-07T12:00:00Z", 0, "Newest post")
+    const host = x({ ...fixture(), bookmarks: [older, secret, newest, newest] }, 50)
+    const output = await snapshot(host, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
+    expect(output.data.items.map((item: { text: string }) => item.text)).toEqual(["Newest post", "Older post"])
+    // A long text without a secret is cut to 200 characters.
+    const long = post("2026-11-08T12:00:00Z", 0, "y".repeat(240))
+    const cutHost = x({ ...fixture(), bookmarks: [long] }, 50)
+    const cut = await snapshot(cutHost, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
+    // `cut` keeps 200 characters, an ellipsis in the last when there is more.
+    expect(cut.data.items[0].text).toBe(`${"y".repeat(199)}…`)
+  })
+
+  test("refuses a list it does not have and a list read with no account, before any X call", async () => {
+    const host = x()
+    await expect(eventsMethod(options(host)).run({ list: "timeline", account: "samrivera" }, call)).rejects.toThrow(/^SOURCE_UNKNOWN: /)
+    await expect(eventsMethod(options(host)).run({ list: "posts" }, call)).rejects.toThrow(/^INPUT_INVALID: A list of X's posts names the account it reads/)
+    expect(host.calls).toEqual([])
   })
 })
 

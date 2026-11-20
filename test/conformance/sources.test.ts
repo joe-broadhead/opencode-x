@@ -247,8 +247,8 @@ describe("the source contract's conformance kit", () => {
       })
       reports.push(report)
       expect(report.problems).toEqual([])
-      // v0.2 runs billed-cost only for events, and does not mark it inapplicable for a billed snapshot, so the
-      // report stays incomplete. The pin stays v0.2.0; the check has nothing to fail.
+      // v0.2.0 and v0.3.0 run billed-cost only for events, and do not mark it inapplicable for a billed snapshot, so
+      // the report stays incomplete. The check has nothing to fail.
       expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual(["billed-cost"])
     }
   })

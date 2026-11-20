@@ -144,7 +144,7 @@ script's result carries a cost line on every method X prices, and says the price
 ### Sources
 
 X's mentions, bookmarks and home timeline are sources under the shared source contract, declared in `package.json`
-(`x.mentions`, `x.bookmarks`, `x.timeline`), so Memory and other projects read them the same way. `x.bookmarks.list` and `x.posts` are the same reads as the contract's `list` output, for an app that renders a list and does not know X. `x.bookmarks` is not renamed. `x_events_list` is
+(`x.mentions`, `x.bookmarks`, `x.timeline`), so Memory and other projects read them the same way. `x.bookmarks.list` and `x.posts` are the same reads as the contract's `list` output, for an app that renders a list and does not know X; they are read through the tools RPC method, and the model's tool takes no `list`. `x.bookmarks` is not renamed. `x_events_list` is
 for their collectors, not for answering questions: it lists, since a cursor, one feed (or, as source `x`, every feed
 `events.feeds` names) as normalised events, oldest first, each with its author's handle and link. The tools RPC's
 `probe` says who is signed in. Every X call is billed, so one call makes at most `events.maxCalls` reads (4 by default,

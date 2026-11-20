@@ -8,7 +8,11 @@ All notable changes to this project are documented in this file. It follows
 
 ### Added
 
-- **List snapshots** `x.bookmarks.list` and `x.posts` (`output: "list"`). An app can bind them and render a list without knowing X. They call the existing `events_list` read (`get_users_bookmarks`, `get_users_posts`), not a second client. `x.bookmarks`, `x.mentions` and `x.timeline` stay events sources and are not renamed. No write is declared. The source-contract pin stays v0.2.0: `list` is already in that pin, and this change sends none of v0.3.0's new fields.
+- **List snapshots** `x.bookmarks.list` and `x.posts` (`output: "list"`), for an app and not for an agent. An app can bind them and render a list without knowing X: the tools RPC method `events_list` with `list` `bookmarks` or `posts` answers the contract's list output, through the same `get_users_bookmarks` and `get_users_posts` reads as the feeds, not a second client. Posts are listed newest first, once each, and a post whose text holds a secret is screened whole and left out before any of it is cut; the answer stays inside the source's 64 KB, dropping whole items from its end and marking `shortened: true` rather than cutting an item's bytes. The method declares both answers, so the host accepts the list; `x_events_list`, the model's tool, keeps its events-only input and output. `x.bookmarks`, `x.mentions` and `x.timeline` stay events sources and are not renamed. No write is declared, and this change sends none of v0.3.0's new fields.
+
+### Changed
+
+- The source contract is `@we-the-rebel-alliance/source-contract` v0.3.0, pinned as `github:we-the-rebel-alliance/source-contract#v0.3.0` (commit `2fd55cd`) and bundled into `dist/index.js`, still with no runtime dependency. `x.mentions`, `x.bookmarks`, `x.timeline`, `x.bookmarks.list` and `x.posts` declare and send none of v0.3.0's new keys (`facts`, `hints`, `routines`, actor `kind`, `sections`/`parts`), which a consumer still on v0.2.0 refuses; their declarations and pages are unchanged, and a pin alone sends nothing. The conformance test states why each new check does not apply to a page here.
 
 ## [0.0.7] - 2026-11-18
 
