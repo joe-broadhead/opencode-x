@@ -367,6 +367,22 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(toolCalls(from)).toEqual(["get_users_me"])
   })
 
+  test("a list read on the packed plugin answers the contract's list shape, through the handle lookup and the feed", async () => {
+    const from = fake.calls.length
+    const result = await call("build", "events_list", { source: "bookmarks", list: "bookmarks", account: "samrivera" })
+    expect(result).toMatchObject({
+      value: {
+        source: "bookmarks",
+        account: "samrivera",
+        data: { items: [{ id: "1900000000000000001", text: "A saved post" }], editable: false },
+        trust: "untrusted",
+      },
+    })
+    expect(result.value.events).toBeUndefined()
+    // The named handle is looked up, then the feed read: no identity read, as the v0.1.0 declaration says.
+    expect(toolCalls(from)).toEqual(["get_users_by_username", "get_users_bookmarks"])
+  })
+
   test("probe runs the packed plugin's own spec, reads who is signed in through OpenCode, and reports an answer it cannot read", async () => {
     const from = fake.calls.length
     const result = await call("build", "probe", { source: "mentions" })

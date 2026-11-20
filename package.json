@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-x",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "private": true,
   "description": "Unofficial OpenCode plugin for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, post, and draft long-form Articles, through X's official MCP server",
   "keywords": [
@@ -221,6 +221,108 @@
         "urlHosts": [
           "x.com"
         ]
+      },
+      {
+        "id": "x.bookmarks.list",
+        "kind": "snapshot",
+        "tool": "events_list",
+        "input": {
+          "source": "bookmarks",
+          "list": "bookmarks"
+        },
+        "output": "list",
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "tool": "x_events_list",
+          "operations": [
+            "get_users_me",
+            "get_users_by_username",
+            "get_users_bookmarks"
+          ],
+          "identity": [
+            "get_users_me"
+          ]
+        },
+        "private": true,
+        "cost": {
+          "class": "billed",
+          "units": [
+            {
+              "per": "post",
+              "usd": 0.005
+            },
+            {
+              "per": "author",
+              "usd": 0.01
+            },
+            {
+              "per": "user",
+              "usd": 0.01
+            }
+          ],
+          "probe": {
+            "per": "user",
+            "usd": 0.01
+          }
+        },
+        "maxAgeSec": 3600,
+        "maxBytes": 65536,
+        "urlHosts": [
+          "x.com"
+        ]
+      },
+      {
+        "id": "x.posts",
+        "kind": "snapshot",
+        "tool": "events_list",
+        "input": {
+          "source": "posts",
+          "list": "posts"
+        },
+        "output": "list",
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "tool": "x_events_list",
+          "operations": [
+            "get_users_me",
+            "get_users_by_username",
+            "get_users_posts"
+          ],
+          "identity": [
+            "get_users_me"
+          ]
+        },
+        "private": false,
+        "cost": {
+          "class": "billed",
+          "units": [
+            {
+              "per": "post",
+              "usd": 0.005
+            },
+            {
+              "per": "author",
+              "usd": 0.01
+            },
+            {
+              "per": "user",
+              "usd": 0.01
+            }
+          ],
+          "probe": {
+            "per": "user",
+            "usd": 0.01
+          }
+        },
+        "maxAgeSec": 3600,
+        "maxBytes": 65536,
+        "urlHosts": [
+          "x.com"
+        ]
       }
     ]
   },
@@ -244,7 +346,7 @@
     "@opentui/solid": "0.8.0",
     "@types/bun": "1.4.4",
     "@types/node": "24.19.2",
-    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.2.0",
+    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.3.0",
     "esbuild": "0.28.2",
     "solid-js": "1.9.17",
     "typescript": "5.9.3"

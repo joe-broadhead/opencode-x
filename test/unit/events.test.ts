@@ -5,7 +5,7 @@
 import { describe, expect, test } from "bun:test"
 import { decodeBoundCursor, encodeBoundCursor } from "@we-the-rebel-alliance/source-contract/cursor"
 import { createHash } from "node:crypto"
-import { EVENTS_ACTION, PACKAGE, PROBE_ACTION, eventsMethod, eventsTool, meOf, postEvent, postsPage, probeMethod, type EventsToolOptions, type Feed } from "../../src/events.js"
+import { EVENTS_ACTION, EVENTS_INPUT, EVENTS_METHOD_INPUT, EVENTS_METHOD_OUTPUT, EVENTS_OUTPUT, PACKAGE, PROBE_ACTION, eventsMethod, eventsTool, meOf, postEvent, postsPage, probeMethod, xList, type EventsToolOptions, type Feed } from "../../src/events.js"
 import { assertEventsListConformance, encodeCursor, resultProblems, type EventsListInput, type EventsListResult } from "@we-the-rebel-alliance/source-contract/events"
 import type { ToolCall } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import type { Status } from "../../src/status.js"
@@ -51,7 +51,7 @@ const FEEDS: Feed[] = ["mentions", "timeline", "bookmarks"]
 // A first listing lists the posts it notes that are from `since` on, so the fixture's one such bookmark comes last.
 const LISTED = [...fixture().mentions.slice(1), ...fixture().timeline.slice(1)].map((item) => item.id).concat(`bookmark:${fixture().bookmarks[0]!.id}`)
 
-const TOOL: Record<string, keyof ReturnType<typeof fixture>> = { x_get_users_mentions: "mentions", x_get_users_timeline: "timeline", x_get_users_bookmarks: "bookmarks" }
+const TOOL: Record<string, keyof ReturnType<typeof fixture>> = { x_get_users_mentions: "mentions", x_get_users_timeline: "timeline", x_get_users_bookmarks: "bookmarks", x_get_users_posts: "timeline" }
 
 /**
  * The host's executors for X's reads, answering from `data` as X does: v2 JSON with `data`, `includes.users` and
@@ -121,7 +121,7 @@ function options(host = x(), more: Partial<EventsToolOptions> = {}, asserts: unk
 }
 const run = (host = x(), more: Partial<EventsToolOptions> = {}) => {
   const tool = eventsTool(options(host, more))
-  return async (input: EventsListInput) => (await tool.execute(input, context)).output
+  return async (input: EventsListInput) => (await tool.execute(input, context)).output as EventsListResult
 }
 
 /** Calls with each result's cursor until `more` is false, and the ids listed. */
@@ -249,7 +249,7 @@ describe("x_events_list", () => {
     expect(host.calls.filter((call) => call.tool === "x_get_users_mentions")).toHaveLength(2)
     expect(host.calls.filter((call) => call.tool === "x_get_users_timeline")).toHaveLength(2)
     const before = host.calls.filter((call) => call.tool === "x_get_users_bookmarks").length
-    await tool.execute({ cursor: first.output.cursor }, context)
+    await tool.execute({ cursor: (first.output as EventsListResult).cursor }, context)
     // The bookmarks walk, now with a known bookmark, also stops when the token comes back.
     expect(host.calls.filter((call) => call.tool === "x_get_users_bookmarks").length - before).toBe(2)
     expect(host.calls.length).toBeLessThan(20)
@@ -428,7 +428,7 @@ describe("x_events_list's feed sources", () => {
   test("a first listing looks the named account up by its handle, never asks who is signed in, and says what X returned", async () => {
     const host = x(fixture(), 10)
     const asserts: unknown[] = []
-    const result = (await eventsTool(options(host, {}, asserts)).execute({ source: "mentions", account: "@SamRivera", since: SINCE }, context)).output
+    const result = (await eventsTool(options(host, {}, asserts)).execute({ source: "mentions", account: "@SamRivera", since: SINCE }, context)).output as EventsListResult
     // The lookup, then one small read that checks X still lists a mention from before SINCE (it does: no gap), then the
     // mentions since SINCE.
     expect(host.calls.map((call) => call.tool)).toEqual(["x_get_users_by_username", "x_get_users_mentions", "x_get_users_mentions"])
@@ -819,6 +819,164 @@ describe("x_events_list's feed sources", () => {
     expect((await list({ source: "mentions", account: ACCOUNT, cursor: result.cursor })).events).toEqual([])
     // Source x keeps contract 1's answers: it lists the post.
     expect((await list({ since: SINCE })).events.map((event) => event.external_id)).toContain(data.mentions[0]!.id)
+  })
+})
+
+describe("list snapshots", () => {
+  const call: ToolCall = { sessionID: "ses_1", agent: "build", messageID: "msg_1", id: "call_1", signal: new AbortController().signal, progress: async () => {} }
+  const snapshot = async (host: ReturnType<typeof x>, input: Record<string, unknown>) => (await eventsMethod(options(host)).run(input, call)) as Record<string, any>
+
+  test("the model's tool has no list input and the tools RPC method does; the tool's output is the events page", () => {
+    const opts = options()
+    expect(eventsTool(opts).input).toBe(EVENTS_INPUT)
+    expect("list" in (EVENTS_INPUT.properties as Record<string, unknown>)).toBe(false)
+    const method = eventsMethod(opts)
+    expect(method.input).toBe(EVENTS_METHOD_INPUT)
+    expect((EVENTS_METHOD_INPUT.properties as Record<string, unknown>)["list"]).toMatchObject({ enum: ["bookmarks", "posts"] })
+    expect(method.output).toBe(EVENTS_METHOD_OUTPUT)
+    expect((EVENTS_METHOD_OUTPUT.anyOf as unknown[])[0]).toBe(EVENTS_OUTPUT)
+  })
+
+  test("reads the signed-in account's posts through the existing posts read and returns the list shape", async () => {
+    const host = x(fixture(), 50)
+    const output = await snapshot(host, { list: "posts", source: "posts", account: "samrivera" })
+    expect(output.trust).toBe("untrusted")
+    expect(output.account).toBe("samrivera")
+    expect(output.source).toBe("posts")
+    expect(output.data.editable).toBe(false)
+    expect(output.data.items.map((item: { text: string }) => item.text)).toEqual(["A week later", "Notes from the launch", "Launch day", "Before since"])
+    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_by_username", "x_get_users_posts"])
+  })
+
+  test("leaves out a bookmark whose text holds a secret", async () => {
+    const secret = post("2026-11-06T09:00:00Z", 0, "the files are at https://pilot:Wq7rZp4xLm9@files.example.net/share")
+    const host = x({ ...fixture(), bookmarks: [secret, post("2026-11-02T12:00:00Z", 0, "Worth keeping")] }, 50)
+    const output = await snapshot(host, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
+    expect(output.data.items.map((item: { text: string }) => item.text)).toEqual(["Worth keeping"])
+  })
+
+  test("screens the whole text before it cuts, sorts newest first and lists a post once", async () => {
+    // 195 characters, then a secret that starts at 196: cut first, the answer would hold " password=hu".
+    const secret = post("2026-11-06T09:00:00Z", 0, "x".repeat(195) + " password=hunter2 and more")
+    const older = post("2026-11-02T12:00:00Z", 0, "Older post")
+    const newest = post("2026-11-07T12:00:00Z", 0, "Newest post")
+    const host = x({ ...fixture(), bookmarks: [older, secret, newest, newest] }, 50)
+    const output = await snapshot(host, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
+    expect(output.data.items.map((item: { text: string }) => item.text)).toEqual(["Newest post", "Older post"])
+    // A long text without a secret is cut to 200 characters.
+    const long = post("2026-11-08T12:00:00Z", 0, "y".repeat(240))
+    const cutHost = x({ ...fixture(), bookmarks: [long] }, 50)
+    const cut = await snapshot(cutHost, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
+    // `cut` keeps 200 characters, an ellipsis in the last when there is more.
+    expect(cut.data.items[0].text).toBe(`${"y".repeat(199)}…`)
+  })
+
+  test("50 maximal items fit inside the source's 64 KB, with three-byte text and ids", async () => {
+    // A post's id is X's (digits and underscores) and its text at most 200 characters, so 50 items cannot reach 64 KB;
+    // this pins the bound with the widest text the source keeps, and that the answer is not marked shortened.
+    const many = Array.from({ length: 50 }, (_, index) => post(new Date(Date.parse("2026-11-01T00:00:00Z") + index * 60_000).toISOString().replace(".000Z", "Z"), 0, "字".repeat(200)))
+    const host = x({ ...fixture(), bookmarks: many }, 100)
+    const output = await snapshot(host, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
+    expect(output.shortened).toBeUndefined()
+    expect(output.data.items).toHaveLength(50)
+    for (const item of output.data.items) expect([...item.text]).toHaveLength(200)
+    expect(new TextEncoder().encode(JSON.stringify(output)).length).toBeLessThanOrEqual(65_536)
+  })
+
+  test("a list asks for no author expansion: its items name no author, so X bills none", async () => {
+    const host = x(fixture(), 50)
+    const output = await snapshot(host, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
+    const read = host.calls.filter((call) => call.tool === "x_get_users_bookmarks")
+    expect(read).toHaveLength(1)
+    expect(read[0]!.input).toEqual({ id: ME, max_results: 50, "post.fields": "created_at,text,note_tweet" })
+    expect(read[0]!.billed).toEqual({ posts: fixture().bookmarks.length, users: 0 })
+    expect(output.cost.units).toContainEqual({ per: "author", count: 0 })
+    const posts = await snapshot(host, { list: "posts", source: "posts", account: "samrivera" })
+    expect(posts.cost.units).toContainEqual({ per: "author", count: 0 })
+  })
+
+  test("a list of a feed the user turned off is off, before any X call; posts has no plugin switch", async () => {
+    const host = x()
+    const off = options(host, { feeds: ["mentions"] })
+    await expect(eventsMethod(off).run({ list: "bookmarks", source: "bookmarks", account: "samrivera" }, call)).rejects.toThrow(/^SOURCE_DISABLED: /)
+    expect(host.calls).toEqual([])
+    // `posts` is not an events feed: events.feeds does not turn it off, and the consumer's consent is what does.
+    const posts = await eventsMethod(options(host, { feeds: ["mentions"] })).run({ list: "posts", source: "posts", account: "samrivera" }, call)
+    expect((posts as { source: string }).source).toBe("posts")
+  })
+
+  test("names the handle it was asked for and does not read who is signed in: the v0.1.0 gap", async () => {
+    // source-contract v0.1.0, which Jelly pins, cannot declare a content read that also reads the identity, so the list
+    // looks up the named handle (`get_users_by_username`) and never calls `get_users_me`. A later sign-in change is not
+    // detected here; docs/configuration.md and the CHANGELOG say so and when it will be restored.
+    const host = x()
+    const output = (await eventsMethod(options(host)).run({ list: "posts", source: "posts", account: "samrivera" }, call)) as { account: string }
+    expect(output.account).toBe("samrivera")
+    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_by_username", "x_get_users_posts"])
+    expect(host.calls.some((entry) => entry.tool === "x_get_users_me")).toBe(false)
+  })
+
+  test("the 50 cap holds when X answers more than asked, newest first", async () => {
+    // A read that answers 60 posts in its own order: the list sorts them newest first and keeps the newest 50.
+    const many = Array.from({ length: 60 }, (_, index) => post(new Date(Date.parse("2026-11-01T00:00:00Z") + index * 60_000).toISOString().replace(".000Z", "Z"), 0, `Post ${index}`))
+    const base = x({ ...fixture(), bookmarks: [] }, 100)
+    const read = async (tool: string, input: Record<string, unknown>) => {
+      base.calls.push({ tool, input })
+      if (tool === "get_users_by_username") return { output: { data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }, content: [] }
+      // Oldest first, so a cap before the sort would keep the oldest 50, not the newest.
+      if (tool === "get_users_bookmarks") return { output: { data: many, meta: { result_count: 60 } }, content: [] }
+      throw new Error(`unexpected ${tool}`)
+    }
+    const output = (await xList(read, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW)) as { data: { items: { text: string }[] } }
+    expect(output.data.items).toHaveLength(50)
+    expect(output.data.items[0]!.text).toBe("Post 59")
+    expect(output.data.items.at(-1)!.text).toBe("Post 10")
+  })
+
+  test("drops whole items and says shortened when the answer cannot fit its bytes", async () => {
+    // A test seam: the real cap is 64 KB and 50 items cannot reach it, so a lowered one shows the drop loop works.
+    const many = Array.from({ length: 10 }, (_, index) => post(new Date(Date.parse("2026-11-01T00:00:00Z") + index * 60_000).toISOString().replace(".000Z", "Z"), 0, "字".repeat(200)))
+    const base = x({ ...fixture(), bookmarks: [] }, 100)
+    const read = async (tool: string, input: Record<string, unknown>) => {
+      base.calls.push({ tool, input })
+      if (tool === "get_users_by_username") return { output: { data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }, content: [] }
+      if (tool === "get_users_bookmarks") return { output: { data: many.slice().reverse(), meta: { result_count: 10 } }, content: [] }
+      throw new Error(`unexpected ${tool}`)
+    }
+    const output = (await xList(read, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW, 4_000)) as { shortened?: boolean; data: { items: { text: string }[] } }
+    expect(output.shortened).toBe(true)
+    expect(output.data.items.length).toBeGreaterThan(0)
+    expect(output.data.items.length).toBeLessThan(10)
+    for (const item of output.data.items) expect([...item.text]).toHaveLength(200)
+    expect(new TextEncoder().encode(JSON.stringify(output)).length).toBeLessThanOrEqual(4_000)
+  })
+
+  test("refuses a lookup that answers a user other than the handle asked for, before any feed read", async () => {
+    // The username check is the only guard that the id the feed is read with belongs to the handle asked for.
+    const base = x({ ...fixture(), bookmarks: [] }, 100)
+    const read = async (tool: string, input: Record<string, unknown>) => {
+      base.calls.push({ tool, input })
+      if (tool === "get_users_by_username") return { output: { data: { id: ME, username: "SomeoneElse", name: "Someone Else" } }, content: [] }
+      throw new Error(`unexpected ${tool}`)
+    }
+    await expect(xList(read, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW)).rejects.toThrow(/^UPSTREAM_UNREADABLE: X's get_users_by_username answered in a shape events_list does not read/)
+    expect(base.calls.map((entry) => entry.tool)).toEqual(["get_users_by_username"])
+    // An answer that is X's own error is refused as UPSTREAM_ERROR, with no feed read either.
+    const empty = x({ ...fixture(), bookmarks: [] }, 100)
+    const none = async (tool: string, input: Record<string, unknown>) => {
+      empty.calls.push({ tool, input })
+      if (tool === "get_users_by_username") return { output: { errors: [{ title: "Not Found Error", detail: "Could not find user." }] }, content: [] }
+      throw new Error(`unexpected ${tool}`)
+    }
+    await expect(xList(none, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW)).rejects.toThrow(/^UPSTREAM_ERROR: /)
+    expect(empty.calls.map((entry) => entry.tool)).toEqual(["get_users_by_username"])
+  })
+
+  test("refuses a list it does not have and a list read with no account, before any X call", async () => {
+    const host = x()
+    await expect(eventsMethod(options(host)).run({ list: "timeline", account: "samrivera" }, call)).rejects.toThrow(/^SOURCE_UNKNOWN: /)
+    await expect(eventsMethod(options(host)).run({ list: "posts" }, call)).rejects.toThrow(/^INPUT_INVALID: A list of X's posts names the account it reads/)
+    expect(host.calls).toEqual([])
   })
 })
 

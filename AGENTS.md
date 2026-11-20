@@ -77,17 +77,19 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   recolour, redraw or combine it. It uses only the drawing elements Jelly's icon cleaner keeps, and no `<title>`: the
   `jelly.title` is the accessible name.
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
-- **The source contract.** `@we-the-rebel-alliance/source-contract`, pinned to its tag `v0.2.0` (the commit in
+- **The source contract.** `@we-the-rebel-alliance/source-contract`, pinned to its tag `v0.3.0` (the commit in
   `package-lock.json`), is a devDependency that the build bundles into `dist/index.js`, so an install runs no build and
   has no runtime dependency. Import only its `tools-rpc`, `events` and `cursor` entries from `src/`; the tests also use
-  its `conformance` and `descriptor`. `package.json`'s top-level `sources` declares X's three sources, and the
+  its `conformance` and `descriptor`. `package.json`'s top-level `sources` declares X's three events sources and the list snapshots `x.bookmarks.list` and `x.posts` (the tools RPC method's, never the model tool's), and the
   `conformance` stage runs the kit over each, on recorded invented X answers, and writes
   `reports/conformance-report.json` (`npm run conformance`, which a release runs; complete, with the kit's `atomicPages`
   and its reason). X keeps only each feed's most recent posts, so never declare `noExpiry`: a feed source answers `gap`
   (`expired` when X no longer lists as far back as the newest post the cursor listed, `window-truncated` when a first
-  listing starts further back than X lists), once per read. A deleted post is not lost history and makes no gap. Declare or send none of v0.2.0's new keys (`removals[]`, `owner.verified`,
-  `permission.readsIdentity`, a price's `conditions` and `min`, among others) until Memory and jelly are on v0.2.0. A feed source never asserts `x_get_users_me`: that identity read is `probe`'s
-  alone. Every `usd` in `sources` is the standard rate in `src/prices.ts` (a test keeps them equal); the `ownsXApp`
+  listing starts further back than X lists), once per read. A deleted post is not lost history and makes no gap. Declare or send none of v0.3.0's new keys (`facts`, `hints`, `routines`, actor `kind`, `sections`/`parts`; before them v0.2.0's `removals[]`, `owner.verified`,
+  `permission.readsIdentity`, a price's `conditions` and `min`, among others) until Memory and jelly are on 0.3.0. No content read asserts `x_get_users_me`, the identity read: it is `probe`'s
+  alone. The list snapshots look the named handle up with `get_users_by_username`, as a feed's first listing does, so
+  they cannot detect a later change of X sign-in while the descriptor stays source-contract v0.1.0 (Jelly's pin, whose
+  schema has no `readsIdentity`). Restore the check with `readsIdentity` once Jelly reads v0.2 or later. Every `usd` in `sources` is the standard rate in `src/prices.ts` (a test keeps them equal); the `ownsXApp`
   Owned Read rate waits for those consumers, so $0.005 stays the most a post costs.
 - **The tools RPC (v2.3).** The package's `tools-rpc` is the transport every plugin shares; X's part is
   `src/tools-rpc.ts` (the plugin value, the method table, the shapers and next steps). `scripts/check-copies.mjs`

@@ -4,7 +4,7 @@ Every option is optional. The smallest setup is one entry in `plugins`, then the
 
 ```json
 {
-  "plugins": ["github:joe-broadhead/opencode-x#v0.0.7"]
+  "plugins": ["github:joe-broadhead/opencode-x#v0.0.8"]
 }
 ```
 
@@ -14,7 +14,7 @@ To set options, use the object form:
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.7",
+      "package": "github:joe-broadhead/opencode-x#v0.0.8",
       "options": {
         "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" }
       }
@@ -169,7 +169,7 @@ no secret, and no per-member app.
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.7",
+      "package": "github:joe-broadhead/opencode-x#v0.0.8",
       "options": { "oauth": { "client_id": "YOUR_TEAM_APP_CLIENT_ID" } }
     }
   ]
@@ -581,24 +581,27 @@ is the shipped minimum; X may change an endpoint's scope, in which case the `403
 ## Sources
 
 This plugin's sources are declared in `package.json`'s `sources` key, by the shared source contract
-(`@we-the-rebel-alliance/source-contract` v0.2.0), so Memory, jelly and any other project read them the same way:
+(`@we-the-rebel-alliance/source-contract` v0.3.0), so Memory, jelly and any other project read them the same way:
 
 | Source | Kind | Reads | `events_list` source | X reads | Price units |
 | --- | --- | --- | --- | --- | --- |
 | `x.mentions` | events | `message` | `mentions` | `get_users_mentions` | post $0.005, author $0.01, user $0.01 |
 | `x.bookmarks` | events | `bookmark` | `bookmarks` | `get_users_bookmarks` | post $0.005, author $0.01, user $0.01 |
 | `x.timeline` | events | `message` | `timeline` | `get_users_timeline` | post $0.005, author $0.01, user $0.01 |
+| `x.bookmarks.list` | snapshot | `list` | `bookmarks` | `get_users_bookmarks` | post $0.005, author $0.01, user $0.01 |
+| `x.posts` | snapshot | `list` | `posts` | `get_users_posts` | post $0.005, author $0.01, user $0.01 |
 
-Each also names `get_users_by_username` (a first listing's account lookup) and `get_users_me` (the probe's, its one
-identity read) among its operations. All three are billed (`cost.class: "billed"`) at X's standard rates from this
+Each also names `get_users_by_username` (a first listing's account lookup, and a list snapshot's) and `get_users_me` (the probe's, its one
+identity read) among its operations. All five are billed (`cost.class: "billed"`) at X's standard rates from this
 plugin's price table (`src/prices.ts`), and a test keeps each `usd` equal to its row there. The declared post price,
-$0.005, is the most a post costs: mentions and bookmarks cost $0.001 a post when you own the X app (`ownsXApp`), but
-the Owned Read rate is not declared: source-contract v0.2.0 can state it (a price's `conditions` and `min`), but
-Memory and jelly on v0.1.x refuse those keys, so it waits until both are on v0.2.0. A probe costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` is private; the other two
-read public posts.
+$0.005, is the most a post costs: mentions, bookmarks and the account's own posts cost $0.001 a post when you own the X app (`ownsXApp`), but
+the Owned Read rate is not declared: v0.2.0 and later state it (a price's `conditions` and `min`), but
+Memory and jelly on v0.1.x refuse those keys, so it waits until both are on v0.2.0. A probe costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` and `x.bookmarks.list` are private; the other
+sources read public posts. `x.bookmarks` is not renamed: it stays the events feed. `x.bookmarks.list` is that same read as the contract's `list` output, so an app can render it without knowing X. `x.posts` is the signed-in account's own posts, the same way. A list snapshot is read through the tools RPC method `events_list` with `{ "list": "bookmarks" }` or `{ "list": "posts" }`, plus `account`; it asks for no author expansion, because an item names no author, so X bills no author for it; the model's tool `x_events_list` takes no `list` and never answers a list. It does not replace the events feeds. Posts are listed newest first, once each; a post whose text holds a secret is screened whole and left out before any of it is cut; the answer stays inside the source's 64 KB, and whole items would be dropped from its end (marked `shortened: true`) rather than cut. The method declares both answers, the events page and the list, so the host accepts the list. A list looks up the handle it is asked for with `get_users_by_username`, as a feed's first listing does, and **does not check which account is signed in**: the declaration is source-contract v0.1.0, which Jelly pins and whose schema cannot say a content read also reads the identity (`readsIdentity` is v0.2.0). So if the X sign-in changes after a consumer's grant, a list for the old handle still runs: X refuses another account's bookmarks itself, while `x.posts` would list that handle's public posts labelled as the grant's. The check returns once Jelly reads v0.2.0 or later. **A list is off when its feed is:** `events.feeds` not naming `bookmarks` answers `x.bookmarks.list` with `SOURCE_DISABLED`, as the feed itself does, before any billed read. `x.posts` has no plugin switch, because it is not an events feed: the consumer's consent is what turns it off.
 
 A feed the `events.feeds` option leaves out is `SOURCE_DISABLED`, which is how you turn a source off: the home
-timeline is off unless you name it.
+timeline is off unless you name it, and `x.bookmarks.list` is off with `x.bookmarks`. `x.posts` is not a feed and has no
+switch of its own: only the consumer's consent turns it off.
 
 ### `events_list`
 
