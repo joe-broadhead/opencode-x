@@ -58,6 +58,8 @@ export interface FakeMcpOptions {
   readonly refreshTokens?: boolean
   /** Answer the first access token with 401, so the client refreshes it, as an expired token would. */
   readonly expireFirstAccessToken?: boolean
+  /** Answer get_users_me with a signed-in user. Default false: the call itself, which a read cannot parse. */
+  readonly meAsUser?: boolean
 }
 
 /** The scripted model's id, as the fake's model API lists it. */
@@ -145,7 +147,7 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
           return reply({ content: [{ type: "text", text: JSON.stringify({ data, includes: { users }, meta: { result_count: 2 } }) }], structuredContent: { data, includes: { users }, meta: { result_count: 2 } } })
         }
         // The signed-in user: probe's read, and the list snapshots' identity check.
-        if (name === "get_users_me") {
+        if (name === "get_users_me" && options.meAsUser === true) {
           const data = { id: "2000000000000000001", username: "SamRivera", name: "Sam Rivera" }
           return reply({ content: [{ type: "text", text: JSON.stringify({ data }) }], structuredContent: { data } })
         }
