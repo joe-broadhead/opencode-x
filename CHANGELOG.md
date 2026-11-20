@@ -28,6 +28,12 @@ All notable changes to this project are documented in this file. It follows
   instead of noting them all as already known, in the same one read (so it asks for those posts' authors, once, when
   the source starts). No event is from before the start time.
 
+### Fixed (list snapshots)
+
+- A list snapshot (`x.bookmarks.list`, `x.posts`) asks for no author expansion. Its items name no author, so the
+  expansion billed X for up to 50 authors a read ($0.50) that the answer never used. The read now asks for the post
+  fields an item is made from (`created_at`, `text`, `note_tweet`) and the answer reports no authors.
+
 ## [0.0.8] - 2026-11-20
 
 ### Added
