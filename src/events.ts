@@ -899,7 +899,7 @@ export async function xList(read: Read, options: XEventsOptions, input: unknown,
   const me = meOf(lookup)
   const account = me.username.toLowerCase()
   if (asked !== account) {
-    throw xError("ACCOUNT_UNKNOWN", `The signed-in X account is not the account a list of ${list} was asked for.`, `Leave "account" out, or pass "${account}", the signed-in handle.`)
+    throw xError("ACCOUNT_UNKNOWN", `The signed-in X account is not the account a list of ${list} was asked for.`, `Pass "account" as "${account}", the signed-in handle that probe answers.`)
   }
   const tool = LIST_READS[list]
   const page = await read(tool, { id: me.id, max_results: LIST_CAP, ...FIELDS })

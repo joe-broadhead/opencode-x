@@ -793,7 +793,8 @@ describe("list snapshots", () => {
     const read = async (tool: string, input: Record<string, unknown>) => {
       base.calls.push({ tool, input })
       if (tool === "get_users_me") return { output: { data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }, content: [] }
-      if (tool === "get_users_bookmarks") return { output: { data: many.slice().reverse(), meta: { result_count: 60 } }, content: [] }
+      // Oldest first, so a cap before the sort would keep the oldest 50, not the newest.
+      if (tool === "get_users_bookmarks") return { output: { data: many, meta: { result_count: 60 } }, content: [] }
       throw new Error(`unexpected ${tool}`)
     }
     const output = (await xList(read, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW)) as { data: { items: { text: string }[] } }

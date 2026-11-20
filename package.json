@@ -242,8 +242,7 @@
           ],
           "identity": [
             "get_users_me"
-          ],
-          "readsIdentity": true
+          ]
         },
         "private": true,
         "cost": {
@@ -293,8 +292,7 @@
           ],
           "identity": [
             "get_users_me"
-          ],
-          "readsIdentity": true
+          ]
         },
         "private": false,
         "cost": {
