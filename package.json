@@ -238,6 +238,7 @@
           "tool": "x_events_list",
           "operations": [
             "get_users_me",
+            "get_users_by_username",
             "get_users_bookmarks"
           ],
           "identity": [
@@ -288,6 +289,7 @@
           "tool": "x_events_list",
           "operations": [
             "get_users_me",
+            "get_users_by_username",
             "get_users_posts"
           ],
           "identity": [

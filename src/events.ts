@@ -875,8 +875,9 @@ const cleanText = (value: string) => value.replace(/\s+/g, " ").replace(/[\u0000
  * posts `x.bookmarks` already collects as events, and a list is off when its feed is: `events.feeds` not naming
  * bookmarks answers SOURCE_DISABLED, as the feed itself does. `posts` is the signed-in account's own posts
  * (`get_users_posts`) and has no plugin switch: the consumer's consent is what turns it off. It uses the same host
- * executors as `events_list`, not a second client. The read names the signed-in account and refuses another with
- * ACCOUNT_UNKNOWN, from one `get_users_me` as probe makes. Posts are listed newest first, once each, and a post whose
+ * executors as `events_list`, not a second client. The read looks the named handle up (`get_users_by_username`) and
+ * names it; it does not read who is signed in, which source-contract v0.1.0 (Jelly's pin) cannot declare for a
+ * content read. Posts are listed newest first, once each, and a post whose
  * text holds a secret is left out: the whole text is screened before any of it is cut. The answer stays inside
  * LIST_MAX_BYTES by dropping whole items from its end, which it says with `shortened: true`; it never cuts an item's
  * bytes. `maxBytes` is a test seam.
@@ -893,16 +894,14 @@ export async function xList(read: Read, options: XEventsOptions, input: unknown,
   if (asked === undefined || !HANDLE.test(asked)) {
     throw xError("INPUT_INVALID", `A list of X's ${list} names the account it reads: events_list has no "account".`, `Pass "account", the signed-in handle that probe answers.`)
   }
-  // Who is signed in, from the one identity read probe makes: a list for another handle would label someone else's
-  // posts as the signed-in account's.
-  const lookup = await read("get_users_me", { "user.fields": "username,name" })
-  const me = meOf(lookup)
-  const account = me.username.toLowerCase()
-  if (asked !== account) {
-    throw xError("ACCOUNT_UNKNOWN", `The signed-in X account is not the account a list of ${list} was asked for.`, `Pass "account" as "${account}", the signed-in handle that probe answers.`)
-  }
+  // The named handle is looked up, as a feed's first listing does: the contract Jelly reads (v0.1.0) cannot declare
+  // that this read also reads the identity, so the list does not detect a later change of X sign-in. Bookmarks for
+  // another handle are refused by X itself; posts are public, and would be labelled as the asked handle's own.
+  const lookup = await read("get_users_by_username", { username: asked, "user.fields": "username,name" })
+  const found = userOf("get_users_by_username", lookup, EVENTS_LIST)
+  if (found.username.toLowerCase() !== asked) throw unreadable("get_users_by_username")
   const tool = LIST_READS[list]
-  const page = await read(tool, { id: me.id, max_results: LIST_CAP, ...FIELDS })
+  const page = await read(tool, { id: found.id, max_results: LIST_CAP, ...FIELDS })
   const { posts } = postsPage(tool, page)
   const seen = new Set<string>()
   const found_items: { at: number; item: { id: string; text: string } }[] = []
@@ -915,12 +914,12 @@ export async function xList(read: Read, options: XEventsOptions, input: unknown,
     found_items.push({ at: post.created, item: { id: post.id.slice(0, 128), text: full === "" ? post.id.slice(0, 200) : cut(full, 200) } })
   }
   const items = found_items.sort((a, b) => b.at - a.at).slice(0, LIST_CAP).map((row) => row.item)
-  const lookupCost = costOf("get_users_me", lookup)
+  const lookupCost = costOf("get_users_by_username", lookup)
   const pageCost = costOf(tool, page)
   const postsCount = (pageCost?.posts ?? 0) + (pageCost?.owned ?? 0)
   const answer = {
     source: list,
-    account,
+    account: asked,
     data: { items, editable: false as const },
     asOf: new Date(now).toISOString(),
     cost: {

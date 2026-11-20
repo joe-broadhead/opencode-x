@@ -367,14 +367,20 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(toolCalls(from)).toEqual(["get_users_me"])
   })
 
-  test("a list read on the packed plugin checks the sign-in first, and stops at the answer it cannot read", async () => {
+  test("a list read on the packed plugin answers the contract's list shape, through the handle lookup and the feed", async () => {
     const from = fake.calls.length
-    // The list reads get_users_me before any feed: the shipped bundle checks who is signed in, and this fake's answer
-    // stops it there, with no billed feed read.
     const result = await call("build", "events_list", { source: "bookmarks", list: "bookmarks", account: "samrivera" })
-    expect(result).toMatchObject({ type: "failed", code: "UPSTREAM_UNREADABLE" })
-    expect(String(result.message)).toContain("UPSTREAM_UNREADABLE: X's get_users_me answered in a shape events_list does not read.")
-    expect(toolCalls(from)).toEqual(["get_users_me"])
+    expect(result).toMatchObject({
+      value: {
+        source: "bookmarks",
+        account: "samrivera",
+        data: { items: [{ id: "1900000000000000001", text: "A saved post" }], editable: false },
+        trust: "untrusted",
+      },
+    })
+    expect(result.value.events).toBeUndefined()
+    // The named handle is looked up, then the feed read: no identity read, as the v0.1.0 declaration says.
+    expect(toolCalls(from)).toEqual(["get_users_by_username", "get_users_bookmarks"])
   })
 
   test("probe runs the packed plugin's own spec, reads who is signed in through OpenCode, and reports an answer it cannot read", async () => {

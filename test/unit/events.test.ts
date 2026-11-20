@@ -731,7 +731,7 @@ describe("list snapshots", () => {
     expect(output.source).toBe("posts")
     expect(output.data.editable).toBe(false)
     expect(output.data.items.map((item: { text: string }) => item.text)).toEqual(["A week later", "Notes from the launch", "Launch day", "Before since"])
-    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_me", "x_get_users_posts"])
+    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_by_username", "x_get_users_posts"])
   })
 
   test("leaves out a bookmark whose text holds a secret", async () => {
@@ -779,11 +779,15 @@ describe("list snapshots", () => {
     expect((posts as { source: string }).source).toBe("posts")
   })
 
-  test("refuses a list for another handle than the signed-in one, after one identity read", async () => {
+  test("names the handle it was asked for and does not read who is signed in: the v0.1.0 gap", async () => {
+    // source-contract v0.1.0, which Jelly pins, cannot declare a content read that also reads the identity, so the list
+    // looks up the named handle (`get_users_by_username`) and never calls `get_users_me`. A later sign-in change is not
+    // detected here; docs/configuration.md and the CHANGELOG say so and when it will be restored.
     const host = x()
-    await expect(eventsMethod(options(host)).run({ list: "posts", source: "posts", account: "someoneelse" }, call)).rejects.toThrow(/^ACCOUNT_UNKNOWN: /)
-    // The signed-in account is read once, and the feed itself never is.
-    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_me"])
+    const output = (await eventsMethod(options(host)).run({ list: "posts", source: "posts", account: "samrivera" }, call)) as { account: string }
+    expect(output.account).toBe("samrivera")
+    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_by_username", "x_get_users_posts"])
+    expect(host.calls.some((entry) => entry.tool === "x_get_users_me")).toBe(false)
   })
 
   test("the 50 cap holds when X answers more than asked, newest first", async () => {
@@ -792,7 +796,7 @@ describe("list snapshots", () => {
     const base = x({ ...fixture(), bookmarks: [] }, 100)
     const read = async (tool: string, input: Record<string, unknown>) => {
       base.calls.push({ tool, input })
-      if (tool === "get_users_me") return { output: { data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }, content: [] }
+      if (tool === "get_users_by_username") return { output: { data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }, content: [] }
       // Oldest first, so a cap before the sort would keep the oldest 50, not the newest.
       if (tool === "get_users_bookmarks") return { output: { data: many, meta: { result_count: 60 } }, content: [] }
       throw new Error(`unexpected ${tool}`)
@@ -809,7 +813,7 @@ describe("list snapshots", () => {
     const base = x({ ...fixture(), bookmarks: [] }, 100)
     const read = async (tool: string, input: Record<string, unknown>) => {
       base.calls.push({ tool, input })
-      if (tool === "get_users_me") return { output: { data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }, content: [] }
+      if (tool === "get_users_by_username") return { output: { data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }, content: [] }
       if (tool === "get_users_bookmarks") return { output: { data: many.slice().reverse(), meta: { result_count: 10 } }, content: [] }
       throw new Error(`unexpected ${tool}`)
     }

@@ -230,12 +230,8 @@ describe("the source contract's conformance kit", () => {
 
   test("x.bookmarks.list and x.posts keep the contract", async () => {
     for (const id of ["x.bookmarks.list", "x.posts"]) {
-      const declared = sources.items.find((item) => item.id === id)!
-      // Jelly pins source-contract v0.1.0, whose descriptor schema has no `readsIdentity` and refuses the whole
-      // declaration for one unknown key, so package.json stays v0.1-clean (test/unit/descriptor.test.ts pins that).
-      // The list read does assert the identity operation `get_users_me`, which `operations` names, so the kit is told
-      // what the declaration cannot: the check is not waived, its input is made truthful.
-      const source = { ...declared, permission: { ...declared.permission, readsIdentity: true } } as typeof declared
+      // The kit runs on exactly the shipped declaration: no readsIdentity, and no injected flag.
+      const source = sources.items.find((item) => item.id === id)!
       const report = await sourceConformance({
         plugin: PACKAGE,
         source,

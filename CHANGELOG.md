@@ -11,8 +11,12 @@ All notable changes to this project are documented in this file. It follows
 - **List snapshots** `x.bookmarks.list` and `x.posts` (`output: "list"`), for an app and not for an agent. An app can bind them and render a list without knowing X: the tools RPC method `events_list` with `list` `bookmarks` or `posts` answers the contract's list output, through the same `get_users_bookmarks` and `get_users_posts` reads as the feeds, not a second client. Posts are listed newest first, once each, and a post whose text holds a secret is screened whole and left out before any of it is cut; the answer stays inside the source's 64 KB, dropping whole items from its end and marking `shortened: true` rather than cutting an item's bytes. The method declares both answers, so the host accepts the list; `x_events_list`, the model's tool, keeps its events-only input and output. `x.bookmarks`, `x.mentions` and `x.timeline` stay events sources and are not renamed. No write is declared, and this change sends none of v0.3.0's new fields.
 - `x.bookmarks.list` is off when `bookmarks` is: a list of a feed the `events.feeds` option leaves out answers
   `SOURCE_DISABLED` before any billed read, as the feed does. `x.posts` is not an events feed and has no plugin switch:
-  only the consumer's consent turns it off. Both lists name the signed-in account and refuse another with
-  `ACCOUNT_UNKNOWN`, from one `get_users_me` read, so a grant for an old handle cannot list someone else's posts.
+  only the consumer's consent turns it off.
+- **A known gap:** a list looks up the handle it is asked for (`get_users_by_username`) and does not read which account
+  is signed in. The declaration is source-contract v0.1.0, which Jelly pins and whose schema cannot say a content read
+  also reads the identity (`readsIdentity` is v0.2.0), so a list cannot detect a later change of X sign-in. X refuses
+  another account's bookmarks itself; `x.posts` would list that handle's public posts, labelled as the grant's. The
+  check returns, with `readsIdentity`, once Jelly reads source-contract v0.2.0 or later.
 - **For jelly:** `sources` gains `x.bookmarks.list` and `x.posts`, so Jelly asks for consent again; `x.mentions`, `x.bookmarks` and `x.timeline` are unchanged.
 
 ### Changed
