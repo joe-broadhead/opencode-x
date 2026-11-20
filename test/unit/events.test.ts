@@ -825,6 +825,27 @@ describe("list snapshots", () => {
     expect(new TextEncoder().encode(JSON.stringify(output)).length).toBeLessThanOrEqual(4_000)
   })
 
+  test("refuses a lookup that answers a user other than the handle asked for, before any feed read", async () => {
+    // The username check is the only guard that the id the feed is read with belongs to the handle asked for.
+    const base = x({ ...fixture(), bookmarks: [] }, 100)
+    const read = async (tool: string, input: Record<string, unknown>) => {
+      base.calls.push({ tool, input })
+      if (tool === "get_users_by_username") return { output: { data: { id: ME, username: "SomeoneElse", name: "Someone Else" } }, content: [] }
+      throw new Error(`unexpected ${tool}`)
+    }
+    await expect(xList(read, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW)).rejects.toThrow(/^UPSTREAM_UNREADABLE: X's get_users_by_username answered in a shape events_list does not read/)
+    expect(base.calls.map((entry) => entry.tool)).toEqual(["get_users_by_username"])
+    // An answer that is X's own error is refused as UPSTREAM_ERROR, with no feed read either.
+    const empty = x({ ...fixture(), bookmarks: [] }, 100)
+    const none = async (tool: string, input: Record<string, unknown>) => {
+      empty.calls.push({ tool, input })
+      if (tool === "get_users_by_username") return { output: { errors: [{ title: "Not Found Error", detail: "Could not find user." }] }, content: [] }
+      throw new Error(`unexpected ${tool}`)
+    }
+    await expect(xList(none, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW)).rejects.toThrow(/^UPSTREAM_ERROR: /)
+    expect(empty.calls.map((entry) => entry.tool)).toEqual(["get_users_by_username"])
+  })
+
   test("refuses a list it does not have and a list read with no account, before any X call", async () => {
     const host = x()
     await expect(eventsMethod(options(host)).run({ list: "timeline", account: "samrivera" }, call)).rejects.toThrow(/^SOURCE_UNKNOWN: /)
