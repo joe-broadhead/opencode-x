@@ -329,7 +329,6 @@
   "scripts": {
     "check": "node scripts/check.mjs",
     "typecheck": "node scripts/check.mjs typecheck",
-    "build": "node scripts/check.mjs build",
     "test": "node scripts/check.mjs unit",
     "conformance": "bun test ./test/conformance",
     "test:host": "node scripts/check.mjs host",
