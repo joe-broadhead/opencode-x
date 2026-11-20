@@ -78,7 +78,7 @@ export async function startHost(input: HostInput = {}) {
   const base = input.base ?? join(root, `host-${++hosts}`)
   const work = join(base, "work")
   mkdirSync(work, { recursive: true })
-  const fake = input.fakeServer ?? await startFakeMcp(input.fake)
+  const fake = input.fakeServer ?? (await startFakeMcp({ ...(input.fake ?? {}), meAsUser: true }))
   const x = createXPlugin({ endpoint: fake.url, ...(input.oauth ? {} : { oauth: false as const }), skillsDir })
   const withOptions = Plugin.define({ id: x.id, setup: (ctx) => x.setup({ ...ctx, options: input.options ?? {} }) })
   const probes = new Map<string, Plugin.Context>()

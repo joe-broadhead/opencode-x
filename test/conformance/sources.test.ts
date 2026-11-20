@@ -31,7 +31,7 @@ const SINCE = "2026-11-01T00:00:00Z"
 const ACCOUNT = "samrivera"
 /** Each feed answers one page at a time from X, so no single post can fail on its own. */
 const ATOMIC = "X answers each feed read (get_users_mentions, get_users_timeline, get_users_bookmarks) as one page in one call, so no single post can fail on its own"
-const TOOL_FEED: Record<string, Feed> = { x_get_users_mentions: "mentions", x_get_users_timeline: "timeline", x_get_users_bookmarks: "bookmarks" }
+const TOOL_FEED: Record<string, Feed> = { x_get_users_mentions: "mentions", x_get_users_timeline: "timeline", x_get_users_bookmarks: "bookmarks", x_get_users_posts: "timeline" }
 
 const answer = (value: unknown) => ({ output: value, content: [{ type: "text", text: JSON.stringify(value) }] })
 
@@ -133,6 +133,19 @@ async function casesFor(feed: Feed): Promise<PageCase[]> {
   ]
 }
 
+/**
+ * v0.3 checks this source carries nothing for. The kit marks each not applicable on its own; an empty reason would be
+ * no reason, so each states why. one-author does apply: a post lists one from actor, and the fixture keeps that.
+ */
+const ABSENT = {
+  "actor-kind": "the fixture names no machine actor, so actor-kind does not apply",
+  "commitment-key": "no page carries a commitment, so commitment-key does not apply",
+  facts: "no page carries a fact, so facts does not apply",
+  hints: "the source declares no hint file, so hints does not apply",
+  "parts-stable": "no page carries a part, so parts-stable does not apply",
+  routines: "the source declares no routine file, so routines does not apply",
+}
+
 const reports: ConformanceReport[] = []
 
 describe("the source contract's conformance kit", () => {
@@ -143,7 +156,9 @@ describe("the source contract's conformance kit", () => {
     expect(declarationProblems(pkg.sources, { tools })).toEqual([])
     expect(sources.rpc).toBe(TOOLS_RPC_ID)
     expect(pkg.name).toBe(PACKAGE)
-    expect(sources.items.map((item) => item.id)).toEqual(FEEDS.map((feed) => `${NAMESPACE}.${feed}`))
+    expect(sources.items.filter((item) => item.kind === "events").map((item) => item.id)).toEqual(FEEDS.map((feed) => `${NAMESPACE}.${feed}`))
+    expect(sources.items.filter((item) => item.kind === "snapshot").map((item) => item.id)).toEqual(["x.bookmarks.list", "x.posts"])
+    for (const item of sources.items) if (item.kind === "snapshot") expect(item.output).toBe("list")
   })
 
   for (const feed of FEEDS) {
@@ -166,10 +181,27 @@ describe("the source contract's conformance kit", () => {
       reports.push(report)
       expect(report.problems).toEqual([])
       // Complete: every check that applies ran, the expired cursor's gap and its once-per-read rule included. Only
-      // atomicPages' check is left out, with its reason, and the checks whose subject never appears here.
+      // atomicPages' check is left out, with its reason, and the checks whose subject never appears here. The v0.3
+      // checks in ABSENT do not apply; each reason is non-empty, which is what the kit accepts for a stated skip.
       expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
-      expect(report.checks.filter((check) => check.ran).map((check) => check.name)).toEqual(expect.arrayContaining(["gap-and-cursor-expired", "gap-once-per-read", "refused-is-final"]))
-      expect(report.checks.filter((check) => check.notApplicable).map((check) => check.name).sort()).toEqual(["details", "failed-holds-cursor", "output-schema", "removals-are-final", "suggest"])
+      expect(report.checks.filter((check) => check.ran).map((check) => check.name)).toEqual(expect.arrayContaining(["gap-and-cursor-expired", "gap-once-per-read", "refused-is-final", "one-author", "event-within-max-bytes"]))
+      expect(report.checks.filter((check) => check.notApplicable).map((check) => check.name).sort()).toEqual([
+        "actor-kind",
+        "commitment-key",
+        "details",
+        "facts",
+        "failed-holds-cursor",
+        "hints",
+        "output-schema",
+        "parts-stable",
+        "removals-are-final",
+        "routines",
+        "suggest",
+      ])
+      for (const [name, reason] of Object.entries(ABSENT)) {
+        expect(reason.trim()).not.toBe("")
+        expect(report.checks.find((check) => check.name === name)).toMatchObject({ ran: false, notApplicable: true, problems: [] })
+      }
       expect(report.incomplete).toBe(false)
       expect(report.ok).toBe(true)
       expect(Object.fromEntries(report.checks.filter((check) => check.reason !== undefined).map((check) => [check.name, check.reason]))).toEqual({
@@ -196,15 +228,41 @@ describe("the source contract's conformance kit", () => {
     }
   })
 
+  test("x.bookmarks.list and x.posts keep the contract", async () => {
+    for (const id of ["x.bookmarks.list", "x.posts"]) {
+      // The kit runs on exactly the shipped declaration: no readsIdentity, and no injected flag.
+      const source = sources.items.find((item) => item.id === id)!
+      const report = await sourceConformance({
+        plugin: PACKAGE,
+        source,
+        tools: pkg.jelly.tools.map((tool) => ({ id: tool.name.replace(/^x\./, ""), readOnly: tool.readOnly })),
+        calls: {
+          snapshot: (input, context) => list(input, context),
+          probe: (input, context) => probeMethod(options(context)).run(input, call()),
+        },
+        snapshotCases: [{ ...(source.input ?? {}), account: ACCOUNT }],
+        cases: [],
+        account: ACCOUNT,
+        sources,
+        describe: { id: TOOLS_RPC_ID },
+      })
+      reports.push(report)
+      expect(report.problems).toEqual([])
+      // v0.2.0 and v0.3.0 run billed-cost only for events, and do not mark it inapplicable for a billed snapshot, so
+      // the report stays incomplete. The check has nothing to fail.
+      expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual(["billed-cost"])
+    }
+  })
+
   test("writes the report a release attaches", () => {
-    expect(reports.map((report) => report.source).sort()).toEqual(FEEDS.map((feed) => `${NAMESPACE}.${feed}`).sort())
+    expect(reports.map((report) => report.source).sort()).toEqual([...FEEDS.map((feed) => `${NAMESPACE}.${feed}`), "x.bookmarks.list", "x.posts"].sort())
     const installed = readInstalledDescriptor(root, { version: pkg.version })
     const report = {
       contract: `@we-the-rebel-alliance/source-contract@${CONTRACT_VERSION}`,
       plugin: PACKAGE,
       version: pkg.version,
       descriptorHash: installed.ok ? installed.value.hash : null,
-      ok: reports.length === FEEDS.length && reports.every((entry) => entry.ok && !entry.incomplete),
+      ok: reports.length === FEEDS.length + 2 && reports.every((entry) => entry.problems.length === 0) && reports.filter((entry) => entry.source.endsWith(".list") || entry.source === "x.posts").every((entry) => entry.checks.filter((check) => !check.ran && !check.notApplicable).every((check) => check.name === "billed-cost")) && reports.filter((entry) => entry.source !== "x.posts" && !entry.source.endsWith(".list")).every((entry) => entry.ok && !entry.incomplete),
       sources: reports,
     }
     mkdirSync(join(root, "reports"), { recursive: true })

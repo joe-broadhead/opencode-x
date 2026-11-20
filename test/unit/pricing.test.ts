@@ -27,9 +27,9 @@ describe("the sources' declared prices", () => {
       if (price === undefined || !("perResourceUsd" in price)) throw new Error(`${method} has no per-resource price`)
       return price.perResourceUsd
     }
-    expect(sources.items.length).toBe(3)
+    expect(sources.items.length).toBe(5)
     for (const item of sources.items) {
-      const feed = item.permission.operations.find((operation) => ["get_users_mentions", "get_users_bookmarks", "get_users_timeline"].includes(operation))!
+      const feed = item.permission.operations.find((operation) => ["get_users_mentions", "get_users_bookmarks", "get_users_timeline", "get_users_posts"].includes(operation))!
       // A post at its feed's standard rate (the Owned Read rate depends on ownsXApp and cannot be declared); an author
       // and a looked-up user at the user rate X bills for each user it returns; the probe's one get_users_me user.
       const expected: Record<string, number> = { post: rate(feed), author: rate("get_users_by_id"), user: rate("get_users_by_username") }

@@ -21,6 +21,7 @@ import {
   parseProbeInput,
   probeResult,
   screenEvents,
+  secretKinds,
   startTime,
 } from "@we-the-rebel-alliance/source-contract/events"
 import { upstreamText, type JsonSchema, type PluginMethod } from "@we-the-rebel-alliance/source-contract/tools-rpc"
@@ -122,6 +123,28 @@ export const EVENTS_INPUT: JsonSchema = {
   },
 }
 
+/**
+ * The tools RPC method's input: the model tool's, plus the list snapshot's name. No model sees `list`: the tool's schema
+ * is EVENTS_INPUT, and a list answer is not an events page, so only a consumer that binds the snapshot asks for it.
+ */
+export const EVENTS_METHOD_INPUT: JsonSchema = {
+  ...EVENTS_INPUT,
+  properties: {
+    ...(EVENTS_INPUT.properties as Record<string, unknown>),
+    // The method's source also names `posts`, the list snapshot's; the model's tool does not.
+    source: {
+      type: "string",
+      enum: [X_SOURCE, ...FEEDS, "posts"],
+      description: `"${X_SOURCE}" (the default) for every feed the events.feeds option names, one feed: ${FEEDS.map((feed) => `"${feed}"`).join(", ")}, or posts for the list snapshot`,
+    },
+    list: {
+      type: "string",
+      enum: ["bookmarks", "posts"],
+      description: "A list snapshot for an app, instead of events: bookmarks (saved posts) or posts (the signed-in account's own posts). Pass account, and source of the same name.",
+    },
+  },
+}
+
 const nullable = (type: string) => ({ anyOf: [{ type }, { type: "null" }] })
 const STRING = { type: "string" }
 
@@ -179,11 +202,61 @@ export const EVENTS_OUTPUT: JsonSchema = {
   },
 }
 
+/**
+ * The list snapshot's answer, as the contract's snapshot envelope and its registry's `list` output. It is the tools RPC
+ * method's second output: the host validates every method answer against the method's declared output, so an events-only
+ * schema would refuse it `rpc.invalid_output`. `shortened` says whole items were dropped to stay in `maxBytes`.
+ */
+export const LIST_ANSWER: JsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["source", "account", "data", "asOf", "cost", "trust"],
+  properties: {
+    source: { type: "string" },
+    account: { type: "string", description: "The signed-in X handle, lowercase, without @" },
+    data: {
+      type: "object",
+      additionalProperties: false,
+      required: ["items", "editable"],
+      properties: {
+        items: {
+          type: "array",
+          maxItems: 50,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "text"],
+            properties: {
+              id: { type: "string", minLength: 1, maxLength: 128 },
+              text: { type: "string", maxLength: 200 },
+              done: { type: "boolean" },
+              note: { type: "string", maxLength: 200 },
+            },
+          },
+        },
+        editable: { type: "boolean", const: false },
+      },
+    },
+    asOf: { type: "string", description: "When the list was read, UTC ISO." },
+    cost: {
+      type: "object",
+      additionalProperties: false,
+      required: ["units"],
+      properties: { units: { type: "array", items: { type: "object", required: ["per", "count"], properties: { per: STRING, count: { type: "number" } } } } },
+    },
+    trust: { type: "string", const: "untrusted" },
+    shortened: { type: "boolean", description: "True when whole items were dropped from the end to stay within maxBytes." },
+  },
+}
+
+/** The tools RPC method's output: an events page, or the list snapshot's answer, whichever the input asked for. */
+export const EVENTS_METHOD_OUTPUT: JsonSchema = { anyOf: [EVENTS_OUTPUT, LIST_ANSWER] }
+
 const PROBE_INPUT: JsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    source: { type: "string", enum: [X_SOURCE, ...FEEDS], description: `The source to probe: "${X_SOURCE}" (the default) or one feed` },
+    source: { type: "string", enum: [X_SOURCE, ...FEEDS, "posts"], description: `The source to probe: "${X_SOURCE}" (the default), one feed, or "posts" for the posts list` },
     account: { type: "string", minLength: 1, maxLength: EVENT_LIMITS.account, description: "The X handle the caller expects to be signed in; another is refused" },
   },
 }
@@ -192,7 +265,7 @@ const PROBE_OUTPUT: JsonSchema = {
   type: "object",
   required: ["source", "account", "owner", "trust"],
   properties: {
-    source: { type: "string", enum: [X_SOURCE, ...FEEDS] },
+    source: { type: "string", enum: [X_SOURCE, ...FEEDS, "posts"] },
     account: { type: "string", description: "The signed-in X handle, lowercase, without @" },
     owner: { type: "object", required: ["id", "label"], properties: { id: { type: "string", description: "x:@ and the handle" }, label: STRING } },
     cost: { type: "object", description: "The one user X returned, billed per user", properties: { units: { type: "array" } } },
@@ -782,6 +855,90 @@ function pageCost(costs: readonly ReadCost[], lookups: number): EventsCost {
   }
 }
 
+// ── List snapshots ──────────────────────────────────────────────────────
+
+/** The list registry holds 50 items. A list read asks X for that many and returns no more. */
+const LIST_CAP = 50
+/** The most bytes the list answer may hold: the source's declared `maxBytes`. */
+export const LIST_MAX_BYTES = 65_536
+const LIST_READS = { bookmarks: "get_users_bookmarks", posts: "get_users_posts" } as const
+type ListName = keyof typeof LIST_READS
+const isListName = (value: string): value is ListName => Object.hasOwn(LIST_READS, value)
+
+/** A string's UTF-8 bytes, as JSON carries it. */
+const jsonBytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length
+/** A post's text as JSON may carry it: whitespace collapsed, control characters dropped. */
+const cleanText = (value: string) => value.replace(/\s+/g, " ").replace(/[\u0000-\u001f\u007f-\u009f]/g, "").trim()
+
+/**
+ * A list snapshot for an app that renders the contract's `list` output and does not know X. `bookmarks` is the saved
+ * posts `x.bookmarks` already collects as events, and a list is off when its feed is: `events.feeds` not naming
+ * bookmarks answers SOURCE_DISABLED, as the feed itself does. `posts` is the signed-in account's own posts
+ * (`get_users_posts`) and has no plugin switch: the consumer's consent is what turns it off. It uses the same host
+ * executors as `events_list`, not a second client. The read looks the named handle up (`get_users_by_username`) and
+ * names it; it does not read who is signed in, which source-contract v0.1.0 (Jelly's pin) cannot declare for a
+ * content read. Posts are listed newest first, once each, and a post whose
+ * text holds a secret is left out: the whole text is screened before any of it is cut. The answer stays inside
+ * LIST_MAX_BYTES by dropping whole items from its end, which it says with `shortened: true`; it never cuts an item's
+ * bytes. `maxBytes` is a test seam.
+ */
+export async function xList(read: Read, options: XEventsOptions, input: unknown, now = Date.now(), maxBytes = LIST_MAX_BYTES) {
+  const data = record(input)
+  const list = text(data["list"])
+  if (list === undefined || !isListName(list)) {
+    throw xError("SOURCE_UNKNOWN", `A list read names "bookmarks" or "posts", not "${list ?? ""}".`, `Pass "list" as "bookmarks" or "posts".`)
+  }
+  // A list for a feed the user switched off is off, before any billed read.
+  if (list === "bookmarks") enabledFeed("bookmarks", options)
+  const asked = text(data["account"]) === undefined ? undefined : handleOf(String(data["account"]))
+  if (asked === undefined || !HANDLE.test(asked)) {
+    throw xError("INPUT_INVALID", `A list of X's ${list} names the account it reads: events_list has no "account".`, `Pass "account", the signed-in handle that probe answers.`)
+  }
+  // The named handle is looked up, as a feed's first listing does: the contract Jelly reads (v0.1.0) cannot declare
+  // that this read also reads the identity, so the list does not detect a later change of X sign-in. Bookmarks for
+  // another handle are refused by X itself; posts are public, and would be labelled as the asked handle's own.
+  const lookup = await read("get_users_by_username", { username: asked, "user.fields": "username,name" })
+  const found = userOf("get_users_by_username", lookup, EVENTS_LIST)
+  if (found.username.toLowerCase() !== asked) throw unreadable("get_users_by_username")
+  const tool = LIST_READS[list]
+  const page = await read(tool, { id: found.id, max_results: LIST_CAP, ...FIELDS })
+  const { posts } = postsPage(tool, page)
+  const seen = new Set<string>()
+  const found_items: { at: number; item: { id: string; text: string } }[] = []
+  for (const post of posts) {
+    if (seen.has(post.id)) continue
+    // The whole text is screened before any of it is cut.
+    const full = cleanText(post.text)
+    if (secretKinds(full).length > 0) continue
+    seen.add(post.id)
+    found_items.push({ at: post.created, item: { id: post.id.slice(0, 128), text: full === "" ? post.id.slice(0, 200) : cut(full, 200) } })
+  }
+  const items = found_items.sort((a, b) => b.at - a.at).slice(0, LIST_CAP).map((row) => row.item)
+  const lookupCost = costOf("get_users_by_username", lookup)
+  const pageCost = costOf(tool, page)
+  const postsCount = (pageCost?.posts ?? 0) + (pageCost?.owned ?? 0)
+  const answer = {
+    source: list,
+    account: asked,
+    data: { items, editable: false as const },
+    asOf: new Date(now).toISOString(),
+    cost: {
+      units: [
+        { per: "post", count: postsCount },
+        { per: "author", count: pageCost?.users ?? 0 },
+        { per: "user", count: lookupCost?.users ?? 0 },
+      ],
+    },
+    trust: "untrusted" as const,
+  }
+  let shortened = false
+  while (items.length > 0 && jsonBytes({ ...answer, shortened }) > maxBytes) {
+    items.pop()
+    shortened = true
+  }
+  return shortened ? { ...answer, shortened } : answer
+}
+
 // ── The probe ───────────────────────────────────────────────────────────
 
 /**
@@ -793,7 +950,8 @@ export async function xProbe(read: Read, options: XEventsOptions, input: unknown
   const parsed = parseProbeInput(input)
   if (!parsed.ok) throw xError("INPUT_INVALID", `The probe input is invalid: ${parsed.problems.join("; ")}.`, "Pass only source and account, as probe's schema describes them.")
   const source = parsed.value.source ?? X_SOURCE
-  if (source !== X_SOURCE) enabledFeed(source, options)
+  // `posts` is the list snapshot, not an events feed, so events.feeds does not turn it off. A feed source still does.
+  if (source !== X_SOURCE && source !== "posts") enabledFeed(source, options)
   const me = userOf("get_users_me", await read("get_users_me", { "user.fields": "username,name" }), PROBE)
   const account = me.username.toLowerCase()
   if (parsed.value.account !== undefined && handleOf(parsed.value.account) !== account) {
@@ -892,6 +1050,7 @@ export function eventsTool(options: EventsToolOptions) {
     execute: async (input: unknown, context: Context) => {
       // Rethrown untouched: the host turns a refusal into the end of the step, and the tools RPC into PERMISSION_DENIED.
       await assertAction(options, EVENTS_ACTION, context)
+      // The tool's schema has no `list`: a model's read is the events feed. The list is the tools RPC method's.
       const answer = await xEvents(reader(options, context, EVENTS_LIST), options, input, options.now?.() ?? Date.now())
       return { output: answer.result, content: summary(answer, options) }
     },
@@ -905,18 +1064,26 @@ const availability = (options: EventsToolOptions) => async () => {
   return current.code ?? current.state.toUpperCase()
 }
 
-/** `events_list` as a tools RPC method: it runs the tool's own spec as the envelope's session and agent. */
+/**
+ * `events_list` as a tools RPC method: the tool's own run as the envelope's session and agent, or the list snapshot when
+ * the input names one. Its input carries `list` and its output both answers; the model's tool carries neither.
+ */
 export function eventsMethod(options: EventsToolOptions): PluginMethod {
-  const tool = eventsTool(options)
   return {
     kind: "plugin",
     class: "read",
     name: EVENTS_LIST,
     action: EVENTS_ACTION,
     description: DESCRIPTION,
-    input: EVENTS_INPUT,
-    output: EVENTS_OUTPUT,
-    run: async (input, call) => (await tool.execute(input, call as unknown as Context)).output,
+    input: EVENTS_METHOD_INPUT,
+    output: EVENTS_METHOD_OUTPUT,
+    run: async (input, call) => {
+      const context = call as unknown as Context
+      // Rethrown untouched: the host turns a refusal into the end of the step, and the tools RPC into PERMISSION_DENIED.
+      await assertAction(options, EVENTS_ACTION, context)
+      if (isRecord(input) && typeof input["list"] === "string") return xList(reader(options, context, EVENTS_LIST), options, input, options.now?.() ?? Date.now())
+      return (await xEvents(reader(options, context, EVENTS_LIST), options, input, options.now?.() ?? Date.now())).result
+    },
     available: availability(options),
   }
 }
