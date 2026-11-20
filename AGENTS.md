@@ -86,8 +86,9 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   and its reason). X keeps only each feed's most recent posts, so never declare `noExpiry`: a feed source answers `gap`
   (`expired` when X no longer lists as far back as the newest post the cursor listed, `window-truncated` when a first
   listing starts further back than X lists), once per read. A deleted post is not lost history and makes no gap. Declare or send none of v0.3.0's new keys (`facts`, `hints`, `routines`, actor `kind`, `sections`/`parts`; before them v0.2.0's `removals[]`, `owner.verified`,
-  `permission.readsIdentity`, a price's `conditions` and `min`, among others) until Memory and jelly are on 0.3.0. A feed source never asserts `x_get_users_me`: that identity read is `probe`'s
-  alone. Every `usd` in `sources` is the standard rate in `src/prices.ts` (a test keeps them equal); the `ownsXApp`
+  `permission.readsIdentity`, a price's `conditions` and `min`, among others) until Memory and jelly are on 0.3.0. A feed source never asserts `x_get_users_me`: that identity read is `probe`'s and the list
+  snapshots'. Both list sources declare `permission.readsIdentity` and read `get_users_me` once to refuse another
+  handle than the signed-in one (`ACCOUNT_UNKNOWN`), so a grant for an old handle cannot list someone else's posts. Every `usd` in `sources` is the standard rate in `src/prices.ts` (a test keeps them equal); the `ownsXApp`
   Owned Read rate waits for those consumers, so $0.005 stays the most a post costs.
 - **The tools RPC (v2.3).** The package's `tools-rpc` is the transport every plugin shares; X's part is
   `src/tools-rpc.ts` (the plugin value, the method table, the shapers and next steps). `scripts/check-copies.mjs`

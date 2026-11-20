@@ -5,7 +5,7 @@
 import { describe, expect, test } from "bun:test"
 import { decodeBoundCursor, encodeBoundCursor } from "@we-the-rebel-alliance/source-contract/cursor"
 import { createHash } from "node:crypto"
-import { EVENTS_ACTION, EVENTS_INPUT, EVENTS_METHOD_INPUT, EVENTS_METHOD_OUTPUT, EVENTS_OUTPUT, PACKAGE, PROBE_ACTION, eventsMethod, eventsTool, meOf, postEvent, postsPage, probeMethod, type EventsToolOptions, type Feed } from "../../src/events.js"
+import { EVENTS_ACTION, EVENTS_INPUT, EVENTS_METHOD_INPUT, EVENTS_METHOD_OUTPUT, EVENTS_OUTPUT, PACKAGE, PROBE_ACTION, eventsMethod, eventsTool, meOf, postEvent, postsPage, probeMethod, xList, type EventsToolOptions, type Feed } from "../../src/events.js"
 import { assertEventsListConformance, encodeCursor, resultProblems, type EventsListInput, type EventsListResult } from "@we-the-rebel-alliance/source-contract/events"
 import type { ToolCall } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import type { Status } from "../../src/status.js"
@@ -731,7 +731,7 @@ describe("list snapshots", () => {
     expect(output.source).toBe("posts")
     expect(output.data.editable).toBe(false)
     expect(output.data.items.map((item: { text: string }) => item.text)).toEqual(["A week later", "Notes from the launch", "Launch day", "Before since"])
-    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_by_username", "x_get_users_posts"])
+    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_me", "x_get_users_posts"])
   })
 
   test("leaves out a bookmark whose text holds a secret", async () => {
@@ -767,6 +767,57 @@ describe("list snapshots", () => {
     expect(output.data.items).toHaveLength(50)
     for (const item of output.data.items) expect([...item.text]).toHaveLength(200)
     expect(new TextEncoder().encode(JSON.stringify(output)).length).toBeLessThanOrEqual(65_536)
+  })
+
+  test("a list of a feed the user turned off is off, before any X call; posts has no plugin switch", async () => {
+    const host = x()
+    const off = options(host, { feeds: ["mentions"] })
+    await expect(eventsMethod(off).run({ list: "bookmarks", source: "bookmarks", account: "samrivera" }, call)).rejects.toThrow(/^SOURCE_DISABLED: /)
+    expect(host.calls).toEqual([])
+    // `posts` is not an events feed: events.feeds does not turn it off, and the consumer's consent is what does.
+    const posts = await eventsMethod(options(host, { feeds: ["mentions"] })).run({ list: "posts", source: "posts", account: "samrivera" }, call)
+    expect((posts as { source: string }).source).toBe("posts")
+  })
+
+  test("refuses a list for another handle than the signed-in one, after one identity read", async () => {
+    const host = x()
+    await expect(eventsMethod(options(host)).run({ list: "posts", source: "posts", account: "someoneelse" }, call)).rejects.toThrow(/^ACCOUNT_UNKNOWN: /)
+    // The signed-in account is read once, and the feed itself never is.
+    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_me"])
+  })
+
+  test("the 50 cap holds when X answers more than asked, newest first", async () => {
+    // A read that answers 60 posts in its own order: the list sorts them newest first and keeps the newest 50.
+    const many = Array.from({ length: 60 }, (_, index) => post(new Date(Date.parse("2026-11-01T00:00:00Z") + index * 60_000).toISOString().replace(".000Z", "Z"), 0, `Post ${index}`))
+    const base = x({ ...fixture(), bookmarks: [] }, 100)
+    const read = async (tool: string, input: Record<string, unknown>) => {
+      base.calls.push({ tool, input })
+      if (tool === "get_users_me") return { output: { data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }, content: [] }
+      if (tool === "get_users_bookmarks") return { output: { data: many.slice().reverse(), meta: { result_count: 60 } }, content: [] }
+      throw new Error(`unexpected ${tool}`)
+    }
+    const output = (await xList(read, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW)) as { data: { items: { text: string }[] } }
+    expect(output.data.items).toHaveLength(50)
+    expect(output.data.items[0]!.text).toBe("Post 59")
+    expect(output.data.items.at(-1)!.text).toBe("Post 10")
+  })
+
+  test("drops whole items and says shortened when the answer cannot fit its bytes", async () => {
+    // A test seam: the real cap is 64 KB and 50 items cannot reach it, so a lowered one shows the drop loop works.
+    const many = Array.from({ length: 10 }, (_, index) => post(new Date(Date.parse("2026-11-01T00:00:00Z") + index * 60_000).toISOString().replace(".000Z", "Z"), 0, "字".repeat(200)))
+    const base = x({ ...fixture(), bookmarks: [] }, 100)
+    const read = async (tool: string, input: Record<string, unknown>) => {
+      base.calls.push({ tool, input })
+      if (tool === "get_users_me") return { output: { data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }, content: [] }
+      if (tool === "get_users_bookmarks") return { output: { data: many.slice().reverse(), meta: { result_count: 10 } }, content: [] }
+      throw new Error(`unexpected ${tool}`)
+    }
+    const output = (await xList(read, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW, 4_000)) as { shortened?: boolean; data: { items: { text: string }[] } }
+    expect(output.shortened).toBe(true)
+    expect(output.data.items.length).toBeGreaterThan(0)
+    expect(output.data.items.length).toBeLessThan(10)
+    for (const item of output.data.items) expect([...item.text]).toHaveLength(200)
+    expect(new TextEncoder().encode(JSON.stringify(output)).length).toBeLessThanOrEqual(4_000)
   })
 
   test("refuses a list it does not have and a list read with no account, before any X call", async () => {

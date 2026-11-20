@@ -238,12 +238,12 @@
           "tool": "x_events_list",
           "operations": [
             "get_users_me",
-            "get_users_by_username",
             "get_users_bookmarks"
           ],
           "identity": [
             "get_users_me"
-          ]
+          ],
+          "readsIdentity": true
         },
         "private": true,
         "cost": {
@@ -289,12 +289,12 @@
           "tool": "x_events_list",
           "operations": [
             "get_users_me",
-            "get_users_by_username",
             "get_users_posts"
           ],
           "identity": [
             "get_users_me"
-          ]
+          ],
+          "readsIdentity": true
         },
         "private": false,
         "cost": {

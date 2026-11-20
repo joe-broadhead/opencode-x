@@ -27,7 +27,9 @@ const TOOLS = [
   tool("get_users_me", true),
   // The list snapshot's two reads: the account lookup by handle, and a page of saved posts.
   tool("get_users_by_username", true),
+  tool("get_users_mentions", true),
   tool("get_users_bookmarks", true),
+  tool("get_users_posts", true),
   ...WRITE_TOOLS.map((name) => tool(name, false)),
   ...PUBLIC_TOOLS.map((name) => tool(name, false)),
   ...DENIED_SAMPLE.map((name) => tool(name, false)),
@@ -142,10 +144,21 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
           const users = Array.from({ length: 2 }, (_, index) => ({ id: String(index), username: `user${index}` }))
           return reply({ content: [{ type: "text", text: JSON.stringify({ data, includes: { users }, meta: { result_count: 2 } }) }], structuredContent: { data, includes: { users }, meta: { result_count: 2 } } })
         }
+        // The signed-in user: probe's read, and the list snapshots' identity check.
+        if (name === "get_users_me") {
+          const data = { id: "2000000000000000001", username: "SamRivera", name: "Sam Rivera" }
+          return reply({ content: [{ type: "text", text: JSON.stringify({ data }) }], structuredContent: { data } })
+        }
         // The list snapshot's two reads: the account lookup by handle, and a page of its saved posts.
         if (name === "get_users_by_username") {
           const data = { id: "2000000000000000001", username: String(args.username ?? ""), name: "Sam Rivera" }
           return reply({ content: [{ type: "text", text: JSON.stringify({ data }) }], structuredContent: { data } })
+        }
+        if (name === "get_users_posts") {
+          const data = [{ id: "1900000000000000002", text: "An own post", created_at: "2026-11-05T00:00:00Z", author_id: "2000000000000000001" }]
+          const users = [{ id: "2000000000000000001", username: "samrivera", name: "Sam Rivera" }]
+          const meta = { result_count: 1 }
+          return reply({ content: [{ type: "text", text: JSON.stringify({ data, includes: { users }, meta }) }], structuredContent: { data, includes: { users }, meta } })
         }
         if (name === "get_users_bookmarks") {
           const data = [{ id: "1900000000000000001", text: "A saved post", created_at: "2026-11-06T00:00:00Z", author_id: "2000000000000000001" }]
