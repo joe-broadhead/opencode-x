@@ -588,14 +588,16 @@ This plugin's sources are declared in `package.json`'s `sources` key, by the sha
 | `x.mentions` | events | `message` | `mentions` | `get_users_mentions` | post $0.005, author $0.01, user $0.01 |
 | `x.bookmarks` | events | `bookmark` | `bookmarks` | `get_users_bookmarks` | post $0.005, author $0.01, user $0.01 |
 | `x.timeline` | events | `message` | `timeline` | `get_users_timeline` | post $0.005, author $0.01, user $0.01 |
+| `x.bookmarks.list` | snapshot | `list` | `bookmarks` | `get_users_bookmarks` | post $0.005, author $0.01, user $0.01 |
+| `x.posts` | snapshot | `list` | `posts` | `get_users_posts` | post $0.005, author $0.01, user $0.01 |
 
-Each also names `get_users_by_username` (a first listing's account lookup) and `get_users_me` (the probe's, its one
-identity read) among its operations. All three are billed (`cost.class: "billed"`) at X's standard rates from this
+Each also names `get_users_by_username` (a first listing's account lookup, and a list snapshot's) and `get_users_me` (the probe's, its one
+identity read) among its operations. All five are billed (`cost.class: "billed"`) at X's standard rates from this
 plugin's price table (`src/prices.ts`), and a test keeps each `usd` equal to its row there. The declared post price,
-$0.005, is the most a post costs: mentions and bookmarks cost $0.001 a post when you own the X app (`ownsXApp`), but
+$0.005, is the most a post costs: mentions, bookmarks and the account's own posts cost $0.001 a post when you own the X app (`ownsXApp`), but
 the Owned Read rate is not declared: source-contract v0.2.0 can state it (a price's `conditions` and `min`), but
-Memory and jelly on v0.1.x refuse those keys, so it waits until both are on v0.2.0. A probe costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` is private; the other two
-read public posts.
+Memory and jelly on v0.1.x refuse those keys, so it waits until both are on v0.2.0. A probe costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` and `x.bookmarks.list` are private; the other
+sources read public posts. `x.bookmarks` is not renamed: it stays the events feed. `x.bookmarks.list` is that same read as the contract's `list` output, so an app can render it without knowing X. `x.posts` is the signed-in account's own posts, the same way. A list snapshot is read with `events_list` and `{ "list": "bookmarks" }` or `{ "list": "posts" }`, plus `account`. It does not replace the events feeds.
 
 A feed the `events.feeds` option leaves out is `SOURCE_DISABLED`, which is how you turn a source off: the home
 timeline is off unless you name it.

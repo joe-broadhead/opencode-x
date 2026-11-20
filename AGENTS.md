@@ -80,7 +80,7 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
 - **The source contract.** `@we-the-rebel-alliance/source-contract`, pinned to its tag `v0.2.0` (the commit in
   `package-lock.json`), is a devDependency that the build bundles into `dist/index.js`, so an install runs no build and
   has no runtime dependency. Import only its `tools-rpc`, `events` and `cursor` entries from `src/`; the tests also use
-  its `conformance` and `descriptor`. `package.json`'s top-level `sources` declares X's three sources, and the
+  its `conformance` and `descriptor`. `package.json`'s top-level `sources` declares X's three events sources and the list snapshots `x.bookmarks.list` and `x.posts`, and the
   `conformance` stage runs the kit over each, on recorded invented X answers, and writes
   `reports/conformance-report.json` (`npm run conformance`, which a release runs; complete, with the kit's `atomicPages`
   and its reason). X keeps only each feed's most recent posts, so never declare `noExpiry`: a feed source answers `gap`

@@ -221,6 +221,108 @@
         "urlHosts": [
           "x.com"
         ]
+      },
+      {
+        "id": "x.bookmarks.list",
+        "kind": "snapshot",
+        "tool": "events_list",
+        "input": {
+          "source": "bookmarks",
+          "list": "bookmarks"
+        },
+        "output": "list",
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "tool": "x_events_list",
+          "operations": [
+            "get_users_me",
+            "get_users_by_username",
+            "get_users_bookmarks"
+          ],
+          "identity": [
+            "get_users_me"
+          ]
+        },
+        "private": true,
+        "cost": {
+          "class": "billed",
+          "units": [
+            {
+              "per": "post",
+              "usd": 0.005
+            },
+            {
+              "per": "author",
+              "usd": 0.01
+            },
+            {
+              "per": "user",
+              "usd": 0.01
+            }
+          ],
+          "probe": {
+            "per": "user",
+            "usd": 0.01
+          }
+        },
+        "maxAgeSec": 3600,
+        "maxBytes": 65536,
+        "urlHosts": [
+          "x.com"
+        ]
+      },
+      {
+        "id": "x.posts",
+        "kind": "snapshot",
+        "tool": "events_list",
+        "input": {
+          "source": "posts",
+          "list": "posts"
+        },
+        "output": "list",
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "tool": "x_events_list",
+          "operations": [
+            "get_users_me",
+            "get_users_by_username",
+            "get_users_posts"
+          ],
+          "identity": [
+            "get_users_me"
+          ]
+        },
+        "private": false,
+        "cost": {
+          "class": "billed",
+          "units": [
+            {
+              "per": "post",
+              "usd": 0.005
+            },
+            {
+              "per": "author",
+              "usd": 0.01
+            },
+            {
+              "per": "user",
+              "usd": 0.01
+            }
+          ],
+          "probe": {
+            "per": "user",
+            "usd": 0.01
+          }
+        },
+        "maxAgeSec": 3600,
+        "maxBytes": 65536,
+        "urlHosts": [
+          "x.com"
+        ]
       }
     ]
   },
