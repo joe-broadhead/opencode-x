@@ -42,7 +42,8 @@ import type { Status } from "./status.js"
  * Mentions and the timeline are read by `since_id`, newest first as X lists them; a window that holds more than this
  * call can read is narrowed with `until_id` to its older part, so events are always listed oldest first and nothing is
  * skipped. Bookmarks have no since, so they are read newest first until a bookmark the cursor knows; a walk the call
- * cannot finish continues from X's page token next time. The first listing only notes the newest bookmarks.
+ * cannot finish continues from X's page token next time. The first listing notes the newest bookmarks, and lists those
+ * of them from the start time on.
  *
  * Every X call is billed, so one call makes at most `events.maxCalls` reads and says `more` when it stops early. A
  * feed source never looks up who is signed in: `probe` does that, and the feed's cursor carries the account's X id, so
@@ -607,18 +608,44 @@ async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Pro
 }
 
 /**
- * Bookmarks added since the ones the state knows, read newest first and listed page by page; a walk the cap stops
- * resumes from X's page token. A bookmark has no time of its own, so the first listing lists none: it notes the newest
- * bookmarks, and every bookmark added after them is listed.
+ * The posts of one bookmarks page that are new, with their authors. A page is read without the author expansion, which
+ * X bills for every author it includes; the new posts are the front of that page, so the same page is read again
+ * (the same token, as many posts as are new, so X charges each post once a day) with the expansion, for their authors
+ * alone. A call with only one read left does it in that read.
+ */
+async function withAuthors(listing: Listing, token: string | undefined, fresh: readonly Post[]): Promise<Post[]> {
+  if (fresh.length === 0) return []
+  const page = await billed(listing, TOOLS.bookmarks, { id: listing.me, max_results: fresh.length, ...FIELDS, ...(token === undefined ? {} : { pagination_token: token }) })
+  const read = new Map(page.posts.map((post) => [post.id, post] as const))
+  // X may have moved on between the two reads; a post it no longer returns here keeps what the first read gave.
+  return fresh.map((post) => read.get(post.id) ?? post)
+}
+
+/** The post fields a bookmark's event is made from, with no expansion and so no author's name: X bills each author. */
+const BOOKMARK_FIELDS = { "post.fields": FIELDS["post.fields"] }
+
+/**
+ * Bookmarks added since the ones the state knows, listed oldest first like every feed, and read newest first (the
+ * order X lists them in: the bookmark added last comes first). The first read is small, KNOWN_BOOKMARKS posts with no
+ * author expansion, so a day with nothing new is one small read. The new bookmarks are those before the first known
+ * one, so a bookmark removed from the older part never makes an old one look new. The walk goes on to a further page
+ * only while every post of the page is new, and authors are looked up for the new posts alone. A walk the cap stops
+ * resumes from X's page token. A bookmark has no time of its own, so the first listing notes the newest bookmarks and
+ * lists those of them whose post is from the start time on; every bookmark added after them is listed.
  */
 async function bookmarkFeed(listing: Listing, state: BookmarkState): Promise<FeedRead<BookmarkState>> {
   const { budget } = listing
   const confirmed = listing.gaps ? { w: listing.now } : {}
   if (budget.calls <= 0) return { state, more: true }
   if (state.k === undefined) {
-    // Only the ids are needed, so no expansion: X bills each author it includes.
-    const page = await billed(listing, TOOLS.bookmarks, { id: listing.me, max_results: KNOWN_BOOKMARKS })
+    // The one read of the first listing also lists the posts it returns from the start time on, so it asks for their
+    // authors: at most KNOWN_BOOKMARKS authors, once, when the source starts. A page never holds more than may be listed.
+    const size = Math.min(KNOWN_BOOKMARKS, budget.events)
+    if (size <= 0) return { state, more: true }
+    const page = await billed(listing, TOOLS.bookmarks, { id: listing.me, max_results: size, ...FIELDS })
     const k = page.posts.slice(0, KNOWN_BOOKMARKS).map((post) => post.id)
+    const since = state.t ?? 0
+    if (!commit(budget, page.posts.filter((post) => post.created >= since).map((post) => postEvent(listing.account, "bookmarks", post, listing.source)))) return { state, more: true }
     return { state: k.length === 0 ? state : { k, ...confirmed }, more: false }
   }
   if (budget.events <= 0) return { state, more: true }
@@ -630,14 +657,17 @@ async function bookmarkFeed(listing: Listing, state: BookmarkState): Promise<Fee
   // A page token X hands back again, within this call, leads nowhere new: it ends the walk like a last page.
   const followed = new Set<string>(token === undefined ? [] : [token])
   while (budget.calls > 0 && budget.events > 0) {
-    // A page never holds more than the call may still list, so a listed page is always whole.
-    const size = Math.min(BOOKMARK_PAGE, budget.events)
-    const page = await billed(listing, TOOLS.bookmarks, { id: listing.me, max_results: size, ...FIELDS, ...(token === undefined ? {} : { pagination_token: token }) })
+    // A page never holds more than the call may still list, so a listed page is always whole. The first page is small.
+    const size = Math.min(token === undefined ? KNOWN_BOOKMARKS : BOOKMARK_PAGE, budget.events)
+    // With a read to spare for the authors, no expansion: they are asked for the new posts alone.
+    const split = budget.calls >= 2
+    const page = await billed(listing, TOOLS.bookmarks, { id: listing.me, max_results: size, ...(split ? BOOKMARK_FIELDS : FIELDS), ...(token === undefined ? {} : { pagination_token: token }) })
     // The walk's first ids, across pages, become the known bookmarks once it ends.
     newest = [...(newest ?? []), ...page.posts.map((post) => post.id)].slice(0, KNOWN_BOOKMARKS)
     const stop = page.posts.findIndex((post) => known.has(post.id))
     const fresh = stop === -1 ? page.posts : page.posts.slice(0, stop)
-    if (!commit(budget, fresh.map((post) => postEvent(listing.account, "bookmarks", post, listing.source)))) return { state, more: true }
+    const listed = split ? await withAuthors(listing, token, fresh) : fresh
+    if (!commit(budget, listed.map((post) => postEvent(listing.account, "bookmarks", post, listing.source)))) return { state, more: true }
     if (stop !== -1 || page.next === undefined || followed.has(page.next)) {
       // Done: everything newer than the known bookmarks is listed; the newest become the known ones. A walk that ends
       // without meeting any known bookmark, after about as many as X lists (within BOOKMARK_MARGIN), may have missed the
@@ -862,6 +892,8 @@ const LIST_CAP = 50
 /** The most bytes the list answer may hold: the source's declared `maxBytes`. */
 export const LIST_MAX_BYTES = 65_536
 const LIST_READS = { bookmarks: "get_users_bookmarks", posts: "get_users_posts" } as const
+/** The post fields a list item is made from: its time to sort by, and its whole text. No expansion, so no author. */
+const LIST_FIELDS = { "post.fields": "created_at,text,note_tweet" }
 type ListName = keyof typeof LIST_READS
 const isListName = (value: string): value is ListName => Object.hasOwn(LIST_READS, value)
 
@@ -901,7 +933,8 @@ export async function xList(read: Read, options: XEventsOptions, input: unknown,
   const found = userOf("get_users_by_username", lookup, EVENTS_LIST)
   if (found.username.toLowerCase() !== asked) throw unreadable("get_users_by_username")
   const tool = LIST_READS[list]
-  const page = await read(tool, { id: found.id, max_results: LIST_CAP, ...FIELDS })
+  // A list item names no author, so the read asks for no expansion: X bills each author it includes.
+  const page = await read(tool, { id: found.id, max_results: LIST_CAP, ...LIST_FIELDS })
   const { posts } = postsPage(tool, page)
   const seen = new Set<string>()
   const found_items: { at: number; item: { id: string; text: string } }[] = []

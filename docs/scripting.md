@@ -58,9 +58,9 @@ table, from [X's pay-per-usage pricing](https://docs.x.com/x-api/getting-started
   X validates them against its own limits. A loop is still a loop: 500 posts cost about $2.50,
   and only an opt-in budget or X's app spending limit bounds it; with a budget set, the estimate refuses the call that
   would cross it.
-- **Bookmarks need a daily cadence.** `get_users_bookmarks` has no `since_id`; every poll re-reads the newest page, and
-  X charges a resource once in a 24-hour UTC window. Poll once a day, not every few minutes; a 15-minute schedule buys
-  the same page many times and gains nothing.
+- **Bookmarks need a daily cadence.** `get_users_bookmarks` has no `since_id`; every poll re-reads the newest five
+  bookmarks (no author expansion), and X charges a resource once in a 24-hour UTC window. Poll once a day, not every
+  few minutes; a 15-minute schedule buys the same posts many times and gains nothing.
 - A script goes through the tools RPC, which calls the tool executor directly: no `execute.before` or `execute.after`
   hook runs, so it gets no hook cost line. The tools RPC's own estimate and
   `shapeResult` cost line replace them.
