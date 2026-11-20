@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `events_list` now lists bookmarks. Its first bookmark read, which notes the five newest bookmarks and lists none, did
+  not ask X for `created_at`. X then answers a post with only its id and text, the reader dropped every such post, and
+  so the read noted nothing: every call repeated it, the cursor never moved, and no bookmark was ever listed. The read
+  now asks for `post.fields: created_at` and nothing else (no author expansion, so no author is billed), with the same
+  page size and the same single call. A cursor from an earlier version needs no change: its first read after this fix
+  notes the bookmarks, and the next lists those added after it. Bookmarks made before that first read are noted as known,
+  not listed. Mentions, the timeline and the reach checks already asked for `created_at`.
+
 ## [0.0.7] - 2026-11-18
 
 ### Added

@@ -56,7 +56,8 @@ const TOOL: Record<string, keyof ReturnType<typeof fixture>> = { x_get_users_men
  * The host's executors for X's reads, answering from `data` as X does: v2 JSON with `data`, `includes.users` and
  * `meta.next_token`; mentions and the timeline newest first, after `since_id` or from `start_time`, before `until_id` or
  * `end_time`;
- * bookmarks in their own order. Pages hold at most `pageSize` posts.
+ * bookmarks in their own order. Pages hold at most `pageSize` posts, and a post has `created_at`, `author_id` and
+ * `conversation_id` only when `post.fields` names them.
  */
 function x(data = fixture(), pageSize = 2) {
   const calls: { tool: string; input: Record<string, unknown> }[] = []
@@ -88,7 +89,10 @@ function x(data = fixture(), pageSize = 2) {
     const page = posts.slice(from, from + size)
     const next = from + size < posts.length ? String(from + size) : undefined
     const users = String(input["expansions"] ?? "").includes("author_id") ? USERS.filter((user) => page.some((item) => item.author_id === user.id)) : []
-    return answer({ ...(page.length === 0 ? {} : { data: page, ...(users.length === 0 ? {} : { includes: { users } }) }), meta: { result_count: page.length, ...(next === undefined ? {} : { next_token: next }) } })
+    // As X does: a post holds only its id and text unless `post.fields` names the rest.
+    const asked = String(input["post.fields"] ?? "").split(",")
+    const shown = page.map((item) => ({ id: item.id, text: item.text, ...Object.fromEntries((["created_at", "author_id", "conversation_id"] as const).filter((field) => asked.includes(field)).map((field) => [field, item[field]])) }))
+    return answer({ ...(page.length === 0 ? {} : { data: shown, ...(users.length === 0 ? {} : { includes: { users } }) }), meta: { result_count: page.length, ...(next === undefined ? {} : { next_token: next }) } })
   }
   const list = async () =>
     ["x_get_users_me", "x_get_users_by_username", ...Object.keys(TOOL)].map((id) => ({
@@ -260,6 +264,27 @@ describe("x_events_list", () => {
     // Removing the newest known bookmark does not restart the walk: the others are known too.
     host.data.bookmarks.shift()
     expect((await list({ cursor })).events).toEqual([])
+  })
+
+  test("bookmarks: the first listing asks only for created_at, stores the newest ids in its cursor, and the next read lists what was added since", async () => {
+    const host = x(fixture(), 5)
+    const list = run(host, { feeds: ["bookmarks"] })
+    const stateOf = (cursor: string) => (JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as { f: { b: { k?: string[] } } }).f.b
+    const first = await list({ since: SINCE })
+    // One read, with no author expansion (X bills each author), and the post field the page reader needs.
+    const priming = host.calls.filter((call) => call.tool === "x_get_users_bookmarks")
+    expect(priming).toHaveLength(1)
+    expect(priming[0]!.input).toEqual({ id: ME, max_results: 5, "post.fields": "created_at" })
+    // The cursor moved from its start time to the bookmarks the read noted, newest first.
+    expect(stateOf(first.cursor).k).toEqual(fixture().bookmarks.map((item) => item.id))
+    // A read from that cursor notes nothing again: it lists the bookmark added since with one bookmarks read.
+    const added = post("2026-11-07T09:00:00Z", 0, "Added since")
+    host.data.bookmarks.unshift(added)
+    const before = host.calls.length
+    const second = await list({ cursor: first.cursor })
+    expect(second.events.map((event) => event.external_id)).toEqual([`bookmark:${added.id}`])
+    expect(host.calls.slice(before).map((call) => call.tool)).toEqual(["x_get_users_me", "x_get_users_bookmarks"])
+    expect(stateOf(second.cursor).k).toEqual([added.id, ...fixture().bookmarks.map((item) => item.id)])
   })
 
   test("refuses an input, a source, an account or a cursor that is not this account's", async () => {

@@ -543,8 +543,9 @@ async function bookmarkFeed(listing: Listing, state: BookmarkState): Promise<Fee
   const confirmed = listing.gaps ? { w: listing.now } : {}
   if (budget.calls <= 0) return { state, more: true }
   if (state.k === undefined) {
-    // Only the ids are needed, so no expansion: X bills each author it includes.
-    const page = await billed(listing, TOOLS.bookmarks, { id: listing.me, max_results: KNOWN_BOOKMARKS })
+    // Only the ids are needed, so no expansion (X bills each author it includes). X answers a post without its
+    // `created_at` unless asked, and the page reader drops such a post, so this read asks for that one field.
+    const page = await billed(listing, TOOLS.bookmarks, { id: listing.me, max_results: KNOWN_BOOKMARKS, "post.fields": "created_at" })
     const k = page.posts.slice(0, KNOWN_BOOKMARKS).map((post) => post.id)
     return { state: k.length === 0 ? state : { k, ...confirmed }, more: false }
   }
