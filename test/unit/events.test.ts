@@ -45,10 +45,11 @@ const fixture = () => ({
   ],
   timeline: [post("2026-10-31T09:00:00Z", 1, "Before since"), post("2026-11-03T09:00:00Z", 1, "Launch day"), post("2026-11-04T09:00:00Z", 0, "Notes from the launch"), post("2026-11-05T09:00:00Z", 1, "A week later")],
   // Newest bookmarked first, as X lists them.
-  bookmarks: [post("2026-10-20T09:00:00Z", 1, "An old post, bookmarked last"), post("2026-11-02T12:00:00Z", 0, "Worth keeping")],
+  bookmarks: [post("2026-11-06T12:00:00Z", 0, "Worth keeping"), post("2026-10-20T09:00:00Z", 1, "An old post, bookmarked first")],
 })
 const FEEDS: Feed[] = ["mentions", "timeline", "bookmarks"]
-const LISTED = [...fixture().mentions.slice(1), ...fixture().timeline.slice(1)].map((item) => item.id)
+// A first listing lists the posts it notes that are from `since` on, so the fixture's one such bookmark comes last.
+const LISTED = [...fixture().mentions.slice(1), ...fixture().timeline.slice(1)].map((item) => item.id).concat(`bookmark:${fixture().bookmarks[0]!.id}`)
 
 const TOOL: Record<string, keyof ReturnType<typeof fixture>> = { x_get_users_mentions: "mentions", x_get_users_timeline: "timeline", x_get_users_bookmarks: "bookmarks" }
 
@@ -60,9 +61,12 @@ const TOOL: Record<string, keyof ReturnType<typeof fixture>> = { x_get_users_men
  * `conversation_id` only when `post.fields` names them.
  */
 function x(data = fixture(), pageSize = 2) {
-  const calls: { tool: string; input: Record<string, unknown> }[] = []
+  const calls: { tool: string; input: Record<string, unknown>; billed?: { posts: number; users: number } }[] = []
   const answer = (value: unknown) => ({ output: value, content: [{ type: "text", text: JSON.stringify(value) }] })
+  // What X would bill for the read just answered: the posts it returned and the authors it included.
+  let tally: { posts: number; users: number } | undefined
   const execute = (tool: string, input: Record<string, unknown>) => {
+    tally = undefined
     if (tool === "x_get_users_me") return answer({ data: { id: ME, username: "SamRivera", name: "Sam Rivera" } })
     if (tool === "x_get_users_by_username") {
       return String(input["username"]) === "samrivera" ? answer({ data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }) : answer({ errors: [{ title: "Not Found Error", detail: "Could not find user." }] })
@@ -92,14 +96,18 @@ function x(data = fixture(), pageSize = 2) {
     // As X does: a post holds only its id and text unless `post.fields` names the rest.
     const asked = String(input["post.fields"] ?? "").split(",")
     const shown = page.map((item) => ({ id: item.id, text: item.text, ...Object.fromEntries((["created_at", "author_id", "conversation_id"] as const).filter((field) => asked.includes(field)).map((field) => [field, item[field]])) }))
+    tally = { posts: page.length, users: users.length }
     return answer({ ...(page.length === 0 ? {} : { data: shown, ...(users.length === 0 ? {} : { includes: { users } }) }), meta: { result_count: page.length, ...(next === undefined ? {} : { next_token: next }) } })
   }
   const list = async () =>
     ["x_get_users_me", "x_get_users_by_username", ...Object.keys(TOOL)].map((id) => ({
       id,
       execute: async (input: Record<string, unknown>) => {
-        calls.push({ tool: id, input })
-        return execute(id, input)
+        const call: { tool: string; input: Record<string, unknown>; billed?: { posts: number; users: number } } = { tool: id, input }
+        calls.push(call)
+        const answered = execute(id, input)
+        if (tally !== undefined) call.billed = tally
+        return answered
       },
     }))
   return { tool: { list: list as never }, calls, data }
@@ -148,15 +156,15 @@ describe("x_events_list", () => {
     expect(asserts).toEqual([{ sessionID: "ses_1", agent: "build", action: EVENTS_ACTION, resources: ["*"], source: { type: "tool", messageID: "msg_1", id: "call_1" } }])
     expect(EVENTS_ACTION).toBe("x_events_list")
     expect(host.calls[0]).toEqual({ tool: "x_get_users_me", input: { "user.fields": "username,name" } })
-    expect(host.calls[1]).toEqual({
+    expect(host.calls[1]).toMatchObject({
       tool: "x_get_users_mentions",
       input: { id: ME, max_results: 100, expansions: "author_id", "post.fields": "created_at,author_id,conversation_id,text,note_tweet", "user.fields": "username,name", start_time: "2026-11-01T00:00:00.000Z" },
     })
     expect(resultProblems(result.output)).toEqual([])
-    expect(result.content).toStartWith(`6 X events from mentions, timeline, bookmarks, oldest first, in ${host.calls.length} billed reads of at most 50. That is everything up to now`)
-    // The six listed posts and the two bookmarks the first listing notes, with the authors X included.
+    expect(result.content).toStartWith(`7 X events from mentions, timeline, bookmarks, oldest first, in ${host.calls.length} billed reads of at most 50. That is everything up to now`)
+    // The six listed posts and the two bookmarks the first listing reads (one is listed), with the authors X included.
     // The test does not sign in as the owner of the developer app, so the line is the conservative estimate.
-    expect(result.content).toContain("Cost: at most 8 owned posts ($0.04) + 6 authors ($0.06) = $0.10.")
+    expect(result.content).toContain("Cost: at most 8 owned posts ($0.04) + 8 authors ($0.08) = $0.12.")
     expect(tool.options).toEqual({ namespace: "x" })
   })
 
@@ -217,6 +225,7 @@ describe("x_events_list", () => {
     const host = x()
     const loop = (value: unknown) => ({ output: value, content: [{ type: "text", text: JSON.stringify(value) }] })
     const tools = await (host.tool.list as unknown as () => Promise<{ id: string; execute: (input: Record<string, unknown>) => Promise<unknown> }[]>)()
+    let primed = false
     const looping = tools.map((entry) =>
       entry.id === "x_get_users_me"
         ? entry
@@ -224,9 +233,12 @@ describe("x_events_list", () => {
             id: entry.id,
             execute: async (input: Record<string, unknown>) => {
               host.calls.push({ tool: entry.id, input })
-              // The first bookmarks listing (ids only, no expansions) notes one bookmark; after that every feed answers an
-              // empty page and the same token for ever.
-              if (entry.id === "x_get_users_bookmarks" && input["expansions"] === undefined) return loop({ data: [post("2026-11-02T12:00:00Z", 0, "Known")], meta: { result_count: 1 } })
+              // The first bookmarks listing notes one bookmark; after that every feed answers an empty page and the same
+              // token for ever.
+              if (entry.id === "x_get_users_bookmarks" && !primed) {
+                primed = true
+                return loop({ data: [post("2026-11-02T12:00:00Z", 0, "Known")], meta: { result_count: 1 } })
+              }
               return loop({ meta: { result_count: 0, next_token: "same-token" } })
             },
           },
@@ -254,7 +266,8 @@ describe("x_events_list", () => {
     const host = x(fixture(), 2)
     const list = run(host, { feeds: ["bookmarks"] })
     const first = await list({ since: SINCE })
-    expect([first.events, first.more]).toEqual([[], false])
+    // Of the bookmarks it notes, the first listing lists the one whose post is from SINCE on.
+    expect([first.events.map((event) => event.title), first.more]).toEqual([[ "Worth keeping" ], false])
     const added = [post("2026-11-07T09:00:00Z", 0, "New bookmark 1"), post("2026-11-06T09:00:00Z", 1, "New bookmark 2"), post("2026-10-01T09:00:00Z", 0, "An old post, bookmarked now")]
     host.data.bookmarks.unshift(...added)
     // A limit of 1 makes pages of one: the walk resumes from X's token and stops at the first known bookmark.
@@ -266,25 +279,101 @@ describe("x_events_list", () => {
     expect((await list({ cursor })).events).toEqual([])
   })
 
-  test("bookmarks: the first listing asks only for created_at, stores the newest ids in its cursor, and the next read lists what was added since", async () => {
-    const host = x(fixture(), 5)
-    const list = run(host, { feeds: ["bookmarks"] })
+  describe("bookmarks cost one small read when nothing is new", () => {
+    /** Bookmarks X lists newest first, `n` of them, each from a day of its own (older than the last). */
+    const saved = (n: number) => Array.from({ length: n }, (_, i) => post(`2026-10-${String(20 - i).padStart(2, "0")}T09:00:00Z`, i % 2, `Saved ${i}`, i))
     const stateOf = (cursor: string) => (JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as { f: { b: { k?: string[] } } }).f.b
-    const first = await list({ since: SINCE })
-    // One read, with no author expansion (X bills each author), and the post field the page reader needs.
-    const priming = host.calls.filter((call) => call.tool === "x_get_users_bookmarks")
-    expect(priming).toHaveLength(1)
-    expect(priming[0]!.input).toEqual({ id: ME, max_results: 5, "post.fields": "created_at" })
-    // The cursor moved from its start time to the bookmarks the read noted, newest first.
-    expect(stateOf(first.cursor).k).toEqual(fixture().bookmarks.map((item) => item.id))
-    // A read from that cursor notes nothing again: it lists the bookmark added since with one bookmarks read.
-    const added = post("2026-11-07T09:00:00Z", 0, "Added since")
-    host.data.bookmarks.unshift(added)
-    const before = host.calls.length
-    const second = await list({ cursor: first.cursor })
-    expect(second.events.map((event) => event.external_id)).toEqual([`bookmark:${added.id}`])
-    expect(host.calls.slice(before).map((call) => call.tool)).toEqual(["x_get_users_me", "x_get_users_bookmarks"])
-    expect(stateOf(second.cursor).k).toEqual([added.id, ...fixture().bookmarks.map((item) => item.id)])
+    const reads = (host: ReturnType<typeof x>, from = 0) => host.calls.slice(from).filter((call) => call.tool === "x_get_users_bookmarks")
+    /** A host with eight bookmarks, a list that reads only them, and the cursor of its first listing. */
+    async function primed() {
+      const host = x({ ...fixture(), bookmarks: saved(8) }, 100)
+      const list = run(host, { feeds: ["bookmarks"] })
+      const first = await list({ since: SINCE })
+      return { host, list, first, before: host.calls.length }
+    }
+
+    test("a primed daily run with nothing new makes one small read, with no expansions and no authors billed", async () => {
+      const { host, list, first, before } = await primed()
+      const second = await list({ cursor: first.cursor })
+      expect(second.events).toEqual([])
+      const made = reads(host, before)
+      expect(made).toHaveLength(1)
+      expect(made[0]!.input).toEqual({ id: ME, max_results: 5, "post.fields": "created_at,author_id,conversation_id,text,note_tweet" })
+      // X bills the five posts, and no author.
+      expect(made[0]!.billed).toEqual({ posts: 5, users: 0 })
+      expect(stateOf(second.cursor).k).toEqual(saved(8).slice(0, 5).map((item) => item.id))
+    })
+
+    test("one new bookmark makes one more read, for its author alone", async () => {
+      const { host, list, first, before } = await primed()
+      const added = post("2026-11-07T09:00:00Z", 0, "Added since")
+      host.data.bookmarks.unshift(added)
+      const second = await list({ cursor: first.cursor })
+      expect(second.events.map((event) => [event.external_id, event.actors.map((actor) => actor.id)])).toEqual([[`bookmark:${added.id}`, ["x:@amamensah"]]])
+      const made = reads(host, before)
+      expect(made.map((call) => [call.input["max_results"], call.input["expansions"], call.billed])).toEqual([
+        [5, undefined, { posts: 5, users: 0 }],
+        [1, "author_id", { posts: 1, users: 1 }],
+      ])
+      // The cursor keeps the five newest bookmarks, never more.
+      expect(stateOf(second.cursor).k).toEqual([added.id, ...saved(8).slice(0, 4).map((item) => item.id)])
+    })
+
+    test("a removed older bookmark never makes an old one look new", async () => {
+      const { host, list, first, before } = await primed()
+      // The oldest known one, a middle one and the newest known one, removed in turn: the rest is still behind the first known.
+      for (const index of [4, 2, 0]) host.data.bookmarks.splice(index, 1)
+      const second = await list({ cursor: first.cursor })
+      expect(second.events).toEqual([])
+      expect(reads(host, before)).toHaveLength(1)
+      // Nothing is listed again on the run after it either.
+      const third = await list({ cursor: second.cursor })
+      expect(third.events).toEqual([])
+    })
+
+    test("pages on only while every post of the page is new, and looks up authors for the new posts alone", async () => {
+      const { host, list, first, before } = await primed()
+      const added = Array.from({ length: 7 }, (_, i) => post(`2026-11-0${7 - i}T09:00:00Z`, i % 2, `Added ${i}`, 50 + i))
+      host.data.bookmarks.unshift(...added)
+      const second = await list({ cursor: first.cursor, limit: 100 })
+      expect(second.events.map((event) => event.external_id).sort()).toEqual(added.map((item) => `bookmark:${item.id}`).sort())
+      const made = reads(host, before)
+      // The small page (all new), the next page (the known ones begin at its third post), then one author read per page.
+      expect(made.map((call) => [call.input["max_results"], call.input["expansions"]])).toEqual([
+        [5, undefined],
+        [5, "author_id"],
+        [50, undefined],
+        [2, "author_id"],
+      ])
+      // Two authors for the first five new posts, two for the other two: never one for a known bookmark.
+      expect(made.map((call) => call.billed?.users)).toEqual([0, 2, 0, 2])
+    })
+
+    test("with one read left, the new posts' authors come with it", async () => {
+      const host = x({ ...fixture(), bookmarks: saved(8) }, 100)
+      const list = run(host, { feeds: ["bookmarks"], maxCalls: 2 })
+      const first = await list({ since: SINCE })
+      const added = post("2026-11-07T09:00:00Z", 1, "Added since")
+      host.data.bookmarks.unshift(added)
+      const before = host.calls.length
+      const second = await list({ cursor: first.cursor })
+      expect(second.events.map((event) => event.actors.map((actor) => actor.id))).toEqual([["x:@kofiboateng"]])
+      expect(reads(host, before)).toHaveLength(1)
+    })
+
+    test("the first listing lists only the noted posts from the start time on, in the one read it makes", async () => {
+      const mixed = [post("2026-11-07T09:00:00Z", 0, "From after"), post("2026-11-03T09:00:00Z", 1, "From after too"), post("2026-10-15T09:00:00Z", 0, "From before"), ...saved(3)]
+      const host = x({ ...fixture(), bookmarks: mixed }, 100)
+      const first = await run(host, { feeds: ["bookmarks"] })({ since: SINCE })
+      expect(first.events.map((event) => event.title).sort()).toEqual(["From after", "From after too"])
+      expect(reads(host)).toHaveLength(1)
+      expect(reads(host)[0]!.input).toMatchObject({ max_results: 5, expansions: "author_id" })
+      expect(stateOf(first.cursor).k).toEqual(mixed.slice(0, 5).map((item) => item.id))
+      // A start time after every post lists none, and still notes the five.
+      const late = await run(x({ ...fixture(), bookmarks: mixed }, 100), { feeds: ["bookmarks"] })({ since: "2026-11-08T00:00:00Z" })
+      expect(late.events).toEqual([])
+      expect(stateOf(late.cursor).k).toHaveLength(5)
+    })
   })
 
   test("refuses an input, a source, an account or a cursor that is not this account's", async () => {

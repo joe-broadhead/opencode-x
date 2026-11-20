@@ -623,8 +623,12 @@ events_list({ since?, cursor?, limit?, account?, source? })
     moves an older `since_id` forward without saying so. A feed source therefore says when it may have missed posts,
     once, with the contract's `gap` (below).
   - `bookmarks` (`get_users_bookmarks`): X gives bookmarks no time, so they are read newest first until one the
-    cursor knows (it keeps the five newest), page by page; a walk the cap stops continues from X's page token. The
-    first listing lists no bookmark: it notes the newest, and every bookmark added after them is listed.
+    cursor knows (it keeps the five newest), page by page; a walk the cap stops continues from X's page token. A
+    read with nothing new is one small read (five posts, with no author expansion, which X bills for every author).
+    The new bookmarks are those before the first known one, so removing an older bookmark lists nothing again. The
+    walk goes on to a next page only while every post of a page is new, and each page that has new posts is read once
+    more, for those posts alone, to look up their authors. The first listing notes the newest five bookmarks and lists
+    those of them whose post is from the start time on; every bookmark added after them is listed.
 - **An event**: kind `message` (a mention or a timeline post, `external_id` the post id) or `bookmark`
   (`bookmark:<post id>`), `occurred_at` the post's time, thread `x-conversation:<id>`, the author as `x:@<handle>`
   with their name, the first line as the title, the text (a long post's whole text, at most 4,096 characters), the

@@ -8,13 +8,25 @@ All notable changes to this project are documented in this file. It follows
 
 ### Fixed
 
-- `events_list` now lists bookmarks. Its first bookmark read, which notes the five newest bookmarks and lists none, did
-  not ask X for `created_at`. X then answers a post with only its id and text, the reader dropped every such post, and
-  so the read noted nothing: every call repeated it, the cursor never moved, and no bookmark was ever listed. The read
-  now asks for `post.fields: created_at` and nothing else (no author expansion, so no author is billed), with the same
-  page size and the same single call. A cursor from an earlier version needs no change: its first read after this fix
-  notes the bookmarks, and the next lists those added after it. Bookmarks made before that first read are noted as known,
-  not listed. Mentions, the timeline and the reach checks already asked for `created_at`.
+- `events_list` now lists bookmarks. Its first bookmark read, which notes the five newest bookmarks, did not ask X for
+  `created_at`. X then answers a post with only its id and text, the reader dropped every such post, and so the read
+  noted nothing: every call repeated it, the cursor never moved, and no bookmark was ever listed. The read now asks
+  for the post fields a bookmark's event needs. A cursor from an earlier version needs no change: its first read after
+  this fix notes the bookmarks, and the next lists those added after it. Mentions, the timeline and the reach checks
+  already asked for `created_at`.
+- A daily read of bookmarks with nothing new is one small read. Once the cursor knew bookmarks, every read took a page
+  of 50 with the author expansion, which X bills for every author (the page size is the most a call may list, 200 from
+  Memory): $0.30 to $0.76 a day. Now the first read is five posts with no author expansion, and the new bookmarks are
+  those before the first known one, so removing an older bookmark never makes an old one look new. The walk reads on
+  only while every post of a page is new. A page with new posts is read once more, for those posts alone, to look up
+  their authors (X charges each post once a day, so only the authors are new). With maxCalls 2 and one read left, the
+  authors come with that read. The cursor still keeps at most five bookmarks.
+
+### Changed
+
+- The first listing of bookmarks lists the posts it reads (the newest five) whose post is from the start time on,
+  instead of noting them all as already known, in the same one read (so it asks for those posts' authors, once, when
+  the source starts). No event is from before the start time.
 
 ## [0.0.7] - 2026-11-18
 

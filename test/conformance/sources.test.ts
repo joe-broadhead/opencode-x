@@ -37,8 +37,7 @@ const answer = (value: unknown) => ({ output: value, content: [{ type: "text", t
 
 /**
  * OpenCode's executors for X's reads, answering as X does from the recorded data: mentions and the timeline newest
- * first, after `since_id` or from `start_time`; bookmarks in their own order, the noted ones only to a first listing
- * (no expansions). Each asserts its own `x_<tool>` on the session's permission first, as the host does.
+ * first, after `since_id` or from `start_time`; bookmarks in their own order, the noted ones only to a first listing. Each asserts its own `x_<tool>` on the session's permission first, as the host does.
  */
 function executors(permission: SessionContext["permission"], noted = false) {
   const execute = (tool: string, input: Record<string, unknown>) => {
@@ -49,7 +48,7 @@ function executors(permission: SessionContext["permission"], noted = false) {
     }
     const feed = TOOL_FEED[tool]!
     if (input["id"] !== X["me"].id) return answer({ errors: [{ title: "Forbidden", detail: "Not this user." }] })
-    let posts: any[] = feed === "bookmarks" ? (noted || input["expansions"] === undefined ? X["bookmarksNoted"] : [...X["bookmarks"], ...X["bookmarksNoted"]]) : [...X[feed]]
+    let posts: any[] = feed === "bookmarks" ? (noted ? X["bookmarksNoted"] : [...X["bookmarks"], ...X["bookmarksNoted"]]) : [...X[feed]]
     if (feed !== "bookmarks") {
       const since = input["since_id"] === undefined ? undefined : BigInt(String(input["since_id"]))
       const start = input["start_time"] === undefined ? undefined : Date.parse(String(input["start_time"]))
