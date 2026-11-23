@@ -133,7 +133,12 @@ export const SENSITIVE_TOOLS: readonly string[] = [
   "users_id_unblock",
 ]
 
-/** Read-only methods among the privacy-restricted tools. The single request read marks messages delivered. */
+/**
+ * Read methods among the privacy-restricted tools. The tools RPC classes them read, but Jelly does not run them at
+ * Read only: they return private messages or key material, and the plugin's own default rules ask for every sensitive
+ * tool at `ask-changes` and deny it at `read-only`. `JELLY_READ_ONLY_OVERRIDES` records why each is declared otherwise.
+ * The single request read (`get_chat_message_request`, not this list) marks messages delivered and is a change.
+ */
 export const PRIVATE_READ_TOOLS: readonly string[] = [
   "get_chat_conversation",
   "get_chat_conversation_events",
@@ -142,6 +147,21 @@ export const PRIVATE_READ_TOOLS: readonly string[] = [
   "get_users_public_key",
   "get_users_public_keys",
 ]
+
+/**
+ * The privacy-sensitive reads declared to Jelly as not read-only, with the reason. Jelly enforces `readOnly` without
+ * loading the plugin, so without these it would let a Read only helper reach private conversations or public-key
+ * material; the plugin's own default rules ask at `ask-changes` and deny at `read-only`. The declaration, the tests
+ * and docs/jelly.md all read this one table, as the family does for a read that must stay restricted.
+ */
+export const JELLY_READ_ONLY_OVERRIDES: Readonly<Record<string, string>> = {
+  get_chat_conversation: "Returns a direct or group conversation's messages and details about the caller.",
+  get_chat_conversation_events: "Returns the events of a direct or group conversation.",
+  get_chat_conversations: "Lists the account's direct and group conversations.",
+  get_chat_message_requests: "Lists message requests from people outside the account's network.",
+  get_users_public_key: "Returns a user's public key, which is tied to that account.",
+  get_users_public_keys: "Returns several users' public keys, which are tied to those accounts.",
+}
 
 /**
  * Each known tool's input parameters, as `name:type`, with `*` after a required name, from the live list's schemas;

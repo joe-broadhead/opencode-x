@@ -4,6 +4,35 @@ All notable changes to this project are documented in this file. It follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Jelly now declares X's six privacy-sensitive DM and public-key reads (`get_chat_conversation`,
+  `get_chat_conversation_events`, `get_chat_conversations`, `get_chat_message_requests`, `get_users_public_key` and
+  `get_users_public_keys`) as not read-only. Ask before changes asks for them and Read only denies them, matching the
+  plugin's own default rules and the Code Mode text; the tools RPC still classes them reads. `JELLY_READ_ONLY_OVERRIDES`
+  in `src/x-tools.ts` records why, and no permission default, tool list or billing rule changed.
+- A billed X read now checks the caller's cancellation signal on entry, after the asynchronous executor lookup, and
+  immediately before dispatch. A cancellation during either lookup therefore starts no new read. A read already
+  dispatched stays billed and is not undone; the tests assert the first executor call survives and the aborted one is
+  never made.
+- The combined `events_list` source (`source: "x"`) now counts and shows its billed identity read: `get_users_me` is one
+  user unit in the page's `cost.units` and in the model's cost line, priced by the existing price table. Its text now
+  says `events.maxCalls` includes an account lookup. No new fee or rate is invented.
+
+### Changed
+
+- The `x_events_list` description, the Code Mode `x` namespace text and the `x` skill now say that
+  `events.maxCalls` bounds reads, an account lookup included, and that a feed's reach check, where it makes one, is one
+  more billed read: a call ceiling, not a spending bound.
+
+### Known
+
+- The conformance reports for `x.bookmarks.list` and `x.posts` stay incomplete on the contract kit's `billed-cost`
+  check, because the pinned kit runs that check only for events. This is preserved and tracked separately; the plugin
+  does not mark the check not-applicable, relabel it, pin another kit, or otherwise work around it.
+
 ## [0.0.9] - 2026-11-20
 
 ### Fixed

@@ -677,8 +677,9 @@ events_list({ since?, cursor?, limit?, account?, source? })
 - **Cost**: X bills every tool call to the X developer account that owns the app, per post and per author returned.
   One call makes at most `events.maxCalls` reads, an account lookup included, plus a feed source's reach check
   (Gaps, above), and asks for each author's handle, which
-  X bills as a user read. A feed source's page carries `cost.units`: the posts, authors and users X returned for this
-  call's reads, per the declared price units. X reports no price itself, so the page has no `usd`. With the default
+  X bills as a user read. A feed source's page, and the combined source `x`'s page, carry `cost.units`: the posts,
+  authors and users X returned for this call's reads, per the declared price units; source `x` includes its one
+  `get_users_me` identity read as a user unit. X reports no price itself, so the page has no `usd`. With the default
   feeds and cap, one call costs a few cents for a quiet account. When the cap stops it, the result says `more`, and
   the text the model reads gives the actual cost line.
 - **Cursor**: opaque, at most 1,024 characters, bound to the plugin, the source and the account. Source `x`'s also

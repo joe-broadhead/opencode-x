@@ -6,7 +6,7 @@
 // replace this test; a live capture with hints replaces the fixture.
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
-import { PARAMETERS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS, classify } from "../../src/x-tools.js"
+import { JELLY_READ_ONLY_OVERRIDES, PARAMETERS, PRIVATE_READ_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS, classify } from "../../src/x-tools.js"
 
 const NAMESPACE = "x"
 
@@ -40,10 +40,14 @@ describe("the declaration against X's catalogued tool list", () => {
     expect([...own].filter((name) => listed.has(name))).toEqual([])
   })
 
-  test("classifies every listed tool, and declares readOnly from its class", () => {
+  test("classifies every listed tool, and declares readOnly from its class except the six restricted reads", () => {
     expect([...listed.keys()].filter((name) => classify(name) === "unknown")).toEqual([])
-    // The reads, and the six privacy-sensitive DM and public-key reads.
-    const reads = new Set([...READ_TOOLS, ...PRIVATE_READ_TOOLS])
+    // The reads that Jelly may run at Read only, and the six privacy-sensitive reads it must ask for and deny.
+    const reads = new Set(READ_TOOLS)
+    expect(Object.keys(JELLY_READ_ONLY_OVERRIDES).sort()).toEqual([...PRIVATE_READ_TOOLS].sort())
+    for (const [name, reason] of Object.entries(JELLY_READ_ONLY_OVERRIDES)) {
+      expect({ name, read: reads.has(name), reason: reason.trim().length > 0 }).toEqual({ name, read: false, reason: true })
+    }
     for (const tool of declared) {
       const name = short(tool.permission)
       if (own.has(name)) continue

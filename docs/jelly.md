@@ -21,9 +21,9 @@ The line says what every call costs and claims nothing about a tool's answer. On
 cost line only for `x_search_posts_all`, `x_get_posts_by_id`, `x_get_posts_by_ids`, `x_get_posts_counts_recent`,
 `x_get_users_mentions`, `x_get_users_timeline`, `x_get_users_posts`, `x_get_users_bookmarks`,
 `x_get_users_bookmarks_by_folder_id`, `x_get_users_liked_posts`, `x_search_users`, `x_get_users_by_id`,
-`x_get_users_by_username`, `x_get_users_by_usernames`, `x_get_users_me_followers`, `x_get_users_me_following`,
-`x_get_users_list_memberships` and `x_get_users_blocking`; every other read, and every write, ends without one. A
-script's result carries a cost line on every method X prices.
+`x_get_users_by_username`, `x_get_users_by_usernames`, `x_get_users_me`, `x_get_users_me_followers`,
+`x_get_users_me_following`, `x_get_users_list_memberships` and `x_get_users_blocking`; every other read, and every
+write, ends without one. A script's result carries a cost line on every method X prices.
 
 ## Icons and vendor
 
@@ -39,15 +39,17 @@ written out, centred on a white rounded holding tile so it stays visible on dark
 
 ## Tools and permissions
 
-102 tools are declared (58 read-only), and every declared effect is `allow`: the 51 reads and the 6 DM and public-key
-reads, the 9 private writes, the public `x_create_posts`, and the 34 other changes that were once off. `jelly.tools`
-follows `src/x-tools.ts`, so each declared tool has the effect the plugin's own `access: all` block gives it, and a
-person's own choice replaces it.
+102 tools are declared (52 read-only), and every declared effect is `allow`: the 51 reads that run at every access, the
+6 DM and public-key reads that ask at Ask before changes and are off at Read only, the 9 private writes, the public
+`x_create_posts`, and the 34 other changes that were once off. `jelly.tools` follows `src/x-tools.ts`, so each declared
+tool has the effect the plugin's own `access: all` block gives it, and a person's own choice replaces it.
 
 - Reads: 51 of the tools return data and run without asking: posts, profiles, timelines, mentions, bookmarks, lists,
   Spaces, Communities, news, trends, your own broadcast's chat and moderators, and the usage balance.
-- The other 6 `readOnly` tools are X's DM conversation and public-key reads. They reach private messages, and they run
-  like the rest. Opening one message request is not read-only: X marks the messages delivered and updates the unread badge.
+- The other 6 tools are X's DM conversation and public-key reads. They reach private messages or key material, so they
+  are deliberately not `readOnly`: Ask before changes asks for them and Read only denies them, as the plugin's own
+  rules do. `JELLY_READ_ONLY_OVERRIDES` in `src/x-tools.ts` records each reason. Opening a message request
+  (`get_chat_message_request`) is not read-only: X marks the messages delivered and updates the unread badge.
 - Changes: bookmarks, lists, an Article draft, a media upload (`x_media_upload`, which returns an id for a later Post
   or DM) and the public `x_create_posts`, plus X's DM, follow, block, mute, list-membership, moderator and live-video
   tools. All of them run without asking under the default, on the user's real
@@ -64,8 +66,9 @@ own default rules.
 November 2026, in `test/fixtures/live-tools.json` (`provenance.json` says how): every listed tool is declared, every
 declared tool is listed or is the plugin's own `x_events_list` (`test/fixtures/tool-registry.json`), and every effect is
 `allow`. That list has names and input parameters only: OpenCode's sign-in to X was refused that day, so there is no
-live capture with X's `readOnlyHint`s, and each `readOnly` is the class in `src/x-tools.ts`, from X's own description
-of the tool.
+live capture with X's `readOnlyHint`s. Each `readOnly` follows the class in `src/x-tools.ts`, from X's own description
+of the tool, except the six privacy-sensitive reads in `JELLY_READ_ONLY_OVERRIDES`, which are not read-only so Jelly's
+Ask before changes asks and Read only denies them.
 
 The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page
 against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit equal to the copy every plugin

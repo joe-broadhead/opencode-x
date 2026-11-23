@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { DISPLAY_NAME, SCOPES, SERVER_NAME } from "../../src/constants.js"
-import { SENSITIVE_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
+import { JELLY_READ_ONLY_OVERRIDES, PRIVATE_READ_TOOLS, SENSITIVE_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
 import { METHODS } from "../../src/tools-rpc.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
@@ -37,12 +37,26 @@ describe("the jelly declaration", () => {
   test("declares every live tool once, with the all-allow effect the default rules give it", () => {
     for (const tool of READ_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: true })
     for (const tool of [...WRITE_TOOLS, ...PUBLIC_TOOLS]) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: false })
-    for (const tool of SENSITIVE_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow" })
-    for (const method of METHODS) expect(byPermission.get(`x_${method.name}`)?.readOnly, method.name).toBe(method.class === "read")
+    for (const tool of SENSITIVE_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: false })
+    expect(Object.keys(JELLY_READ_ONLY_OVERRIDES).sort()).toEqual([...PRIVATE_READ_TOOLS].sort())
+    for (const tool of PRIVATE_READ_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: false })
+    for (const method of METHODS) expect(byPermission.get(`x_${method.name}`)?.readOnly, method.name).toBe(method.class === "read" && !Object.hasOwn(JELLY_READ_ONLY_OVERRIDES, method.name))
     // Memory's collector runs x_events_list unattended, so it never asks.
     expect(byPermission.get("x_events_list")).toEqual({ name: "x.events_list", permission: "x_events_list", effect: "allow", readOnly: true })
     expect(jelly.tools).toHaveLength(known.length)
     for (const tool of jelly.tools) expect(Object.keys(tool).sort()).toEqual(["effect", "name", "permission", "readOnly"])
+  })
+
+  test("declares the six private reads as not read-only, so Jelly asks and then denies them", () => {
+    for (const tool of PRIVATE_READ_TOOLS) {
+      expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: false })
+      expect(JELLY_READ_ONLY_OVERRIDES[tool]?.trim()).toBeTruthy()
+    }
+    // The plugin's own default rules ask for every one of them at ask-changes and deny them at read-only.
+    for (const access of ["ask-changes", "read-only"] as const) {
+      const rules = [BASE_ALLOW, ...defaultRules(access)]
+      for (const tool of PRIVATE_READ_TOOLS) expect({ access, tool, effect: evaluate(rules, `x_${tool}`) }).toEqual({ access, tool, effect: access === "ask-changes" ? "ask" : "deny" })
+    }
   })
 
   test("names every skill the package ships, both sign-ins, and no views, RPC, feeds or widgets", () => {

@@ -823,19 +823,19 @@
         "name": "x.get_chat_conversation",
         "permission": "x_get_chat_conversation",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       },
       {
         "name": "x.get_chat_conversation_events",
         "permission": "x_get_chat_conversation_events",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       },
       {
         "name": "x.get_chat_conversations",
         "permission": "x_get_chat_conversations",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       },
       {
         "name": "x.get_chat_message_request",
@@ -847,19 +847,19 @@
         "name": "x.get_chat_message_requests",
         "permission": "x_get_chat_message_requests",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       },
       {
         "name": "x.get_users_public_key",
         "permission": "x_get_users_public_key",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       },
       {
         "name": "x.get_users_public_keys",
         "permission": "x_get_users_public_keys",
         "effect": "allow",
-        "readOnly": true
+        "readOnly": false
       },
       {
         "name": "x.go_live_scheduled_broadcast",
