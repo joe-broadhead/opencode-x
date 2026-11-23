@@ -13,8 +13,8 @@ outside the billed-read block, one `search()`, for the tool you are about to cal
 X bills each call to the X developer account that owns the app (yours or your team's): a post read about $0.005,
 user read $0.010, your own reads about $0.001, bookmark change $0.005, and post create $0.015, or $0.200 with a URL.
 
-Reads are automatic: fetch what the question needs, with the `max_results`, next-page tokens and expansions you judge
-useful for it. Never ask whether to spend: make the call.
+Reads are automatic: fetch what the question needs, with the `max_results`, next-page tokens and expansions you judge useful for it. Never ask whether to spend: make the call. For a collector, `events_list` makes at most `events.maxCalls`
+reads, an account lookup included (one billed user read), plus one small billed reach check where needed; a call ceiling, not a spending bound.
 
 Every answer that made a billed read ends with one line: "Cost: at most 10 posts ($0.05) + 10 authors ($0.10) =
 $0.15." An Owned Read is $0.001 only with `ownsXApp`; otherwise standard. Never mention an estimate.

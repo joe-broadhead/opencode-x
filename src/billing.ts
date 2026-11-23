@@ -20,6 +20,7 @@ const OWNED_TOOLS = new Set([
 /** Reads that return users, billed per user. */
 const OWNED_USER_TOOLS = new Set(["get_users_me_followers", "get_users_me_following", "get_users_blocking"])
 const USER_TOOLS = new Set([
+  "get_users_me",
   "search_users",
   "get_users_by_id",
   "get_users_by_username",
@@ -120,15 +121,18 @@ export const mergeCosts = (costs: readonly ReadCost[]): ReadCost => ({
 })
 
 /** One line the model can repeat: what was returned, at its rate, and the actual total. */
-export function costLine(cost: ReadCost): string {
-  const atMost = cost.basis === "conservative" ? "at most " : ""
+export function costLine(cost: ReadCost, identity?: ReadCost): string {
+  const atMost = cost.basis === "conservative" || identity?.basis === "conservative" ? "at most " : ""
   const parts: string[] = []
   if (cost.posts > 0) parts.push(`${cost.posts} ${cost.posts === 1 ? "post" : "posts"} (${money(cost.posts * POST)})`)
   if (cost.owned > 0) parts.push(`${cost.owned} owned ${cost.owned === 1 ? "post" : "posts"} (${money(cost.owned * cost.ownedRate)})`)
   const noun = parts.length > 0 ? (cost.users === 1 ? "author" : "authors") : cost.users === 1 ? "user" : "users"
   if (cost.users > 0) parts.push(`${cost.users} ${noun} (${money(cost.users * cost.userRate)})`)
+  const identityUsers = identity?.users ?? 0
+  if (identityUsers > 0) parts.push(`${identityUsers} ${identityUsers === 1 ? "user" : "users"} (${money(identity?.total ?? identityUsers * (identity?.userRate ?? 0))})`)
   if (cost.counts > 0) parts.push(`${cost.counts} count ${cost.counts === 1 ? "read" : "reads"} (${money(cost.counts * COUNT)})`)
-  return parts.length === 0 ? "Cost: 0 posts + 0 authors = $0.00." : `Cost: ${atMost}${parts.join(" + ")} = ${money(cost.total)}.`
+  const total = cost.total + (identity?.total ?? 0)
+  return parts.length === 0 ? "Cost: 0 posts + 0 authors = $0.00." : `Cost: ${atMost}${parts.join(" + ")} = ${money(total)}.`
 }
 
 const append = (result: Result, line: string) => {

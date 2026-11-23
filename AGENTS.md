@@ -71,7 +71,9 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   and the `icon`, with only the keys Jelly reads: its contracts drop an unknown top-level key, and refuse an unknown
   key inside a tool, sign-in or `contributes` entry. The summary names what the plugin reaches and states no policy.
   `test/unit/jelly.test.ts` runs the shared declaration kit, `test/support/jelly-kit.ts`, against Jelly's plugin
-  authors' standard, and keeps the section in step with the tool lists and the default rules.
+  authors' standard, and keeps the section in step with the tool lists and the default rules. The six DM and public-key
+  reads are declared `readOnly: false` even though the tools RPC classes them reads, so Jelly asks at Ask before changes
+  and denies them at Read only as the default rules do; `JELLY_READ_ONLY_OVERRIDES` records why.
 - **The icon** `assets/icon.svg` is X's own logo, the path x.com serves in its own 24×24 viewBox, unchanged, in black,
   centred on a white rounded holding tile (48×48) so it stays visible on dark backgrounds, with the PNGs rendered from it. `opencode.vendor.mark` is `true`, so the README carries the trademark line. Do not
   recolour, redraw or combine it. It uses only the drawing elements Jelly's icon cleaner keeps, and no `<title>`: the
@@ -82,8 +84,10 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
   has no runtime dependency. Import only its `tools-rpc`, `events` and `cursor` entries from `src/`; the tests also use
   its `conformance` and `descriptor`. `package.json`'s top-level `sources` declares X's three events sources and the list snapshots `x.bookmarks.list` and `x.posts` (the tools RPC method's, never the model tool's), and the
   `conformance` stage runs the kit over each, on recorded invented X answers, and writes
-  `reports/conformance-report.json` (`npm run conformance`, which a release runs; complete, with the kit's `atomicPages`
-  and its reason). X keeps only each feed's most recent posts, so never declare `noExpiry`: a feed source answers `gap`
+  `reports/conformance-report.json` (`npm run conformance`, which a release runs; the three feed reports are complete,
+  with the kit's `atomicPages` and its reason). The two list-snapshot reports stay incomplete on the kit's `billed-cost`
+  check, because the pinned kit runs that check only for events. That incompleteness is preserved and tracked separately:
+  do not mark the check not-applicable, relabel it, or pin another kit to make it pass. X keeps only each feed's most recent posts, so never declare `noExpiry`: a feed source answers `gap`
   (`expired` when X no longer lists as far back as the newest post the cursor listed, `window-truncated` when a first
   listing starts further back than X lists), once per read. A deleted post is not lost history and makes no gap. Declare or send none of v0.3.0's new keys (`facts`, `hints`, `routines`, actor `kind`, `sections`/`parts`; before them v0.2.0's `removals[]`, `owner.verified`,
   `permission.readsIdentity`, a price's `conditions` and `min`, among others) until Memory and jelly are on 0.3.0. No content read asserts `x_get_users_me`, the identity read: it is `probe`'s

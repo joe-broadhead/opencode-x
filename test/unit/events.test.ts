@@ -148,6 +148,38 @@ describe("x_events_list", () => {
     await assertEventsListConformance(async (input) => method.run(input, call), { source: "x", account: "samrivera", owner: OWNER, since: SINCE, expected: LISTED, sourceInput: true })
   })
 
+  test("makes no billed X read when the call is already cancelled", async () => {
+    const host = x()
+    const controller = new AbortController()
+    controller.abort()
+    const cancelled = { sessionID: "ses_1", agent: "build", messageID: "msg_1", id: "call_1", signal: controller.signal } as never
+    await expect(eventsTool(options(host)).execute({ since: SINCE }, cancelled)).rejects.toThrow()
+    const call: ToolCall = { sessionID: "ses_1", agent: "build", messageID: "msg_script", id: "script:1", signal: controller.signal, progress: async () => {} }
+    await expect(eventsMethod(options(host)).run({ since: SINCE }, call)).rejects.toThrow()
+    expect(host.calls).toEqual([])
+  })
+
+  test.each([1, 2] as const)("does not dispatch a paid read when cancellation lands during executor lookup %i", async (abortAt) => {
+    const host = x()
+    const tools = await (host.tool.list as unknown as () => Promise<unknown[]>)()
+    const controller = new AbortController()
+    let lookups = 0
+    const list = async () => {
+      lookups++
+      if (lookups === abortAt) controller.abort()
+      return tools
+    }
+    const cancelled = { sessionID: "ses_1", agent: "build", messageID: "msg_1", id: "call_1", signal: controller.signal } as never
+    await expect(eventsTool(options({ ...host, tool: { list } as never })).execute({ since: SINCE }, cancelled)).rejects.toThrow()
+    expect(lookups).toBe(abortAt)
+    if (abortAt === 1) {
+      expect(host.calls).toEqual([])
+    } else {
+      // The first read was already dispatched and stays billed; the aborted second read never reaches an executor.
+      expect(host.calls.map((call) => call.tool)).toEqual(["x_get_users_me"])
+    }
+  })
+
   test("asserts x_events_list as the calling tool, asks X only for what an event needs, and says what it cost", async () => {
     const host = x()
     const asserts: unknown[] = []
@@ -164,7 +196,9 @@ describe("x_events_list", () => {
     expect(result.content).toStartWith(`7 X events from mentions, timeline, bookmarks, oldest first, in ${host.calls.length} billed reads of at most 50. That is everything up to now`)
     // The six listed posts and the two bookmarks the first listing reads (one is listed), with the authors X included.
     // The test does not sign in as the owner of the developer app, so the line is the conservative estimate.
-    expect(result.content).toContain("Cost: at most 8 owned posts ($0.04) + 8 authors ($0.08) = $0.12.")
+    expect(result.content).toContain("Cost: at most 8 owned posts ($0.04) + 8 authors ($0.08) + 1 user ($0.01) = $0.13.")
+    // The combined source's one get_users_me identity read is a user unit, apart from the post authors.
+    expect(result.output.cost).toEqual({ units: [{ per: "post", count: 8 }, { per: "author", count: 8 }, { per: "user", count: 1 }] })
     expect(tool.options).toEqual({ namespace: "x" })
   })
 

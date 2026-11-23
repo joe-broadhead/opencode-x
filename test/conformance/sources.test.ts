@@ -255,6 +255,13 @@ describe("the source contract's conformance kit", () => {
 
   test("writes the report a release attaches", () => {
     expect(reports.map((report) => report.source).sort()).toEqual([...FEEDS.map((feed) => `${NAMESPACE}.${feed}`), "x.bookmarks.list", "x.posts"].sort())
+    // Preserved, not worked around: the two list snapshots stay incomplete on billed-cost, tracked separately. Do not
+    // mark the check not-applicable, relabel it, or pin another kit to make it pass.
+    const incomplete = reports.filter((entry) => entry.incomplete).map((entry) => entry.source).sort()
+    expect(incomplete).toEqual(["x.bookmarks.list", "x.posts"])
+    for (const entry of reports.filter((entry) => entry.incomplete)) {
+      expect(entry.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual(["billed-cost"])
+    }
     const installed = readInstalledDescriptor(root, { version: pkg.version })
     const report = {
       contract: `@we-the-rebel-alliance/source-contract@${CONTRACT_VERSION}`,
