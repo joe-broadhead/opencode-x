@@ -134,9 +134,10 @@ export const SENSITIVE_TOOLS: readonly string[] = [
 ]
 
 /**
- * Read methods among the privacy-restricted tools. The tools RPC classes them read, but Jelly does not run them at
- * Read only: they return private messages or key material, and the plugin's own default rules ask for every sensitive
- * tool at `ask-changes` and deny it at `read-only`. `JELLY_READ_ONLY_OVERRIDES` records why each is declared otherwise.
+ * Read methods among the privacy-restricted tools. The tools RPC classes them read, but the `jelly` declaration does
+ * not call them read-only: they return private messages or key material, and the plugin's own default rules ask for
+ * every sensitive tool at `ask-changes` and deny it at `read-only`. `JELLY_READ_ONLY_OVERRIDES` records why each is
+ * declared otherwise.
  * The single request read (`get_chat_message_request`, not this list) marks messages delivered and is a change.
  */
 export const PRIVATE_READ_TOOLS: readonly string[] = [
@@ -149,10 +150,10 @@ export const PRIVATE_READ_TOOLS: readonly string[] = [
 ]
 
 /**
- * The privacy-sensitive reads declared to Jelly as not read-only, with the reason. Jelly enforces `readOnly` without
- * loading the plugin, so without these it would let a Read only helper reach private conversations or public-key
- * material; the plugin's own default rules ask at `ask-changes` and deny at `read-only`. The declaration, the tests
- * and docs/jelly.md all read this one table, as the family does for a read that must stay restricted.
+ * The privacy-sensitive reads declared in the `jelly` declaration as not read-only, with the reason. The declaration
+ * is read without loading the plugin, so without these it would let a Read only helper reach private conversations or
+ * public-key material; the plugin's own default rules ask at `ask-changes` and deny at `read-only`. The declaration
+ * and the tests all read this one table.
  */
 export const JELLY_READ_ONLY_OVERRIDES: Readonly<Record<string, string>> = {
   get_chat_conversation: "Returns a direct or group conversation's messages and details about the caller.",

@@ -25,7 +25,7 @@ of its own, and has no runtime dependencies.
 | `src/redact.ts` | Redaction for everything status shows: URL credentials, queries and token shapes removed, one line, controls and bidi characters stripped, cut by whole characters |
 | `src/skills.ts` | Loading and registering the skills |
 | `src/prices.ts` | X's pay-per-usage table, one row per known method X prices, with its source and date; `UNPRICED` lists the known methods it gives no price for (media uploads and chat media), which have no guessed row |
-| `src/billing.ts` | The model path's cost line, and the script path's estimates, both caps, the rolling daily ledger in plugin storage, and the structured `cost` |
+| `src/billing.ts` | The script path's estimates, both opt-in caps, the rolling daily ledger in plugin storage, and the structured `cost`; the model path has no cost line and the plugin registers no hook |
 | `src/tools-rpc.ts` | X's part of the tools RPC for scripts, `x.posts.tools`: the plugin value, the method table, the shapers and the next steps that the source contract's shared `tools-rpc` transport takes |
 | `src/events.ts` | X's sources: `events_list` (the three feed sources and the combined source `x`) and `probe`, built with the source contract's `events` and `cursor` |
 | `src/tui.ts` | The terminal UI part: the plugin `x.posts.tui` and the `/x` dialog |
@@ -33,8 +33,8 @@ of its own, and has no runtime dependencies.
 | `src/version.ts` | The plugin's version from `package.json`; the build replaces it with the version string alone |
 
 The default rules, the tools RPC's methods, status's unknown tools, the fake server in the tests and the checks of
-`jelly.tools` and the skills all derive from `src/x-tools.ts`, so a change to X's tools is a change there, in
-`jelly.tools`, and in any skill example that names a tool.
+the `jelly` declaration and the skills all derive from `src/x-tools.ts`, so a change to X's tools is a change there,
+in the declaration, and in any skill example that names a tool.
 
 `scripts/build.mjs` bundles each entry with esbuild into one self-contained file: `src/index.ts` into `dist/index.js`
 and `src/tui.ts` into `dist/tui.js`. Shared code, such as the status model and the RPC contract, is inlined into both.
@@ -107,7 +107,8 @@ traps: the Production environment, the Pay-per-use package and the scopes. An ag
 allow, lacks the plugin's whole block after it, and its own rules would let a new X tool run without asking. A skill of
 the plugin's id that OpenCode loads from another path is named, with a next step to rename or move it. OpenCode's text
 for a needed sign-in is never shown as OpenCode wrote it: a failure's or an expired sign-in's reason is cut to one line
-of 160 characters with no URL query and token shapes redacted. A token X cannot refresh is `AUTH_REQUIRED`.
+of 160 characters with no URL query and token shapes redacted. A sign-in failure the host reports with a reason is
+`AUTH_REQUIRED`; a bare `needs_auth` (a first sign-in) is not.
 Status makes no X call, because every call costs money.
 
 - `/x-status` posts the text with `ctx.session.synthetic` (`resume: false`).
@@ -122,8 +123,8 @@ Status makes no X call, because every call costs money.
 methods are `describe` and one per entry in `METHODS`, which classifies every known tool by its exact name: the reads,
 the private writes, the public send and the privacy-sensitive tools. A tool that X adds later is not a method.
 `describe` reports each method's class, its availability from what OpenCode lists now, and, given a session, its
-resolved permission. The model path is unchanged; the RPC's shapers reproduce its hooks: `shapeInput` allows X's 100
-results and pagination and stops a session at an opt-in budget when one is set, and `shapeResult` appends the actual-cost line.
+resolved permission. The model path is unchanged; the RPC's shapers price the call and stop it at an opt-in budget when
+one is set (`shapeInput`), and append the script call's actual-cost line (`shapeResult`).
 
 A call is `{ sessionID, input }`. The module:
 
@@ -156,7 +157,7 @@ instead of refusing them. So the envelope's schema carries a strict Standard Sch
 OpenCode answers a bad envelope with `rpc.invalid_input`.
 
 The executor runs no `execute.before` or `execute.after` hooks, so `shapeInput` and `shapeResult` stand in for the model
-path's: they price the call and append the cost line.
+script path's: they price the call and append the cost line.
 
 ## Terminal UI part
 
@@ -168,27 +169,27 @@ path's: they price the call and append the cost line.
 
 ## Platform facts
 
-These facts were read on OpenCode 2.2.3 during development; the host and package suites on 2.4.1, the one tested
-release, are the check for every row they cover. The links name the 2.2.3 source where the behaviour was first read.
+These facts were read on OpenCode 2.4.1, the one tested release; the host and package suites on 2.4.1 are the check
+for every row they cover. The links name the 2.4.1 source.
 
 | Topic | Fact | Source |
 | --- | --- | --- |
-| MCP tool permissions | The host asserts every MCP call: action `<server>_<tool>`, resource `*`. A last-matching `deny` on `*` hides the tool. | [`tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/tool/mcp.ts) |
-| Rule evaluation | The last match wins. Saved approvals come after all rules as `allow`. An unattended `ask` is refused. | [`permission.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/permission.ts) |
-| Agent rule order | Built-in agents start from a base `* * allow` and exist before package plugins run. User `permissions`, and agents defined only in user config, come after. | [`config/plugin/agent.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/config/plugin/agent.ts) |
-| User MCP config | `mcp.servers` is applied before package plugins. A later plugin `set` would replace the user's entry. | [`config/plugin/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/config/plugin/mcp.ts) |
-| **Static-client sign-in** | With `oauth.client_id`, OpenCode logs `registration: "static"` and registers nothing. It never calls a registration endpoint, even when the authorization server metadata advertises one. It uses the entry's `oauth.client_secret` as `client_secret_basic` at the token endpoint, and sends no secret for a public client (`token_endpoint_auth_method: "none"`, PKCE S256). X advertises no registration endpoint and no client metadata documents, so a static client is the only route. The host test and the pack test assert no registration, the client ID, and basic authentication, on the 2.4.1 host and package suites. | [`mcp/oauth.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/mcp/oauth.ts) |
+| MCP tool permissions | The host asserts every MCP call: action `<server>_<tool>`, resource `*`. A last-matching `deny` on `*` hides the tool. | [`tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/tool/mcp.ts) |
+| Rule evaluation | The last match wins. Saved approvals come after all rules as `allow`. An unattended `ask` is refused. | [`permission.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/permission.ts) |
+| Agent rule order | Built-in agents start from a base `* * allow` and exist before package plugins run. User `permissions`, and agents defined only in user config, come after. | [`config/plugin/agent.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/config/plugin/agent.ts) |
+| User MCP config | `mcp.servers` is applied before package plugins. A later plugin `set` would replace the user's entry. | [`config/plugin/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/config/plugin/mcp.ts) |
+| **Static-client sign-in** | With `oauth.client_id`, OpenCode logs `registration: "static"` and registers nothing. It never calls a registration endpoint, even when the authorization server metadata advertises one. It uses the entry's `oauth.client_secret` as `client_secret_basic` at the token endpoint, and sends no secret for a public client (`token_endpoint_auth_method: "none"`, PKCE S256). X advertises no registration endpoint and no client metadata documents, so a static client is the only route. The host test and the pack test assert no registration, the client ID, and basic authentication, on the 2.4.1 host and package suites. | [`mcp/oauth.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/mcp/oauth.ts) |
 | **Public-client sign-in** | With no `oauth.client_secret`, OpenCode keeps `token_endpoint_auth_method: "none"`, uses PKCE S256, and sends the token request as a form with `grant_type`, `code`, `redirect_uri`, `client_id` and `code_verifier`, with **no** `Authorization` header. A refresh sends `grant_type=refresh_token`, `client_id` and `refresh_token`, again with no secret. The host test asserts the authorize URL, the code exchange and a refresh on the 2.4.1 host and package suites. X issued a public Native App a refresh token in the live test on 2026-11-06, and OpenCode refreshed it after about two
-hours, so U7 is confirmed. | [`mcp/oauth.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/mcp/oauth.ts); the host test |
-| **Pinned callback** | `oauth.redirect_uri` is used verbatim; without it OpenCode builds `http://127.0.0.1:<port>/callback` from an ephemeral port. It listens on `oauth.callback_port ?? the redirect's port ?? 0` on 127.0.0.1. X matches the redirect exactly, so the plugin pins `http://127.0.0.1:8766/callback`, and the tests assert that exact `redirect_uri` in the authorization request. | [`mcp/oauth.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/mcp/oauth.ts) |
-| **Pinned scope** | OpenCode requests `oauth.scope` if the entry sets one, else the challenge's `scope`. X's 401 carries no `scope`, so the plugin pins `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write media.write offline.access`, `offline.access` included, which is what makes X issue a refresh token. The authorization request carries exactly that string. | [`mcp/oauth.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/mcp/oauth.ts) |
-| MCP integrations | Integration ID `mcp_` + the first 16 hex digits of sha1(`<name>\0<url>`), so credentials are kept per name and URL. | [`mcp/index.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/mcp/index.ts) |
-| Code Mode | MCP tools are in Code Mode by default (`tools.x.<tool>`). A declined prompt is an error the program can catch. Each tool's signature, with its parameter names, reaches the model; a tool's full description reaches it only through `search()`, so the skills name every tool they use. | [`codemode/tool.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/codemode/tool.ts) |
-| **Tool hooks** | `ctx.tool.hook("execute.before")` runs for an MCP call on the model path and inside Code Mode, and changing `event.input` changes the arguments the server receives. `ctx.tool.hook("execute.after")` can append to the result the model reads. Both hold on the 2.4.1 host suite. The plugin appends its cost line there and leaves a read's arguments unchanged; it never replaces `execute`. | The isolated host test of the two hooks on 2.4.1 |
-| **Tool descriptions** | `ctx.tool.transform`'s `editor.update` shallow-copies the tool, so `execute` and its permission assert survive: on 2.4.1 a description rewrite still asks, and a declined call is refused before X is contacted. The one change is that a decline then raises an empty `Tool.Error` instead of `Permission.DeclinedError`, which hides the decline from the model. The plugin therefore does not rewrite `create_posts`'s description: the namespace text carries the public-and-price sentence, and in Code Mode a tool's full description reaches the model only through `search()`. | The isolated host test of `editor.update` on 2.4.1 |
+hours, so U7 is confirmed. | [`mcp/oauth.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/mcp/oauth.ts); the host test |
+| **Pinned callback** | `oauth.redirect_uri` is used verbatim; without it OpenCode builds `http://127.0.0.1:<port>/callback` from an ephemeral port. It listens on `oauth.callback_port ?? the redirect's port ?? 0` on 127.0.0.1. X matches the redirect exactly, so the plugin pins `http://127.0.0.1:8766/callback`, and the tests assert that exact `redirect_uri` in the authorization request. | [`mcp/oauth.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/mcp/oauth.ts) |
+| **Pinned scope** | OpenCode requests `oauth.scope` if the entry sets one, else the challenge's `scope`. X's 401 carries no `scope`, so the plugin pins `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write media.write offline.access`, `offline.access` included, which is what makes X issue a refresh token. The authorization request carries exactly that string. | [`mcp/oauth.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/mcp/oauth.ts) |
+| MCP integrations | Integration ID `mcp_` + the first 16 hex digits of sha1(`<name>\0<url>`), so credentials are kept per name and URL. | [`mcp/index.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/mcp/index.ts) |
+| Code Mode | MCP tools are in Code Mode by default (`tools.x.<tool>`). A declined prompt is an error the program can catch. Each tool's signature, with its parameter names, reaches the model; a tool's full description reaches it only through `search()`, so the skills name every tool they use. | [`codemode/tool.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/codemode/tool.ts) |
+| **Tool hooks** | `ctx.tool.hook("execute.before")` runs for an MCP call on the model path and inside Code Mode, and changing `event.input` changes the arguments the server receives. `ctx.tool.hook("execute.after")` can append to the result the model reads. Both hold on the 2.4.1 host suite. The plugin registers neither: it has no per-request hook, and its own results carry `cost` where it computes one. | The isolated host test of the two hooks on 2.4.1 |
+| **Tool descriptions** | `ctx.tool.transform`'s `editor.update` shallow-copies the tool, so `execute` and its permission assert survive: on 2.4.1 a description rewrite still asks, and a declined call is refused before X is contacted. The one change is that a decline then raises an empty `Tool.Error` instead of `Permission.DeclinedError`, which hides the decline from the model. The plugin therefore does not rewrite `create_posts`'s description: the x-write skill carries the public-and-price sentence, and in Code Mode a tool's full description reaches the model only through `search()`. | The isolated host test of `editor.update` on 2.4.1 |
 | Dialog close paths | A plugin's `ui.dialog.alert` resolves on its dialog's `onClose`. Opening another dialog (`replace`), `clear` (also a click outside), Escape and Ctrl+C all call `onClose` for each dialog they remove, so the `/x` dialog's `r` key and listeners stop on every path. | The pack test reads each stock release's terminal UI code for this |
 | Sign-in label | `ctx.integration.connection.active` returns the active credential with a `label`. For an MCP sign-in OpenCode may keep no name there; the Account row then says so. Status makes no X call, so there is no other source. | `@opencode/plugin` 2.4.1 types |
 | Credential status | A status set with `integration.connection.status` is not on what `connection.active` returns; `integration.get` projects it as `connections[].status`. A 401 whose token refresh fails removes the credential, so the `/connect` mark is only observable while a credential remains: with a token that has no refresh token. The host test signs in through the pinned loopback callback and the token endpoint, then challenges, and asserts the mark is set and cleared. | The host test on 2.4.1 |
 | UI part options | The UI part of a plugin listed in `opencode.json` gets no plugin options. | Observed on the 2.4.1 host suite |
-| Tool executors | `ctx.tool.list()` returns each MCP tool with a callable `execute`, which checks `<server>_<tool>` with the agent's and the session's rules and saved approvals, and gives the `evaluate` hook the call's `source`. A deny is a `Tool.Error` with a cause; the server's `isError` is one without. A direct call of that executor runs no `execute.before` or `execute.after` hook; a model turn and Code Mode do. Not documented as an entry point: the package test checks it on stock 2.4.1. | [`tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.2.3/packages/core/src/tool/mcp.ts) |
+| Tool executors | `ctx.tool.list()` returns each MCP tool with a callable `execute`, which checks `<server>_<tool>` with the agent's and the session's rules and saved approvals, and gives the `evaluate` hook the call's `source`. A deny is a `Tool.Error` with a cause; the server's `isError` is one without. A direct call of that executor runs no `execute.before` or `execute.after` hook; a model turn and Code Mode do. Not documented as an entry point: the package test checks it on stock 2.4.1. | [`tool/mcp.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/tool/mcp.ts) |
 | RPC input | An RPC input given as a Standard Schema is validated with it; a plain JSON Schema is decoded with Effect, which drops unknown keys of an object that has properties. The package test checks the envelope on stock 2.4.1. | `@opencode/core` 2.4.1, the RPC service's `parse` |

@@ -688,6 +688,30 @@ describe("a token rotation that fails", () => {
   })
 })
 
+// The 2.4 host probes an MCP server that declares no `protocol` with `server/discover` first. A 401 ends the attempt:
+// @opencode/core 2.4.1 `dist/mcp/client.js:673-675` turns an UnauthorizedError into NeedsAuthError, and the MCP client
+// sends no `initialize` after it. The fake answers the probe with X's bearer challenge, so the plugin must report the
+// auth failure rather than list tools.
+describe("a server that refuses the discover probe", () => {
+  let host: Host
+  beforeAll(async () => {
+    host = await startHost({ oauth: true, options: appOptions(), fake: { discoverUnauthorized: true } })
+  })
+  afterAll(() => host?.close())
+
+  test("stops at server/discover with no initialize, and status names the auth failure", async () => {
+    const server = await until("the server reports the auth failure", async () => {
+      const { data } = await host.client.mcp.list({ location: host.location })
+      const found = data.find((item) => item.name === "x")
+      return found && found.status.status !== "pending" ? found : undefined
+    })
+    expect(host.fake.methods).toEqual(["server/discover"])
+    expect(host.fake.methods).not.toContain("initialize")
+    expect(server.status.status).toBe("needs_auth")
+    expect(await statusRpc(host)).toMatchObject({ state: "sign_in_required", code: "AUTH_REQUIRED", nextStep: SIGN_IN })
+  })
+})
+
 // An upgrade that adds a default scope: the token X granted before lacks it. OpenCode stores the granted scope with the
 // credential, and the plugin compares it with the scopes it asks for, so the person is told to sign in again rather
 // than meeting a 403 from the tools that need it.
@@ -876,67 +900,6 @@ describe("the /connect entry", () => {
   })
 })
 
-
-describe("no read cap, and the cost line, on the model path", () => {
-  let direct: Host
-  let codeMode: Host
-  beforeAll(async () => {
-    direct = await modelHost(false)
-    codeMode = await modelHost(true)
-  })
-  afterAll(async () => {
-    await direct?.close()
-    await codeMode?.close()
-  })
-
-  const toolText = (requests: unknown[]) =>
-    (requests as { messages?: { role: string; content?: unknown }[] }[])
-      .flatMap((request) => (request.messages ?? []).filter((message) => message.role === "tool"))
-      .map((message) => (typeof message.content === "string" ? message.content : JSON.stringify(message.content)))
-      .join("\n")
-
-  test("a direct model call is sent as asked, X's next-page token reaches the model, and the actual cost line ends it", async () => {
-    direct.fake.model.script = [{ tool: "x_search_posts_all", arguments: { query: "cost", max_results: 100, next_token: "n" } }]
-    const before = direct.fake.model.requests.length
-    const sessionID = (await scripted(direct).create({ agent: "build", location: direct.location, model: { providerID: "lmstudio", id: MODEL_ID } })).id
-    await scripted(direct).prompt({ sessionID, text: "Count the posts." })
-    await until("the direct read call", async () => direct.fake.calls.includes("search_posts_all"))
-    expect(direct.fake.callArguments.at(-1)).toEqual({ query: "cost", max_results: 100, next_token: "n" })
-    await until("the cost line in the model's tool result", async () => toolText(direct.fake.model.requests.slice(before)).includes("Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15."))
-    expect(toolText(direct.fake.model.requests.slice(before))).toContain("cost-page-2")
-  })
-
-  test("a completed read that returned nothing still ends with the zero line", async () => {
-    direct.fake.model.script = [{ tool: "x_search_posts_all", arguments: { query: "empty", max_results: 50 } }]
-    const before = direct.fake.model.requests.length
-    const calls = direct.fake.callArguments.length
-    const sessionID = (await scripted(direct).create({ agent: "build", location: direct.location, model: { providerID: "lmstudio", id: MODEL_ID } })).id
-    await scripted(direct).prompt({ sessionID, text: "Find the empty page." })
-    await until("the empty read call", async () => direct.fake.callArguments.length > calls)
-    expect(direct.fake.callArguments.at(-1)).toEqual({ query: "empty", max_results: 50 })
-    await until("the zero line in the tool result", async () => toolText(direct.fake.model.requests.slice(before)).includes("Cost: 0 posts + 0 authors = $0.00."))
-  })
-
-  test("inside execute the read is sent as asked, with one summed cost line", async () => {
-    const code = "return await tools.x.search_posts_all({ query: 'cost', max_results: 50, next_token: 'n' })"
-    codeMode.fake.model.script = [{ tool: "execute", arguments: { code } }]
-    const before = codeMode.fake.model.requests.length
-    const sessionID = (await scripted(codeMode).create({ agent: "build", location: codeMode.location, model: { providerID: "lmstudio", id: MODEL_ID } })).id
-    await scripted(codeMode).prompt({ sessionID, text: "Count the posts." })
-    await until("the Code Mode read call", async () => codeMode.fake.calls.includes("search_posts_all"))
-    expect(codeMode.fake.callArguments.at(-1)).toEqual({ query: "cost", max_results: 50, next_token: "n" })
-    await until("the cost line in the execute result", async () => toolText(codeMode.fake.model.requests.slice(before)).includes("Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15."))
-  })
-
-  test("an execute that makes no X call ends with no cost line", async () => {
-    codeMode.fake.model.script = [{ tool: "execute", arguments: { code: "return 'no x call here'" } }]
-    const before = codeMode.fake.model.requests.length
-    const sessionID = (await scripted(codeMode).create({ agent: "build", location: codeMode.location, model: { providerID: "lmstudio", id: MODEL_ID } })).id
-    await scripted(codeMode).prompt({ sessionID, text: "Run a small script." })
-    await until("the execute result", async () => toolText(codeMode.fake.model.requests.slice(before)).includes("no x call here"))
-    expect(toolText(codeMode.fake.model.requests.slice(before))).not.toContain("Cost:")
-  })
-})
 
 describe("opt-in script budgets: the session budget, then the daily cap across two sessions", () => {
   let host: Host

@@ -313,7 +313,7 @@ describe("docs", () => {
 
 describe("the new organization's shape", () => {
   // Every repository URL, install line and doc link points at the new repository, on master.
-  test("no doc or file names the old organization or the old package, and there is no Jelly guide", () => {
+  test("no doc or file names the old organization or the old package, and there is no app-specific guide", () => {
     expect(existsSync(join(ROOT, "docs", "jelly.md"))).toBe(false)
     const offenders: string[] = []
     for (const file of [...FILES, "package.json"]) {
@@ -329,8 +329,8 @@ describe("the new organization's shape", () => {
     expect(pkg.name).toBe("@we-the-rebel-alliance/x-plugin")
     expect(pkg.version).toBe("0.0.0")
     for (const url of [pkg.repository.url, pkg.homepage, pkg.bugs.url]) expect(url).toContain("we-the-rebel-alliance/x-plugin")
-    expect(text("README.md")).toContain("opencode plugin add github:we-the-rebel-alliance/x-plugin#vX.Y.Z")
-    expect(text("README.md")).toContain("No `v0.0.0` release is cut yet")
+    expect(text("README.md")).toContain("Install from a release: `opencode plugin add github:we-the-rebel-alliance/x-plugin#v<version>`")
+    expect(text("README.md")).toContain("The first release on plugin-contract is v0.0.0 (phase 4b)")
   })
 
   test("the changelog is one 0.0.0 section and no older release", () => {

@@ -190,8 +190,9 @@ export function buildStatus(facts: StatusFacts): Status {
   const denied = access === "read-only" ? listed.filter((tool) => classify(tool) !== "read") : []
   // A failure's and an expired sign-in's reason is kept, redacted: a URL loses its query, so a code in it never shows.
   const error = (facts.server?.status === "failed" || facts.server?.status === "needs_auth") && facts.server.error ? shortReason(facts.server.error) : undefined
-  // X could not refresh the token: the account has to sign in again. A missing scope has its own next step instead.
-  const expired = facts.server?.status === "needs_auth" && missingScope.length === 0
+  // X could not refresh the token: the account has to sign in again. A first sign-in is a bare needs_auth with no
+  // failure reason, and a missing scope has its own next step instead.
+  const expired = facts.server?.status === "needs_auth" && missingScope.length === 0 && facts.server.error !== undefined && facts.server.error.trim() !== ""
   const shadowed = shadowedOf(facts)
   const account = facts.account ? cut(oneLine(facts.account), ACCOUNT_LIMIT) : ""
   const setup = facts.setup
@@ -326,11 +327,11 @@ function accessText({ problems, unguardedAgents, access }: Status) {
   return `${POSTURE(access ?? "all")}; ${rules}`
 }
 
-/** The script spend row: the rolling 24-hour spend, and the opt-in daily and per-session caps when set. */
+/** The script spend row: what the tools RPC recorded, the rolling 24-hour spend, and the opt-in caps when set. */
 function scriptsText(billing: NonNullable<Status["billing"]>) {
   const daily = billing.dailyBudgetUsd === null ? "" : ` of $${billing.dailyBudgetUsd.toFixed(2)}`
   const session = billing.sessionBudgetUsd === null ? "no per-session budget" : `$${billing.sessionBudgetUsd.toFixed(2)} per session`
-  return `estimated spend, at most: $${billing.dailySpentUsd.toFixed(2)}${daily} in the last 24 hours; ${session}; X's Developer Console has the real bill`
+  return `script calls this plugin records, estimated at most: $${billing.dailySpentUsd.toFixed(2)}${daily} in the last 24 hours; ${session}; X's Developer Console has the real bill`
 }
 
 /** The OpenCode row: the version, whether it is tested, the supported range, then any setup problems. */

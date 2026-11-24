@@ -35,19 +35,15 @@ hours later.
 
 ## Install
 
-```sh
-opencode plugin add github:we-the-rebel-alliance/x-plugin#vX.Y.Z
-```
-
-No `v0.0.0` release is cut yet. The old tags belong to the old organization and are not installable; until the first
-release, install the branch instead:
+Install from a release: `opencode plugin add github:we-the-rebel-alliance/x-plugin#v<version>`. The first release on
+plugin-contract is v0.0.0 (phase 4b).
 
 ```sh
-opencode plugin add github:we-the-rebel-alliance/x-plugin#master
+opencode plugin add github:we-the-rebel-alliance/x-plugin#v<version>
 ```
 
-Run `opencode reload`, or restart OpenCode. A Git install does not update by itself: remove the old entry and add the
-new tag. The plugin registers X's MCP server as `x`, adds default permission rules, the `/x-status` command, the `/x`
+Run `opencode reload`, or restart OpenCode. A Git install runs no build: the release commit carries the built
+`dist/`. The plugin registers X's MCP server as `x`, adds default permission rules, the `/x-status` command, the `/x`
 status view and two skills.
 
 ## Sign in
@@ -65,8 +61,8 @@ The client secret may be `{env:X_CLIENT_SECRET}` in `opencode.json`, which reads
 service or the desktop app; keep the literal out of config. A saved value that is an empty string is refused. No bearer token is pasted into OpenCode:
 OpenCode stores the token and refreshes it.
 
-`/x-status` shows the state and one next step. Status makes no X call, so it costs nothing. If X's token cannot be
-refreshed, status and `probe` say `AUTH_REQUIRED`: sign in again through `/connect` and X. To sign out, run
+`/x-status` shows the state and one next step. Status makes no X call, so it costs nothing. If the host reports a sign-in
+failure for X with a reason, status and `probe` say `AUTH_REQUIRED`: sign in again through `/connect` and X. To sign out, run
 `opencode mcp logout x`.
 
 ## Who signs up for what
@@ -114,19 +110,15 @@ notes", "How much credit is left?".
 
 Two skills carry the rules:
 
-- `x` teaches search, the cost line, timelines, mentions, bookmarks, personal data and untrusted content.
+- `x` teaches search, how to state a cost from X's rates, timelines, mentions, bookmarks, personal data and untrusted content.
 - `x-write` teaches whom each change reaches, the public-post warning, Articles, and how `access` decides.
 
 ### Cost lines
 
-X bills every call, and on the model path an answer carries a cost line only for `x_search_posts_all`,
-`x_get_posts_by_id`, `x_get_posts_by_ids`, `x_get_posts_counts_recent`, `x_get_users_mentions`,
-`x_get_users_timeline`, `x_get_users_posts`, `x_get_users_bookmarks`, `x_get_users_bookmarks_by_folder_id`,
-`x_get_users_liked_posts`, `x_search_users`, `x_get_users_by_id`, `x_get_users_by_username`, `x_get_users_by_usernames`,
-`x_get_users_me`, `x_get_users_me_followers`, `x_get_users_me_following`, `x_get_users_list_memberships` and
-`x_get_users_blocking`, the list `costOf` in `src/billing.ts` prices; every other read, and every write, ends without
-one. A script's result carries a cost line on every method X prices, and says the price is unknown for a method X does
-not.
+X bills every call. The plugin registers no per-request hook, so it adds no cost line to a model-path tool result.
+Its own `x_events_list` and `probe` results carry `cost.units` (the posts, authors and users X returned), and a
+script's result carries the tools RPC's cost line. When a model states a cost, the `x` skill tells it to compute the
+figure from X's rates and what the call returned, and never to present it as an estimate.
 
 ### Sources and scripts
 
@@ -140,14 +132,14 @@ tools through `x.posts.tools`; see [Scripting](https://github.com/we-the-rebel-a
 
 | What you see | What it means |
 | --- | --- |
-| `AUTH_REQUIRED` | X's token could not be refreshed. Sign in again: `/connect`, X. |
+| `AUTH_REQUIRED` | The host reported a sign-in failure for X, with a reason. Sign in again: `/connect`, X. |
 | Connection: sign-in required soon after signing in | The two-hour token expired and no refresh token was issued. Check `offline.access` was requested and granted. |
 | `client-not-enrolled` | The app is not in Pay-per-use → Production. Move it, then try again. |
 | `403` on a write | The app lacks the scope. Add it in User authentication settings, then sign in again. |
 | `429` | X's rate limit is used up. Wait for the reset X returns, and make fewer calls. |
 | Posting asks first | `access` is `ask-changes`, or a rule of yours asks. Change `access` or the rule if you want it to run. |
 | How much credit is left | `get_usage_credits` answers it: the payer's balance in USD. |
-| Answers cost more than expected | Every call is billed per resource returned; the cost line says what each answer cost. X's Developer Console has the real bill. |
+| Answers cost more than expected | Every call is billed per resource returned; the rates above apply. X's Developer Console has the real bill. |
 | `HOST_UNTESTED` | OpenCode is outside `>=2.4.1 <2.5.0`. Use a tested host, or set `"allowUntestedHost": true`. |
 | `OPTIONS_INVALID` | An option is unknown or wrong. The message names it; fix `opencode.json`. |
 | `CLIENT_ID_MISSING` / `CLIENT_ID_INVALID` | No usable X app client ID. Save it again in `/connect` → X app. |

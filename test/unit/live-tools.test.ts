@@ -1,5 +1,5 @@
 // The declaration against X's tool list as Code Mode's catalogue showed it on 2026-11-14 (`test/fixtures/live-tools.json`,
-// with `provenance.json`). Jelly enforces `jelly.tools` without loading the plugin, so every tool X lists is declared,
+// with `provenance.json`). The `jelly` declaration enforces its tools without loading the plugin, so every tool X lists is declared,
 // and every declared tool is listed or is the plugin's own (`test/fixtures/tool-registry.json`). OpenCode's sign-in to
 // X was refused that day, so the list is the catalogue's names and input parameters, with no `readOnlyHint`: each
 // `readOnly` is the class in `src/x-tools.ts`. The family kit's drift check reads the same three files and will
@@ -42,7 +42,7 @@ describe("the declaration against X's catalogued tool list", () => {
 
   test("classifies every listed tool, and declares readOnly from its class except the six restricted reads", () => {
     expect([...listed.keys()].filter((name) => classify(name) === "unknown")).toEqual([])
-    // The reads that Jelly may run at Read only, and the six privacy-sensitive reads it must ask for and deny.
+    // The reads the declaration may run at Read only, and the six privacy-sensitive reads it must ask for and deny.
     const reads = new Set(READ_TOOLS)
     expect(Object.keys(JELLY_READ_ONLY_OVERRIDES).sort()).toEqual([...PRIVATE_READ_TOOLS].sort())
     for (const [name, reason] of Object.entries(JELLY_READ_ONLY_OVERRIDES)) {

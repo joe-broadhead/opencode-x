@@ -16,8 +16,10 @@ user read $0.010, your own reads about $0.001, bookmark change $0.005, and post 
 Reads are automatic: fetch what the question needs, with the `max_results`, next-page tokens and expansions you judge useful for it. Never ask whether to spend: make the call. For a collector, `events_list` makes at most `events.maxCalls`
 reads, an account lookup included (one billed user read), plus one small billed reach check where needed; a call ceiling, not a spending bound.
 
-Every answer that made a billed read ends with one line: "Cost: at most 10 posts ($0.05) + 10 authors ($0.10) =
-$0.15." An Owned Read is $0.001 only with `ownsXApp`; otherwise standard. Never mention an estimate.
+`x_events_list` and `probe` results carry their own `cost.units`, and a script's result carries the tools RPC's cost
+line. A model-path tool result carries none: when you state a cost, compute it from the rates above and what X
+returned, write it as "Cost: at most 10 posts ($0.05) + 10 authors ($0.10) = $0.15.", use an Owned Read ($0.001) only
+with `ownsXApp`; otherwise standard. Never mention an estimate.
 
 ## The billed reads
 

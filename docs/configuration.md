@@ -181,10 +181,10 @@ Each member runs `/connect` and chooses X, then presses `o` or Enter. Status sho
 
 **The consequences, plainly:**
 
-- Every member's calls bill the team's X developer account. The plugin does not cap a model read; the model path's
-  cost line covers the tools the README lists under Cost lines, and a script has no budget unless the admin sets
-  `scriptBudgetUsd` (per session) or `scriptDailyBudgetUsd` (per rolling 24 hours), so the app's spending limit in X's
-  Developer Console is what caps many sessions.
+- Every member's calls bill the team's X developer account. The plugin does not cap a model read and adds no cost line to
+  a model-path result (it has no per-request hook); the README's Cost lines section says what carries one. A script has
+  no budget unless the admin sets `scriptBudgetUsd` (per session) or `scriptDailyBudgetUsd` (per rolling 24 hours), so
+  the app's spending limit in X's Developer Console is what caps many sessions.
 - The owned-reads discount (about $0.001 a post) applies only when the authenticated user owns the app. Other members'
   timeline, mention and bookmark reads bill at the full rate.
 - X describes pay-per-use as for "applications with limited end-users". A larger team may need X's Enterprise plan.
@@ -581,7 +581,7 @@ is the shipped minimum; X may change an endpoint's scope, in which case the `403
 ## Sources
 
 The plugin's three sources are declared in `package.json`'s `sources` key, by the shared source contract
-(`@we-the-rebel-alliance/source-contract` v0.3.0), so Memory and any other consumer read them the same way:
+(`@we-the-rebel-alliance/source-contract` v0.3.0), so a consumer reads them the same way:
 
 | Source | Kind | `events_list` source | X reads | Price units |
 | --- | --- | --- | --- | --- |
@@ -608,7 +608,7 @@ It is not for answering questions.
 ```text
 events_list({ since?, cursor?, limit?, account?, source? })
   → { source, account, owner: { id, label }, events, cursor, more, trust: "untrusted",
-      refused?, cost?, plugin?, asOf? }
+      refused?, failed?, cost?, plugin?, asOf? }
 ```
 
 - **Sources**: `source` is `mentions`, `bookmarks` or `timeline` for one feed, or `x`, the default, for every feed in
@@ -656,6 +656,10 @@ events_list({ since?, cursor?, limit?, account?, source? })
 - **Refused posts**: a feed source refuses for good a post whose title or text holds a secret (an API key, a token, a
   private key or a password in a URL), with the contract's own detector. It is listed in `refused[]` with `reason:
   "secret"` and never in `events`; the cursor moves past it.
+- **A failed feed**: with more than one enabled feed, a feed whose read fails does not abort the page. The other feeds'
+  events are listed, the failed feed's previous state is kept in the cursor, `more` is true, and `failed[]` names it
+  with a code (the installed contract's `{ external_id, code }` shape). The next call retries that feed. With one feed,
+  the read's own error is raised, as before.
 - **Cost**: X bills every tool call to the X developer account that owns the app, per post and per author returned.
   One call makes at most `events.maxCalls` reads, an account lookup included, plus a feed source's reach check, and
   asks for each author's handle, which X bills as a user read. A feed page, and the combined source `x`'s page, carry
@@ -681,7 +685,8 @@ probe({ source?, account? })
 
 It asserts `x_probe`, then makes one billed read, `get_users_me`. `source` is `x` (the default) or a feed; a feed that
 `events.feeds` leaves out is `SOURCE_DISABLED`. An `account` other than the signed-in handle is `ACCOUNT_MISMATCH`.
-While X's token cannot be refreshed, `probe` answers `AUTH_REQUIRED` with the redacted reason and the `/connect` step.
+When the host reports a sign-in failure for X with a reason, `probe` answers `AUTH_REQUIRED` with the redacted reason
+and the `/connect` step.
 
 ### Conformance
 
@@ -707,7 +712,7 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `UPSTREAM_ERROR` | `x_events_list` or `probe`: X refused one of its reads, such as a rate limit. The message holds the first line of X's text, at most 300 characters, with tokens and URL query strings removed. | Run `/x-status`, then call again with the same cursor. |
 | `UPSTREAM_UNREADABLE` | `x_events_list` or `probe`: one of its reads answered in a shape it does not read. | Call the read the message names directly, and run `/x-status`. |
 | `TOOL_UNAVAILABLE` | `x_events_list` or `probe`: OpenCode does not list a read it needs. While X cannot be called, it gives status's own code and next step instead. | Wait a few seconds, then run `/x-status` and follow its next step. |
-| `AUTH_REQUIRED` | Status and `probe`: X's token could not be refreshed, so the account has to sign in again. The reason is redacted and cut to 160 characters. | Run `/connect` and choose X, then sign in again. |
+| `AUTH_REQUIRED` | Status and `probe`: the host reported a failed sign-in for X, with a reason. A first sign-in is `sign_in_required` without this code. The reason is redacted and cut to 160 characters. | Run `/connect` and choose X, then sign in again. |
 | `HOST_UNTESTED` | Setup: OpenCode is outside `>=2.4.1 <2.5.0`, and `allowUntestedHost` is not set. | Use OpenCode `>=2.4.1 <2.5.0`, or set `"allowUntestedHost": true`. |
 | `CLIENT_ID_MISSING` | Setup: no X app client ID is in the options or the `/connect` X app entry. | Run `/connect` and choose X app, and paste your X app's client ID. |
 | `CLIENT_ID_INVALID` | Setup: the saved client ID is empty or has spaces. | Save the client ID again from the app's User authentication settings. |
@@ -743,8 +748,8 @@ meanings:
 | --- | --- |
 | `version` | The plugin's version |
 | `state` | `connected`, `sign_in_required`, `connecting`, `disabled`, `failed`, `not_configured`, `conflict` or `host_untested`. The `Connection` row shows the same states as `connected`, `sign-in required`, `connecting`, `disabled`, `failed`, `not configured`, `conflict` and `host untested`. |
-| `code`, `message` | For a setup state, or a missing or unusable client: `OPTIONS_INVALID`, `HOST_UNTESTED`, `CLIENT_ID_MISSING` or `CLIENT_ID_INVALID`, and one sentence on it. |
-| `error` | For a failed connection only: OpenCode's reason, on one line of at most 160 characters, with any URL cut before its query. The text for a needed sign-in can hold an authorization URL, so it is never shown. |
+| `code`, `message` | For a setup state, a missing or unusable client, or an expired sign-in: `OPTIONS_INVALID`, `HOST_UNTESTED`, `CLIENT_ID_MISSING`, `CLIENT_ID_INVALID` or `AUTH_REQUIRED`, and one sentence on a setup or client code. |
+| `error` | A failed connection's or an expired sign-in's reason, on one line of at most 160 characters, with any URL cut before its query and token shapes redacted. It is present only when the host reported a real failure, not for a first sign-in. |
 | `source` | `type` (`plugin`, `adopted` or `conflict`), `url`, `signIn` (`oauth`, or `own` for your own entry with `"oauth": false`), and for a conflict the `expected` URL |
 | `account` | The name OpenCode keeps on the active sign-in, on one line of at most 80 characters; absent when it keeps none. Status makes no X call, so the plugin learns nothing else about the account. |
 | `client` | `id`, `mode` (`public_pkce` for a Native App, `confidential` when a secret is set) and `source` (`options` or `connect`). The `Client` row names `your own app` when it came from `/connect`, or `configured app` when it came from plugin options, as a team app does; status cannot tell managed config from a user's own options. The secret is never shown. |

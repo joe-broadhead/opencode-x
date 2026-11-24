@@ -1,4 +1,4 @@
-// Jelly pins source-contract v0.1.0, and its validator refuses the whole `sources` declaration for one key it does not
+// The `jelly` declaration pins source-contract v0.1.0, and its validator refuses the whole `sources` declaration for one key it does not
 // know. The descriptor therefore carries only v0.1.0's keys, exactly: this test walks package.json's `sources` and fails
 // on any key v0.2.0 or v0.3.0 added (`readsIdentity`, `identityRules`, `facts`, `hints`, `routines`, ...).
 import { describe, expect, test } from "bun:test"
@@ -8,7 +8,7 @@ const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.ur
 
 /**
  * source-contract v0.1.0's `dist/schemas/sources.json`, as its key sets. Every object it describes is closed
- * (`additionalProperties: false`), so this list is the whole vocabulary Jelly's validator accepts.
+ * (`additionalProperties: false`), so this list is the whole vocabulary the declaration's validator accepts.
  */
 const KEYS = {
   sources: ["contractVersion", "items", "probe", "rpc"],
@@ -48,13 +48,13 @@ function v02OrLaterKeys(sources: Record<string, any>): string[] {
 }
 
 describe("package.json's sources", () => {
-  test("carry only source-contract v0.1.0's keys, which Jelly's validator accepts", () => {
+  test("carry only source-contract v0.1.0's keys, which the declaration's validator accepts", () => {
     expect(v02OrLaterKeys(pkg.sources)).toEqual([])
     // The released sources keep the identity read the lists share, as a v0.1 key.
     expect(pkg.sources["items"].every((item: Record<string, any>) => !("readsIdentity" in item["permission"]))).toBe(true)
   })
 
-  test("the check catches a v0.2 or v0.3 key, so a future edit fails here rather than in Jelly", () => {
+  test("the check catches a v0.2 or v0.3 key, so a future edit fails here rather than in the declaration", () => {
     const withIdentity = structuredClone(pkg.sources)
     withIdentity["items"][0]["permission"]["readsIdentity"] = true
     expect(v02OrLaterKeys(withIdentity)).toEqual(["sources.items[0].permission.readsIdentity"])

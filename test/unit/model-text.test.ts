@@ -53,7 +53,7 @@ const defaultStatus = (): Status =>
 describe("the model-facing text at access all", () => {
   const all = {
     "the Code Mode namespace": NAMESPACE_DESCRIPTION,
-    "the Jelly summary": jellySummary(),
+    "the `jelly` summary": jellySummary(),
     "the /x-status text": formatStatus(defaultStatus()),
     ...Object.fromEntries(readdirSync(join(ROOT, "skills")).map((name) => [`skills/${name}/SKILL.md`, read(`skills/${name}/SKILL.md`)] as const)),
   }
@@ -67,7 +67,7 @@ describe("the model-facing text at access all", () => {
     expect(NAMESPACE_DESCRIPTION).toContain("Load the x skill first")
     expect(NAMESPACE_DESCRIPTION).toContain("x-write before any change")
     expect(NAMESPACE_DESCRIPTION).toContain("changes act on the user's real account and posts are public")
-    expect(NAMESPACE_DESCRIPTION).toContain("Reads are billed: end with the cost line the skill gives")
+    expect(NAMESPACE_DESCRIPTION).toContain("Every call is billed: state costs from X's rates, never invent one")
   })
 
   test("status says every tool is allowed, and that an unknown tool runs too", () => {

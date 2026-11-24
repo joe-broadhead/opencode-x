@@ -1,4 +1,3 @@
-import type { Plugin } from "@opencode/plugin"
 import { PARAMETERS } from "./x-tools.js"
 import { priceOf, type MethodPrice, type ResourceKind } from "./prices.js"
 
@@ -120,7 +119,7 @@ export const mergeCosts = (costs: readonly ReadCost[]): ReadCost => ({
   userRate: USER,
 })
 
-/** One line the model can repeat: what was returned, at its rate, and the actual total. */
+/** One line for a tool result: what was returned, at its rate, and the actual total. */
 export function costLine(cost: ReadCost, identity?: ReadCost): string {
   const atMost = cost.basis === "conservative" || identity?.basis === "conservative" ? "at most " : ""
   const parts: string[] = []
@@ -133,55 +132,6 @@ export function costLine(cost: ReadCost, identity?: ReadCost): string {
   if (cost.counts > 0) parts.push(`${cost.counts} count ${cost.counts === 1 ? "read" : "reads"} (${money(cost.counts * COUNT)})`)
   const total = cost.total + (identity?.total ?? 0)
   return parts.length === 0 ? "Cost: 0 posts + 0 authors = $0.00." : `Cost: ${atMost}${parts.join(" + ")} = ${money(total)}.`
-}
-
-const append = (result: Result, line: string) => {
-  const content = result.content
-  if (typeof content === "string") result.content = `${content}\n${line}`
-  else (result as { content?: unknown }).content = [...(content ?? []), { type: "text", text: line }]
-}
-
-/**
- * Registers the cost line. A read's arguments pass to X unchanged, page size and next-page token included: X
- * validates them against its own limits. `execute.before` marks a Code Mode program; `execute.after` adds the line to
- * the result. Both are checked on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2. In Code
- * Mode the inner calls are summed and one line goes on the `execute` result the model reads.
- */
-export async function registerBilling(tool: Pick<Plugin.Context["tool"], "hook">, managed: () => boolean, owns = ownsXApp) {
-  const pending = new Map<string, ReadCost[]>()
-  const before = await tool.hook("execute.before", (event) => {
-    if (!managed()) return
-    if (event.tool === "execute") {
-      pending.set(event.sessionID, [])
-      return
-    }
-  })
-  const after = await tool.hook("execute.after", (event) => {
-    if (!managed()) return
-    if (event.tool === "execute") {
-      const costs = pending.get(event.sessionID) ?? []
-      pending.delete(event.sessionID)
-      // Only an execute that made a billed X call gets a line; one that made none is left as it is.
-      if (costs.length === 0) return
-      const merged = mergeCosts(costs)
-      if (merged.total > 0) recordDaily(merged.total)
-      if (event.status === "completed") append(event.result, costLine(merged))
-      return
-    }
-    if (!event.tool.startsWith("x_") || event.status !== "completed") return
-    const cost = costOf(event.tool, event.result, owns)
-    if (!cost) return
-    const waiting = pending.get(event.sessionID)
-    if (waiting) waiting.push(cost)
-    else {
-      recordDaily(cost.total)
-      append(event.result, costLine(cost))
-    }
-  })
-  return async () => {
-    await before.dispose()
-    await after.dispose()
-  }
 }
 
 /** The rolling window of the daily ledger: 24 hours. */
@@ -215,7 +165,7 @@ export async function configureBilling(input: { readonly storage?: LedgerStorage
   ledger = prune(entries.flatMap((entry) => (entry && typeof entry === "object" && typeof (entry as LedgerEntry).at === "number" && typeof (entry as LedgerEntry).usd === "number" ? [entry as LedgerEntry] : [])))
 }
 
-/** The spend in the rolling 24-hour window, and both caps (null when not set), for status. */
+/** The spend of the script calls the tools RPC records, in the rolling 24-hour window, and both caps (null when not set). */
 export function billingStatus() {
   return { dailySpentUsd: dailySpent(), dailyBudgetUsd: dailyBudgetUsd ?? null, sessionBudgetUsd: sessionBudgetUsd ?? null }
 }
@@ -383,7 +333,7 @@ export function resetBilling() {
   void save()
 }
 
-/** Records the actual spend after a call: the session sum and the rolling daily ledger. */
+/** Records one script (tools RPC) call's actual spend: the session sum and the rolling daily ledger. */
 export function recordCall(sessionID: string, usd: number) {
   // A long-lived server must not keep one entry per script session forever: cap the map at 1000 sessions.
   if (!scriptSpent.has(sessionID) && scriptSpent.size >= 1_000) {
@@ -393,6 +343,3 @@ export function recordCall(sessionID: string, usd: number) {
   scriptSpent.set(sessionID, exact((scriptSpent.get(sessionID) ?? 0) + usd))
   recordDaily(usd)
 }
-
-/** The model path's own cost also counts toward the daily ledger. */
-export const recordModelCost = (usd: number) => recordDaily(usd)

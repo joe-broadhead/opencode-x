@@ -73,12 +73,12 @@ describe("buildStatus", () => {
 
   test("shows the rolling 24-hour script spend against the daily cap, and the per-session cap", () => {
     const status = buildStatus({ ...base, billing: { dailySpentUsd: 0.25, dailyBudgetUsd: 1, sessionBudgetUsd: 0.8 } })
-    expect(formatStatus(status)).toContain("- Scripts: estimated spend, at most: $0.25 of $1.00 in the last 24 hours; $0.80 per session; X's Developer Console has the real bill")
+    expect(formatStatus(status)).toContain("- Scripts: script calls this plugin records, estimated at most: $0.25 of $1.00 in the last 24 hours; $0.80 per session; X's Developer Console has the real bill")
   })
 
   test("with no opt-in caps, the Scripts row gives the spend and says there is no budget", () => {
     const status = buildStatus({ ...base, billing: { dailySpentUsd: 2.5, dailyBudgetUsd: null, sessionBudgetUsd: null } })
-    expect(formatStatus(status)).toContain("- Scripts: estimated spend, at most: $2.50 in the last 24 hours; no per-session budget; X's Developer Console has the real bill")
+    expect(formatStatus(status)).toContain("- Scripts: script calls this plugin records, estimated at most: $2.50 in the last 24 hours; no per-session budget; X's Developer Console has the real bill")
   })
 
   test("without a sign-in label, the Account row says X's MCP reports no account name, and the RPC has no account", () => {
@@ -118,6 +118,15 @@ describe("buildStatus", () => {
     expect(status.nextStep).toBe(nextStep)
     expect(formatStatus(status)).toContain(`- Connection: ${label}`)
     expect(formatStatus(status)).toContain(`- Next step: ${nextStep}`)
+  })
+
+  test("a bare needs_auth is a first sign-in, not a failed refresh: no AUTH_REQUIRED and no reason", () => {
+    const first = buildStatus({ ...base, server: { status: "needs_auth" } })
+    expect(first).toMatchObject({ state: "sign_in_required", nextStep: SIGN_IN })
+    expect(first).not.toHaveProperty("code")
+    expect(first).not.toHaveProperty("error")
+    const failed = buildStatus({ ...base, server: { status: "needs_auth", error: "invalid_grant" } })
+    expect(failed).toMatchObject({ state: "sign_in_required", code: "AUTH_REQUIRED", error: "invalid_grant" })
   })
 
   test("shows a failure's or an expired sign-in's reason on one short line, without URL queries", () => {

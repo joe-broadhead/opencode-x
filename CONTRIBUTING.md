@@ -160,10 +160,10 @@ line with no local path) when X changes its tools.
    blocks or mutes, deletes a post, changes list membership, changes a moderator role, schedules a call, goes live,
    manages a stream source, changes account settings, or sends data to X's team to `SENSITIVE_TOOLS`. Leave a tool out if
    you are not sure: it then follows the `x_*` rule like any other tool (it runs at `all`, asks at `ask-changes` and
-   is denied at `read-only`), but it is not declared to Jelly and scripts cannot call it.
+   is denied at `read-only`), but it is not declared in the `jelly` declaration and scripts cannot call it.
 4. Update `PARAMETERS` from the schemas, `jelly.tools` in `package.json`, and any skill text that names a changed tool.
    With parameters recorded, a skill may give a literal call such as `search_posts_all({ … })`, and the skills test
-   checks its keys against `PARAMETERS`. Run `npm run check`: the Jelly test fails if `jelly.tools` differs from the
+   checks its keys against `PARAMETERS`. Run `npm run check`: the `jelly` test fails if `jelly.tools` differs from the
    lists, the skills test if a skill names a tool or parameter the record doesn't have, and the docs test if a doc
    names a tool in no list.
 5. Record the change in `CHANGELOG.md`. Moving a tool between the lists changes the default rules and the tools RPC's

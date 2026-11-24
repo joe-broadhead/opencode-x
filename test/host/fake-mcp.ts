@@ -59,6 +59,12 @@ export interface FakeMcpOptions {
   readonly expireFirstAccessToken?: boolean
   /** Answer get_users_me with a signed-in user. Default false: the call itself, which a read cannot parse. */
   readonly meAsUser?: boolean
+  /**
+   * Answer the 2.4 host's `server/discover` probe with 401 and X's bearer challenge, before any other method. A 401
+   * that cannot be refreshed ends the attempt: `@opencode/core` 2.4.1 `dist/mcp/client.js:673-675` turns an
+   * UnauthorizedError into NeedsAuthError, and the MCP client sends no `initialize` after it.
+   */
+  readonly discoverUnauthorized?: boolean
 }
 
 /** The scripted model's id, as the fake's model API lists it. */
@@ -109,6 +115,8 @@ export interface FakeMcp {
   readonly markers: (string | undefined)[]
   /** The `authorization` header of every MCP request. */
   readonly authorizations: (string | undefined)[]
+  /** Every MCP request's JSON-RPC method, in order, including `server/discover` when the host probes for it. */
+  readonly methods: string[]
   close(): Promise<void>
 }
 
@@ -120,6 +128,7 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
   const callArguments: Record<string, unknown>[] = []
   const markers: (string | undefined)[] = []
   const authorizations: (string | undefined)[] = []
+  const methods: string[] = []
   const registrations: Record<string, unknown>[] = []
   const tokens: Record<string, string>[] = []
   const tokenAuthorizations: (string | undefined)[] = []
@@ -262,15 +271,19 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
     if (route.startsWith("/.well-known/") || route.startsWith("/i/oauth2") || route.startsWith("/2/oauth2")) return signIn(request, response, route)
     markers.push(header(request, "x-x-test"))
     authorizations.push(header(request, "authorization"))
-    if (fake.challenge || (options.expireFirstAccessToken && header(request, "authorization") === "Bearer fake-access-1")) {
+    if (request.method !== "POST") return void response.writeHead(405, { allow: "POST" }).end()
+    const body = JSON.parse(await read(request)) as Message | Message[]
+    const messages = Array.isArray(body) ? body : [body]
+    for (const message of messages) methods.push(message.method)
+    const challenge = () => {
       const metadata = `${fake.origin}/.well-known/oauth-protected-resource`
       return void response
         .writeHead(401, { "content-type": "application/json", "www-authenticate": `Bearer resource_metadata="${metadata}"` })
         .end(JSON.stringify({ error: "invalid_token" }))
     }
-    if (request.method !== "POST") return void response.writeHead(405, { allow: "POST" }).end()
-    const body = JSON.parse(await read(request)) as Message | Message[]
-    const replies = (Array.isArray(body) ? body : [body]).filter((message) => message.id !== undefined).map((message) => answer(message, route))
+    if (options.discoverUnauthorized && messages.some((message) => message.method === "server/discover")) return challenge()
+    if (fake.challenge || (options.expireFirstAccessToken && header(request, "authorization") === "Bearer fake-access-1")) return challenge()
+    const replies = messages.filter((message) => message.id !== undefined).map((message) => answer(message, route))
     if (!replies.length) return void response.writeHead(202).end()
     response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(Array.isArray(body) ? replies : replies[0]))
   })
@@ -291,6 +304,7 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
     callArguments,
     markers,
     authorizations,
+    methods,
     close: () => new Promise<void>((resolve) => (server.closeAllConnections(), server.close(() => resolve()))),
   })
   return fake
