@@ -31,6 +31,8 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.5
+          # No cache: a cache made on a runner with another home restores bun to a path that runner cannot execute.
+          no-cache: true
       # The workflows are tools too: a YAML file GitHub refuses fails the whole run. actionlint parses them as
       # workflows, not as YAML. It goes on PATH before `npm run check`, whose actionlint stage then runs it.
       - name: Install actionlint
