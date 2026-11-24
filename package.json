@@ -2,7 +2,7 @@
   "name": "@we-the-rebel-alliance/x-plugin",
   "version": "0.0.0",
   "private": true,
-  "description": "OpenCode connector for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, and change the account only when asked, through X official MCP server",
+  "description": "OpenCode connector for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, and change the account only when asked, through X's official MCP server",
   "keywords": [
     "opencode",
     "opencode-plugin",
