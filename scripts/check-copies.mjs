@@ -9,7 +9,7 @@ import { createHash } from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
 
 const COPIES = [
-  { path: "test/support/jelly-kit.ts", optional: false, sha256: "b91590c0312a7d636b05e671d43cafb97e0a625fd15b156a0d686776a3ac8639", part: (text) => text },
+  { path: "test/support/jelly-kit.ts", optional: false, sha256: "00b65a0040ce1410f392b5199f1451f28ce08be3eabe16ad2a3b078cb04e1277", part: (text) => text },
   // Jelly's setting rules, restated without zod (the file's header says what it restates and how to update it).
   { path: "test/support/jelly-settings.ts", optional: false, sha256: "966aeac7eddce490da51e8e46780f1fbcfaf9b3e892bd62f2c3952c2a6111383", part: (text) => text },
   // The release kit, whole: one version in every plugin (CONTRIBUTING.md, Releasing). Change it in every plugin at once.

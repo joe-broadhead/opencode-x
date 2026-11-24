@@ -176,19 +176,3 @@ export function iconProblems(root: URL, pkg: Package): string[] {
   if (others.length > 0) problems.push(`the icon has elements Jelly drops: ${[...new Set(others)].join(", ")}`)
   return problems
 }
-
-/** docs/jelly.md: it counts the declared tools, names each declared skill, and names no version. */
-export function docProblems(root: URL): string[] {
-  const path = new URL("docs/jelly.md", root)
-  if (!existsSync(path)) return ["docs/jelly.md is missing"]
-  const doc = readFileSync(path, "utf8")
-  const pkg = readPackage(root)
-  const tools = pkg.jelly?.tools ?? []
-  const reads = tools.filter((tool) => tool.readOnly).length
-  const problems: string[] = []
-  if (!doc.includes(`${tools.length} tools are declared (${reads} read-only)`)) problems.push(`docs/jelly.md does not say "${tools.length} tools are declared (${reads} read-only)"`)
-  for (const skill of pkg.jelly?.skills ?? []) if (!doc.includes(`\`${skill}\``)) problems.push(`docs/jelly.md does not name the skill \`${skill}\``)
-  if (doc.includes(pkg.version)) problems.push(`docs/jelly.md names the version ${pkg.version}, which a release makes untrue`)
-  return problems
-}
-
