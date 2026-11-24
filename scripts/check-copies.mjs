@@ -9,18 +9,18 @@ import { createHash } from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
 
 const COPIES = [
-  { path: "test/support/jelly-kit.ts", optional: false, sha256: "00b65a0040ce1410f392b5199f1451f28ce08be3eabe16ad2a3b078cb04e1277", part: (text) => text },
+  { path: "test/support/jelly-kit.ts", optional: false, sha256: "c759445421c51ff9bc72d41bbe6f313e66abdf0b11ae5f458ef97ff808926eb1", part: (text) => text },
   // The setting rules, restated without zod (the file's header says what it restates and how to update it).
   { path: "test/support/jelly-settings.ts", optional: false, sha256: "966aeac7eddce490da51e8e46780f1fbcfaf9b3e892bd62f2c3952c2a6111383", part: (text) => text },
   // The release kit, whole: one version in every plugin (CONTRIBUTING.md, Releasing). Change it in every plugin at once.
   { path: "scripts/attach-native.mjs", optional: false, sha256: "835b12b5d4e95fe87f61a2656f7be0baf8c805299cadff7110a16a6f2b475f8e", part: (text) => text },
   { path: "scripts/capture-tools.mjs", optional: false, sha256: "bf1276b41979c94519f4d42c580ebf8b077b66cb969fa234063a241d0073fa63", part: (text) => text },
   { path: "scripts/changelog.mjs", optional: false, sha256: "72980c16bea66ebdb991169796db6e1c29779f1f3d491dc5824a5bacc0efdcd9", part: (text) => text },
-  { path: "scripts/check-drift.mjs", optional: false, sha256: "328217e149e6e840facfd6297d8b3d4d2effbbd8ba7f5a1c7dfa6e54f47550a4", part: (text) => text },
+  { path: "scripts/check-drift.mjs", optional: false, sha256: "e8a30e70018431d668fe1f480ecb7231847f7a3b3dbbd93c75f81318b02b6b69", part: (text) => text },
   { path: "scripts/check-release-plugin-add.sh", optional: false, sha256: "557fda41255c0b9fd0d3be3e7fc9518fc2cb097cd8fc9766b76fa0b3c3620f89", part: (text) => text },
   { path: "scripts/check-release-shape.mjs", optional: false, sha256: "cca057c01cbbd1c3caead2b769b47fae9037243d3e3e4f322d7dfab02d3b3f46", part: (text) => text },
-  { path: "scripts/drift-kit.test.mjs", optional: false, sha256: "97ba8806938d6ebf323dd5e1490508cfcf37aaeb9e16da41dd758449bb79c885", part: (text) => text },
-  { path: "scripts/jelly-family-block.md", optional: false, sha256: "100a42223681d3d0b06db1abd5f218cb33ea7d4733fb2131151ebf725e637564", part: (text) => text },
+  { path: "scripts/drift-kit.test.mjs", optional: false, sha256: "15e45c56dab8ccb6c6e883867b6c7cb2631848275916fc490f571d17db44eb21", part: (text) => text },
+  { path: "scripts/jelly-family-block.md", optional: false, sha256: "f93f00eef5378791c299d2597568e26202d5571ac26d5b4fbaf129bb4e4601f5", part: (text) => text },
   { path: "scripts/native-manifest.mjs", optional: false, sha256: "4dc1025825b2802cc6afc31e597745f89dd1da9a50856ca69b3f3322844ecfc7", part: (text) => text },
   { path: "scripts/publish-release.mjs", optional: false, sha256: "9615e2eaab236a8ba01c133be87a2428d17a5612716a4df05c788ff1be7668a1", part: (text) => text },
   { path: "scripts/release-commit.mjs", optional: false, sha256: "fb08f19a3bf659eeff960944fa4eb53b4cf74f94c4e12e123c2d104185667f44", part: (text) => text },

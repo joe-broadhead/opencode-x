@@ -96,7 +96,7 @@ export function declarationProblems(root: URL, options: DeclarationOptions): str
   if (Object.keys(pkg.dependencies ?? {}).length > 0) problems.push("the package has runtime dependencies, so its tarball does not stand alone")
 
   for (const key of Object.keys(jelly)) {
-    if (!(DECLARATION_KEYS as readonly string[]).includes(key)) problems.push(`jelly.${key} is not a key Jelly knows`)
+    if (!(DECLARATION_KEYS as readonly string[]).includes(key)) problems.push(`jelly.${key} is not a key the schema knows`)
   }
   if (!jelly.title?.trim() || jelly.title.length > 60) problems.push("jelly.title must be 1 to 60 characters")
   problems.push(...summaryProblems(jelly.summary))

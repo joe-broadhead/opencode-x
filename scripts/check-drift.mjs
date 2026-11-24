@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Checks a plugin's Jelly declaration, registry, skills and docs against the tool list its provider serves, as the
+// Checks a plugin's declaration, registry, skills and docs against the tool list its provider serves, as the
 // committed capture records it. Kit script: one copy in every plugin, pinned by check-copies.mjs. It reads files only:
 // no network, no credential, no child process.
 //
@@ -32,7 +32,7 @@
 //                        is", "logged in as", "signed in as", …) followed by an id, email or quoted value that is not a
 //                        placeholder or a documented example (any capture, older formats too; npm run capture redacts)
 //   namespace            a declared permission outside the capture's namespace
-//   served-not-declared  a served tool `jelly.tools` lacks: a write there escapes Jelly's read-only-helper fence
+//   served-not-declared  a served tool `jelly.tools` lacks: a write there escapes the read-only-helper fence
 //   declared-not-served  a declared tool the capture lacks, unless it is the plugin's own, or gated in the registry
 //                        (availability and reason) with a note on the declared tool
 //   own-served           an own tool the server serves as well
@@ -160,7 +160,7 @@ export function familyBlockOf(text) {
   const end = text.indexOf(FAMILY_BLOCK_END)
   return start < 0 || end < start ? undefined : text.slice(start, end + FAMILY_BLOCK_END.length)
 }
-/** Jelly's shared block, as the kit vendors it (scripts/jelly-family-block.md): read here, never fetched. */
+/** The shared block, as the kit vendors it (scripts/jelly-family-block.md): read here, never fetched. */
 export const FAMILY_BLOCK = familyBlockOf(readFileSync(new URL("./jelly-family-block.md", import.meta.url), "utf8"))
 
 /**
@@ -177,10 +177,10 @@ export function familyContradictions(text) {
   for (const match of sentences) {
     const sentence = match[0].replace(/\s+/g, " ").trim()
     const line = prose.slice(0, match.index).split("\n").length
-    // An effect of allow, or a tool declared allow ("Every tool is declared `allow`, so a Jelly agent runs …").
+    // An effect of allow, or a tool declared allow ("Every tool is declared `allow`, so an agent runs …").
     const allowEffect = /`?effect`?[^.]{0,40}`?\ballow\b`?|\ballow\b`?\s+effect|\b(?:declared|is|are|with|as)\s+`?allow\b/i.test(sentence)
     if (allowEffect && /\b(lets|makes|means|so that|so)\b[^.]{0,50}\b(run|runs)\b(?! only)/i.test(sentence) && !/changes nothing|follows the access/i.test(sentence)) {
-      found.push({ level: "fail", line, sentence, detail: "an effect of allow (or a tool declared allow) is said to make a tool run; jelly's shared block: \"A declared `effect` of `allow` changes nothing\"" })
+      found.push({ level: "fail", line, sentence, detail: "an effect of allow (or a tool declared allow) is said to make a tool run; the shared block: \"A declared `effect` of `allow` changes nothing\"" })
     } else if (allowEffect && /\bruns?\b[^.]{0,30}\bwithout asking\b/i.test(sentence) && !/changes nothing|follows the access|at Allowed|`all`/i.test(sentence)) {
       found.push({ level: "warn", line, sentence, detail: "an effect of allow beside a tool running without asking: allow changes nothing (the block's fourth sentence)" })
     }
@@ -362,15 +362,15 @@ export function checkDrift({ pkg, fixture, provenance, registry = {}, effectExce
   if (!Array.isArray(declared)) throw new FileError("package.json's jelly.tools is not an array")
 
   // schema
-  if (declared.length > MAX_TOOLS) add("fail", "schema", { detail: `${declared.length} tools declared; Jelly takes at most ${MAX_TOOLS}` })
+  if (declared.length > MAX_TOOLS) add("fail", "schema", { detail: `${declared.length} tools declared; the declaration takes at most ${MAX_TOOLS}` })
   // A permission is declared once, except for a per-account pattern (Plaud's `plaud-*.list_files`): a name with `*` that
   // ends `*.<tool>` may share its permission with the one default tool `<namespace>.<tool>`, with the same readOnly, as
-  // Jelly accepts. The pattern is then left out of the checks by permission below; its default tool stands for both.
+  // The schema accepts. The pattern is then left out of the checks by permission below; its default tool stands for both.
   const byPermission = new Map()
   const names = new Set()
   const patterns = []
   for (const tool of declared) {
-    for (const key of Object.keys(tool)) if (!TOOL_KEYS.has(key)) add("fail", "schema", { tool: tool.name, detail: `unknown key ${key}: Jelly refuses an unknown key inside a tool` })
+    for (const key of Object.keys(tool)) if (!TOOL_KEYS.has(key)) add("fail", "schema", { tool: tool.name, detail: `unknown key ${key}: the schema refuses an unknown key inside a tool` })
     if (names.has(tool.name)) add("fail", "schema", { tool: tool.name, detail: "declared twice" })
     names.add(tool.name)
     if (String(tool.name).includes("*")) patterns.push(tool)
@@ -396,19 +396,19 @@ export function checkDrift({ pkg, fixture, provenance, registry = {}, effectExce
     add(nonEmpty(reason) ? "note" : "fail", "effect-not-allow", { tool: tool.name, detail: nonEmpty(reason) ? `owner-approved: ${reason}` : `effect ${tool.effect}; OD-29 declares every tool allow` })
   }
 
-  // jelly's shared block in docs/jelly.md, word for word, and no sentence outside it that contradicts it
+  // the shared block in a declaration's docs page, word for word, and no sentence outside it that contradicts it
   // jellyDoc is null when the repository has no docs/jelly.md, undefined when the caller passed none.
-  if (jellyDoc === null) add("warn", "family-block", { file: "docs/jelly.md", detail: "no docs/jelly.md: it carries jelly's shared block (scripts/jelly-family-block.md) between its markers" })
+  if (jellyDoc === null) add("warn", "family-block", { file: "docs/jelly.md", detail: "no docs page: it carries the shared block (scripts/jelly-family-block.md) between its markers" })
   else if (jellyDoc !== undefined) {
     const starts = jellyDoc.split(FAMILY_BLOCK_START).length - 1
     const ends = jellyDoc.split(FAMILY_BLOCK_END).length - 1
     const mine = familyBlockOf(jellyDoc)
-    if (starts !== 1 || ends !== 1 || mine === undefined) add("fail", "family-block", { file: "docs/jelly.md", detail: `carries ${starts} start and ${ends} end markers: it must carry jelly's shared block once, between ${FAMILY_BLOCK_START} and ${FAMILY_BLOCK_END}, copied from scripts/jelly-family-block.md` })
+    if (starts !== 1 || ends !== 1 || mine === undefined) add("fail", "family-block", { file: "docs/jelly.md", detail: `carries ${starts} start and ${ends} end markers: it must carry the shared block once, between ${FAMILY_BLOCK_START} and ${FAMILY_BLOCK_END}, copied from scripts/jelly-family-block.md` })
     else if (mine !== familyBlock) {
       const a = mine.split("\n")
       const b = familyBlock.split("\n")
       const at = a.findIndex((text, index) => text !== b[index])
-      add("fail", "family-block", { file: "docs/jelly.md", line: jellyDoc.slice(0, jellyDoc.indexOf(FAMILY_BLOCK_START)).split("\n").length + Math.max(at, 0), detail: "the shared block differs from jelly's (scripts/jelly-family-block.md): copy it word for word" })
+      add("fail", "family-block", { file: "docs/jelly.md", line: jellyDoc.slice(0, jellyDoc.indexOf(FAMILY_BLOCK_START)).split("\n").length + Math.max(at, 0), detail: "the shared block differs from the vendored block (scripts/jelly-family-block.md): copy it word for word" })
     }
     const outside = mine === undefined ? jellyDoc : jellyDoc.replace(mine, (block) => block.replace(/[^\n]/g, " "))
     for (const item of familyContradictions(outside)) add(item.level, "family-contradiction", { file: "docs/jelly.md", line: item.line, detail: `${item.detail}: "${item.sentence.slice(0, 160)}"` })
