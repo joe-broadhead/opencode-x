@@ -1,23 +1,24 @@
 {
-  "name": "@joe-broadhead/opencode-x",
-  "version": "0.0.9",
+  "name": "@we-the-rebel-alliance/x-plugin",
+  "version": "0.0.0",
   "private": true,
-  "description": "Unofficial OpenCode plugin for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, post, and draft long-form Articles, through X's official MCP server",
+  "description": "OpenCode connector for X: search and read posts, profiles, timelines, mentions, bookmarks, news and trends, and change the account only when asked, through X official MCP server",
   "keywords": [
     "opencode",
     "opencode-plugin",
     "x",
-    "twitter"
+    "twitter",
+    "plugin-contract"
   ],
   "license": "MIT",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/joe-broadhead/opencode-x.git"
+    "url": "git+https://github.com/we-the-rebel-alliance/x-plugin.git"
   },
-  "homepage": "https://github.com/joe-broadhead/opencode-x#readme",
+  "homepage": "https://github.com/we-the-rebel-alliance/x-plugin#readme",
   "bugs": {
-    "url": "https://github.com/joe-broadhead/opencode-x/issues"
+    "url": "https://github.com/we-the-rebel-alliance/x-plugin/issues"
   },
   "exports": {
     ".": "./dist/index.js",
@@ -37,7 +38,7 @@
     "CHANGELOG.md"
   ],
   "opencode": {
-    "host": ">=2.2.3 <2.4.0",
+    "host": ">=2.4.1 <2.5.0",
     "icons": [
       {
         "src": "assets/icon.svg",
@@ -221,108 +222,6 @@
         "urlHosts": [
           "x.com"
         ]
-      },
-      {
-        "id": "x.bookmarks.list",
-        "kind": "snapshot",
-        "tool": "events_list",
-        "input": {
-          "source": "bookmarks",
-          "list": "bookmarks"
-        },
-        "output": "list",
-        "accounts": {
-          "named": false
-        },
-        "permission": {
-          "tool": "x_events_list",
-          "operations": [
-            "get_users_me",
-            "get_users_by_username",
-            "get_users_bookmarks"
-          ],
-          "identity": [
-            "get_users_me"
-          ]
-        },
-        "private": true,
-        "cost": {
-          "class": "billed",
-          "units": [
-            {
-              "per": "post",
-              "usd": 0.005
-            },
-            {
-              "per": "author",
-              "usd": 0.01
-            },
-            {
-              "per": "user",
-              "usd": 0.01
-            }
-          ],
-          "probe": {
-            "per": "user",
-            "usd": 0.01
-          }
-        },
-        "maxAgeSec": 3600,
-        "maxBytes": 65536,
-        "urlHosts": [
-          "x.com"
-        ]
-      },
-      {
-        "id": "x.posts",
-        "kind": "snapshot",
-        "tool": "events_list",
-        "input": {
-          "source": "posts",
-          "list": "posts"
-        },
-        "output": "list",
-        "accounts": {
-          "named": false
-        },
-        "permission": {
-          "tool": "x_events_list",
-          "operations": [
-            "get_users_me",
-            "get_users_by_username",
-            "get_users_posts"
-          ],
-          "identity": [
-            "get_users_me"
-          ]
-        },
-        "private": false,
-        "cost": {
-          "class": "billed",
-          "units": [
-            {
-              "per": "post",
-              "usd": 0.005
-            },
-            {
-              "per": "author",
-              "usd": 0.01
-            },
-            {
-              "per": "user",
-              "usd": 0.01
-            }
-          ],
-          "probe": {
-            "per": "user",
-            "usd": 0.01
-          }
-        },
-        "maxAgeSec": 3600,
-        "maxBytes": 65536,
-        "urlHosts": [
-          "x.com"
-        ]
       }
     ]
   },
@@ -339,14 +238,14 @@
     "capture": "node scripts/capture-tools.mjs"
   },
   "devDependencies": {
-    "@opencode/client": "2.2.3",
-    "@opencode/plugin": "2.2.3",
-    "@opencode/sdk": "2.2.3",
+    "@opencode/client": "2.4.1",
+    "@opencode/plugin": "2.4.1",
+    "@opencode/sdk": "2.4.1",
     "@opentui/core": "0.8.0",
     "@opentui/solid": "0.8.0",
     "@types/bun": "1.4.4",
     "@types/node": "24.19.2",
-    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.3.0",
+    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#2fd55cdc0c6c1067927fefc403a88bfd18c9a971",
     "esbuild": "0.28.2",
     "solid-js": "1.9.17",
     "typescript": "5.9.3"

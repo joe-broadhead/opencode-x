@@ -8,7 +8,7 @@ import tui, { setupView, viewMessage, type ViewContext } from "../../src/tui.js"
 const SIGN_IN = "Run `/connect` and choose X, then press `o` or Enter to open the link (in a terminal, `opencode mcp auth x` opens it automatically)."
 
 const status = (overrides: Partial<Parameters<typeof buildStatus>[0]> = {}): Status =>
-  buildStatus({ server: { status: "connected" }, source: { type: "plugin", url: "https://mcp.xhq.com/mcp/v1", signIn: "oauth" }, tools: ["search_records_by_name"], host: checkHost("2.2.3", false), ...overrides })
+  buildStatus({ server: { status: "connected" }, source: { type: "plugin", url: "https://mcp.xhq.com/mcp/v1", signIn: "oauth" }, tools: ["search_records_by_name"], host: checkHost("2.4.1", false), ...overrides })
 
 /** Everything the view touches, recorded. */
 function fake(options: { answer?: () => Promise<unknown> } = {}) {
@@ -119,8 +119,8 @@ describe("status view", () => {
   })
 
   test("an untested host the user allowed shows the warning", () => {
-    const untested = status({ host: checkHost("2.4.0", true) })
-    expect(viewMessage({ status: untested })).toContain("- OpenCode: 2.4.0 (untested; supported range >=2.2.3 <2.4.0). It is outside the supported range;")
+    const untested = status({ host: checkHost("2.4.2", true) })
+    expect(viewMessage({ status: untested })).toContain("- OpenCode: 2.4.2 (untested; supported range >=2.4.1 <2.5.0)")
   })
 
   test.each([

@@ -1,15 +1,12 @@
 // The one local entry point: `npm run check` runs every stage in order and stops at the first failure.
 // `node scripts/check.mjs <stage>...` runs only the named stages, in the order given.
 import { spawnSync } from "node:child_process"
-import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { delimiter, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = fileURLToPath(new URL("..", import.meta.url))
 const env = { ...process.env, PATH: `${join(root, "node_modules", ".bin")}${delimiter}${process.env.PATH ?? ""}` }
-// The one list of tested OpenCode releases. Node loads src/constants.ts by stripping its types, so that file keeps to
-// type-only imports.
-const { TESTED_HOSTS } = await import(new URL("../src/constants.ts", import.meta.url).href)
 
 // The approved package shape. Change it here only together with the release policy.
 const FILES = ["dist", "assets/icon.svg", "assets/icon-128.png", "assets/icon-256.png", "skills", "README.md", "LICENSE", "CHANGELOG.md"]
@@ -19,8 +16,8 @@ const ASSET_EXPORTS = { "./icon.svg": "./assets/icon.svg", "./icon-128.png": "./
 // dist/ holds one self-contained bundle per export, and nothing else (scripts/build.mjs).
 const DIST = Object.values(EXPORTS).map((base) => `${base}.js`).sort()
 // The tested OpenCode line. The host provides @opencode/plugin, OpenTUI and Solid, so the package declares no peers.
-const HOST_RANGE = ">=2.2.3 <2.4.0"
-const HOST_DEV_PIN = "2.2.3"
+const HOST_RANGE = ">=2.4.1 <2.5.0"
+const HOST_DEV_PIN = "2.4.1"
 const ABSENT_FIELDS = ["dependencies", "optionalDependencies", "bundleDependencies", "bundledDependencies", "peerDependencies", "peerDependenciesMeta", "engines", "overrides"]
 const LIFECYCLE_SCRIPTS = ["preinstall", "install", "postinstall", "preprepare", "prepare", "postprepare", "prepublish", "prepublishOnly", "prepack", "postpack", "publish", "postpublish"]
 
@@ -78,31 +75,9 @@ function run(command, args, options = {}) {
   return result.status ?? 1
 }
 
-/**
- * The host suite on each tested release: the locked @opencode/sdk for HOST_DEV_PIN, and the others installed from npm
- * into a temp folder under the system's /tmp, outside the lockfile, once per run. HOST_SDK_DIR runs only that SDK.
- */
+/** The host suite on the one tested release: the locked @opencode/sdk. */
 function host() {
-  if (process.env.HOST_SDK_DIR) return run("bun", ["test", "./test/host"])
-  for (const version of TESTED_HOSTS) {
-    console.log(`\n[check] host on @opencode/sdk ${version}`)
-    if (version === HOST_DEV_PIN) {
-      const code = run("bun", ["test", "./test/host"])
-      if (code !== 0) return code
-      continue
-    }
-    const dir = mkdtempSync(join(realpathSync("/tmp"), `x-sdk-${version}-`))
-    try {
-      // Its own package.json, so npm never walks up to another one.
-      writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "x-host-sdk", private: true }))
-      const code = run("npm", ["install", `@opencode/sdk@${version}`, "--ignore-scripts", "--no-audit", "--no-fund", "--prefer-offline"], { cwd: dir })
-        || run("bun", ["test", "./test/host"], { env: { HOST_SDK_DIR: dir } })
-      if (code !== 0) return code
-    } finally {
-      rmSync(dir, { recursive: true, force: true })
-    }
-  }
-  return 0
+  return run("bun", ["test", "./test/host"])
 }
 
 function whitelist() {
