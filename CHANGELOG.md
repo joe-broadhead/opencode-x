@@ -11,7 +11,7 @@ The repository's first release under `we-the-rebel-alliance`, rebuilt on the plu
   on 2.4.1, and its harness answers the 2.4 `server/discover` probe and waits for the background plugin load.
 - **New name and repository.** The package is `@we-the-rebel-alliance/x-plugin`, version `0.0.0`. Every install line,
   badge, link and repository URL names the new organization and `blob/master`.
-- **Fixed context.** The Code Mode namespace line is 320 characters and each skill description is within 300. The
+- **Fixed context.** The Code Mode namespace line is 330 characters and each skill description is within 300. The
   search window, the cost line, the "never ask whether to spend" rule, the public-post warning, the "only when asked"
   list and the sensitive-trait rule live in the two skill bodies. Nothing is pinned and there are no per-request hooks.
 - **Three sources.** `x.mentions`, `x.bookmarks` and `x.timeline` remain. The app-only list snapshots

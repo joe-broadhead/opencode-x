@@ -48,7 +48,7 @@ machine's: a time tool gives the zone, and the answer names it. `start_time` is 
 `end_time` the earlier of the next local midnight and now minus 10 seconds (X rejects a later one), or that day's own
 end. Never leave `end_time` off or use a rolling 48 hours for "the last two days"; say the window runs to now.
 An empty result means the query, the window or access: say which you ruled out, then widen the query or the window if
-that helps; the answer's cost line covers every read.
+that helps. A script's result carries the cost line for every read it made; a model-path result does not.
 
 ## Answering
 

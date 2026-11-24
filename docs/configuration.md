@@ -1,10 +1,11 @@
 # Configuration
 
-Every option is optional. The smallest setup is one entry in `plugins`, then the X app in `/connect`:
+Every option is optional. Install from a release; the first release on plugin-contract is v0.0.0 (phase 4b). The
+smallest setup is one entry in `plugins`, then the X app in `/connect`:
 
 ```json
 {
-  "plugins": ["github:we-the-rebel-alliance/x-plugin#master"]
+  "plugins": ["github:we-the-rebel-alliance/x-plugin#v<version>"]
 }
 ```
 
@@ -14,7 +15,7 @@ To set options, use the object form:
 {
   "plugins": [
     {
-      "package": "github:we-the-rebel-alliance/x-plugin#master",
+      "package": "github:we-the-rebel-alliance/x-plugin#v<version>",
       "options": {
         "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" }
       }
@@ -169,7 +170,7 @@ no secret, and no per-member app.
 {
   "plugins": [
     {
-      "package": "github:we-the-rebel-alliance/x-plugin#master",
+      "package": "github:we-the-rebel-alliance/x-plugin#v<version>",
       "options": { "oauth": { "client_id": "YOUR_TEAM_APP_CLIENT_ID" } }
     }
   ]

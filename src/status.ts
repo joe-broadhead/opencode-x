@@ -462,7 +462,7 @@ const count = { type: "integer", minimum: 0 }
 const nullableString = { type: ["string", "null"] }
 
 /**
- * One read-only method for the TUI view and scripts. The TUI part does not receive the plugin options on 2.2.x, and
+ * One read-only method for the TUI view and scripts. The TUI part does not receive the plugin options on 2.4.1, and
  * cannot see the server's own findings, so it asks the server for the same status /x-status reports.
  */
 export const StatusRpc = {
