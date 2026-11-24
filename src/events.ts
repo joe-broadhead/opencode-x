@@ -352,8 +352,8 @@ export function postEvent(account: string, feed: Feed, post: Post, source: strin
 
 /**
  * Where a timeline or mentions feed stands: after post `s`, or from time `t` before any; `u` caps a narrowed window.
- * A feed source also keeps `w`, the time of the newest post it listed (a gap's `since`), and `g` after a gap, until it
- * lists a post, so the gap is answered once.
+ * Every source keeps `w`, the time of the newest post it listed; a feed source also uses it as a gap's `since`, and
+ * keeps `g` after a gap until it lists a post, so the gap is answered once.
  */
 interface WindowState {
   readonly s?: string
@@ -364,7 +364,7 @@ interface WindowState {
 }
 /**
  * Where bookmarks stand: the newest known bookmarks `k`, or the start time `t` before any; `r` and `n` resume a walk,
- * and `m` counts the bookmarks it has read. A feed source also keeps `w`, when the known bookmarks were confirmed.
+ * `m` counts the bookmarks it has read, and `w` is when the known bookmarks were confirmed.
  */
 interface BookmarkState {
   readonly k?: readonly string[]
@@ -524,7 +524,9 @@ async function windowFeed(listing: Listing, feed: Feed, state: WindowState): Pro
     // Out of reads before the window ended: what was read is its newest part, so keep only the older part for later.
     return answer(posts.length === 0 ? state : { ...state, u: posts[0]!.id }, true)
   }
-  const newest = (post: Post) => (listing.gaps ? { w: post.created } : {})
+  // Every source keeps the newest post's time (`w`), so a cursor with a position but no `w` (and no post-gap `g`) is
+  // an older format. The combined source does not answer gaps, but still carries `w` for that check.
+  const newest = (post: Post) => ({ w: post.created })
   const kept = state.w !== undefined ? { w: state.w } : state.g !== undefined ? { g: state.g } : {}
   let last: Post | undefined
   for (const post of posts) {
@@ -568,7 +570,7 @@ const BOOKMARK_FIELDS = { "post.fields": FIELDS["post.fields"] }
  */
 async function bookmarkFeed(listing: Listing, state: BookmarkState): Promise<FeedRead<BookmarkState>> {
   const { budget } = listing
-  const confirmed = listing.gaps ? { w: listing.now } : {}
+  const confirmed = { w: listing.now }
   if (budget.calls <= 0) return { state, more: true }
   if (state.k === undefined) {
     // The one read of the first listing also lists the posts it returns from the start time on, so it asks for their
@@ -706,6 +708,13 @@ const failureCode = (error: unknown) => {
   return typeof code === "string" && CODE.test(code) ? code : "UNAVAILABLE"
 }
 
+/**
+ * A current feed cursor carries the newest post's time (`w`), or `g: 1` after a gap it has answered once. A state with a
+ * position (`s` for a window feed, `k` for bookmarks) but neither is an older format, not one this version reads.
+ */
+const currentFeedState = (state: { readonly s?: string; readonly k?: readonly string[]; readonly g?: 1; readonly w?: number }) =>
+  !((state.s !== undefined || state.k !== undefined) && state.w === undefined && state.g === undefined)
+
 /** The account and owner a combined cursor belongs to, as 16 hex digits: a cursor from another sign-in is refused. */
 const ownerHash = (account: string, me: string) => createHash("sha256").update(`${account}\u0000${me}`).digest("hex").slice(0, 16)
 const KEYS: Readonly<Record<Feed, string>> = { mentions: "m", timeline: "h", bookmarks: "b" }
@@ -740,7 +749,7 @@ async function combinedEvents(read: Read, options: XEventsOptions, request: Even
       const value = saved[KEYS[feed]]
       // A feed enabled after this cursor was issued starts like a first listing, 24 hours back.
       const parsed = value === undefined ? { t: now - 24 * 3_600_000 } : feedState(feed, value)
-      if (parsed === undefined) throw refuseCursor()
+      if (parsed === undefined || !currentFeedState(parsed as { readonly s?: string; readonly k?: readonly string[]; readonly g?: 1; readonly w?: number })) throw refuseCursor()
       states.set(feed, parsed)
     }
   }
@@ -816,10 +825,7 @@ async function feedEvents(read: Read, options: XEventsOptions, request: EventsLi
     if (!decoded.ok) throw refuseCursor()
     const [me, label, position] = [id(decoded.state["i"]), decoded.state["l"], feedState(feed, decoded.state["p"])]
     if (me === undefined || typeof label !== "string" || label === "" || label.length > EVENT_LIMITS.ownerLabel || position === undefined || decoded.state["a"] !== asked) throw refuseCursor()
-    // A current feed cursor carries the newest post's time (`w`), or `g: 1` after a gap it has answered once. A cursor
-    // with a position but neither is an older format, not one this version reads.
-    const carry = position as { readonly s?: string; readonly k?: readonly string[]; readonly g?: 1; readonly w?: number }
-    if ((carry.s !== undefined || carry.k !== undefined) && carry.w === undefined && carry.g === undefined) throw refuseCursor()
+    if (!currentFeedState(position as { readonly s?: string; readonly k?: readonly string[]; readonly g?: 1; readonly w?: number })) throw refuseCursor()
     user = { id: me, account: asked, owner: { id: `x:@${asked}`, label } }
     state = position
   } else {

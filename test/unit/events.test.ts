@@ -447,6 +447,31 @@ describe("x_events_list", () => {
 
 })
 
+describe("the combined source's cursor", () => {
+  test("refuses an older cursor: every feed state needs w, or g after a gap", async () => {
+    const host = x(fixture(), 50)
+    const list = run(host)
+    const first = await list({ since: SINCE })
+    const binding = { plugin: "x", source: "x", account: "samrivera" }
+    const decoded = decodeBoundCursor(binding, first.cursor)
+    if (!decoded.ok) throw new Error("the cursor did not decode")
+    const state = decoded.state as { o: string; f: Record<string, { s?: string; k?: string[]; w?: number; g?: 1 }> }
+    // A current combined cursor carries each feed's newest post time (w): the window feeds and bookmarks alike.
+    expect(state.f["m"]?.w).toBeDefined()
+    expect(state.f["h"]?.w).toBeDefined()
+    expect(state.f["b"]?.w).toBeDefined()
+    for (const key of ["m", "b"] as const) {
+      const { w: _w, ...older } = state.f[key]!
+      const legacy = encodeBoundCursor(binding, { o: state.o, f: { ...state.f, [key]: older } })
+      await expect(list({ cursor: legacy })).rejects.toThrow(/^CURSOR_INVALID: /)
+    }
+    // The untouched current cursor still decodes and lists (nothing new on this page).
+    const next = await list({ cursor: first.cursor })
+    expect(next.source).toBe("x")
+    expect(resultProblems(next)).toEqual([])
+  })
+})
+
 describe("a combined page when one feed fails", () => {
   type Entry = { id: string; execute: (input: Record<string, unknown>) => Promise<unknown> }
   /** The host, with one tool failing `times` times before it answers as the fake does. */

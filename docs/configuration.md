@@ -666,9 +666,10 @@ events_list({ since?, cursor?, limit?, account?, source? })
   `cost.units`: the posts, authors and users X returned, per the declared price units; source `x` includes its one
   `get_users_me` identity read as a user unit. X reports no price itself, so the page has no `usd`. When the cap
   stops it, the result says `more`, and the text the model reads gives the actual cost line.
-- **Cursor**: opaque, at most 1,024 characters, bound to the plugin, the source and the account. Source `x`'s also
-  holds a digest of the signed-in owner. A cursor wins over the `since` input; without either, or for a feed turned on
-  later, listing starts 24 hours ago. An older-format cursor is refused: there is no compatibility path.
+- **Cursor**: opaque, at most 1,024 characters, bound to the plugin, the source and the account. Every feed state
+  carries the newest post's time (`w`), or `g` after a gap; source `x`'s cursor also holds a digest of the signed-in
+  owner. A cursor wins over the `since` input; without either, or for a feed turned on later, listing starts 24 hours
+  ago. An older-format cursor is refused: there is no compatibility path, in either source.
 - **Limits**: `limit` is 1 to 500 (100 by default), and a result stays within 900 KB, every source's `maxBytes`.
 - **Permissions**: it asserts `x_events_list`, then each read goes through OpenCode's own executor with its own rules.
   The call cap bounds these reads. Every result carries `trust: "untrusted"`.
