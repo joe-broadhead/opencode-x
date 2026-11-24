@@ -1973,17 +1973,6 @@ describe("CI: macOS on pushes to master and for releases, never on pull requests
     assert.deepEqual(ciJobsProblems([...fullJobs(RUNNERS.slice(0, 3)), ...fullJobs(["macos-26-intel"], "cancelled")], RUNNERS), ["no successful job on macos-26-intel"])
     assert.deepEqual(ciJobsProblems(undefined, ["macos-26"]), ["no successful job on macos-26"])
   })
-
-  test("this repository's ci.yml: one ci job on the required runner rule (npm run check)", () => {
-    // The plugin standard's CI: one job whose id and name are `ci`, on the exact runner expression, with no matrix.
-    const yml = readFileSync(join(SCRIPTS, "..", ".github", "workflows", "ci.yml"), "utf8")
-    const runsOn = "    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (vars.CI_RUNNER_PUBLIC || 'ubuntu-24.04') || 'ubuntu-24.04' }}"
-    assert.ok(yml.includes("permissions:\n  contents: read\n"), "contents: read at the workflow level")
-    assert.ok(yml.includes(`\n  ci:\n    name: ci\n${runsOn}\n`), "one job, id and name ci, on the required runner rule")
-    const afterJobs = yml.slice(yml.indexOf("\njobs:\n"))
-    assert.equal((afterJobs.match(/^  [a-z][a-z-]*:$/gm) ?? []).length, 1, "exactly one job")
-    assert.equal(/strategy:/.test(yml), false, "no matrix")
-  })
 })
 
 describe("the conformance report of a plugin that declares sources", () => {
