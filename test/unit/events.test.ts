@@ -447,6 +447,50 @@ describe("x_events_list", () => {
 
 })
 
+describe("a combined page when one feed fails", () => {
+  type Entry = { id: string; execute: (input: Record<string, unknown>) => Promise<unknown> }
+  /** The host, with one tool failing `times` times before it answers as the fake does. */
+  const failing = (host: ReturnType<typeof x>, tool: string, times = Number.POSITIVE_INFINITY): ReturnType<typeof x> => {
+    let left = times
+    const list = async () =>
+      (await (host.tool.list as unknown as () => Promise<Entry[]>)()).map((entry) =>
+        entry.id === tool
+          ? {
+              ...entry,
+              execute: async (input: Record<string, unknown>) => {
+                if (left > 0) {
+                  left--
+                  throw new Error("X's timeline read failed")
+                }
+                return entry.execute(input)
+              },
+            }
+          : entry,
+      )
+    return { ...host, tool: { list: list as never } }
+  }
+
+  test("lists the other feeds, holds the failed feed's state, records failed[], and retries it next call", async () => {
+    const list = run(failing(x(fixture(), 50), "x_get_users_timeline", 1), { feeds: ["timeline", "mentions"] })
+    const first = await list({ since: SINCE })
+    expect(resultProblems(first)).toEqual([])
+    // The timeline read fails first; the mentions still page, and the page says which feed failed.
+    expect(first.events.map((event) => event.external_id)).toEqual(fixture().mentions.slice(1).map((item) => item.id))
+    expect(first.failed).toEqual([{ external_id: "feed:timeline", code: "UNAVAILABLE" }])
+    expect(first.more).toBe(true)
+    // The cursor kept the timeline's start state, so the next call retries it and lists its posts.
+    const second = await list({ cursor: first.cursor })
+    expect(second.failed).toBeUndefined()
+    expect(second.events.map((event) => event.external_id)).toEqual(fixture().timeline.slice(1).map((item) => item.id))
+    expect(second.more).toBe(false)
+  })
+
+  test("a single feed still fails the call: there is no other feed's page to keep", async () => {
+    const list = run(failing(x(fixture(), 50), "x_get_users_timeline"), { feeds: ["timeline"] })
+    await expect(list({ since: SINCE })).rejects.toThrow("X's timeline read failed")
+  })
+})
+
 describe("x_events_list's feed sources", () => {
   const ACCOUNT = "samrivera"
 
@@ -681,7 +725,7 @@ describe("x_events_list's feed sources", () => {
     }
   })
 
-  test("a v0.0.5 cursor, with no w, is checked on its first read from its post's own time (review L2)", async () => {
+  test("refuses a cursor without the newest post's time: no older format is read", async () => {
     for (const feed of ["mentions", "timeline"] as const) {
       const host = x(fixture(), 10)
       const list = run(host)
@@ -689,20 +733,13 @@ describe("x_events_list's feed sources", () => {
       const binding = { plugin: "x", source: feed, account: ACCOUNT }
       const decoded = decodeBoundCursor(binding, first.cursor)
       if (!decoded.ok) throw new Error("the cursor did not decode")
-      const state = decoded.state as { a: string; i: string; l: string; p: { s: string } }
-      // v0.0.5's cursor holds only the post it listed last.
+      const state = decoded.state as { a: string; i: string; l: string; p: { s: string; w?: number } }
+      // A v0.0.5 cursor holds only the post it listed last, with no `w`; this version does not read it.
+      expect(state.p.w).toBeDefined()
       const legacy = encodeBoundCursor(binding, { a: state.a, i: state.i, l: state.l, p: { s: state.p.s } })
-      // X still lists that post: no gap, and what came after is listed.
-      host.data[feed].push(post("2026-11-06T09:00:00Z", 0, "New", 1))
-      const fine = await list({ source: feed, account: ACCOUNT, cursor: legacy })
-      expect([fine.gap, fine.events.map((event) => event.title)]).toEqual([undefined, ["New"]])
-      expect(host.calls.at(-2)!.input["until_id"]).toBe((BigInt(state.p.s) + 1n).toString())
-      // X moved past it: one gap from that post's own time, read from its id.
-      host.data[feed] = Array.from({ length: 2 }, (_, n) => post("2026-11-07T09:00:00Z", 1, `Kept ${n}`, 10 + n))
-      const stale = await list({ source: feed, account: ACCOUNT, cursor: legacy })
-      expect(stale.gap).toEqual({ reason: "expired", since: fixture()[feed].at(-1)!.created_at })
-      expect(stale.events.map((event) => event.title)).toEqual(["Kept 0", "Kept 1"])
-      expect((await list({ source: feed, account: ACCOUNT, cursor: stale.cursor })).gap).toBeUndefined()
+      await expect(list({ source: feed, account: ACCOUNT, cursor: legacy })).rejects.toThrow(/^CURSOR_INVALID: /)
+      // The cursor this version issued still decodes and reads.
+      expect((await list({ source: feed, account: ACCOUNT, cursor: first.cursor })).source).toBe(feed)
     }
   })
 
