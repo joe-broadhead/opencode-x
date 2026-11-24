@@ -96,7 +96,7 @@ Things to know:
 ## Scripts
 
 The tools RPC (`x.posts.tools`, see
-[docs/scripting.md](https://github.com/joe-broadhead/opencode-x/blob/HEAD/docs/scripting.md)) calls X's tools for a
+[docs/scripting.md](https://github.com/we-the-rebel-alliance/x-plugin/blob/master/docs/scripting.md)) calls X's tools for a
 script, with no model. Every known tool is a method, with its class. A script gets the same `access` default as the
 model: with `all`, every method resolves `allow`; with `ask-changes` or `read-only`, a method that is not a read is
 refused before dispatch. A method is not a grant:

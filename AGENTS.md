@@ -1,21 +1,21 @@
 # Repository rules
 
-This repository builds `@joe-broadhead/opencode-x`, an OpenCode plugin that registers X's official MCP server and
-adds default permission rules, a status command, a status dialog, two skills and a tools RPC (v2) for scripts. It has
-no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you change code, and
-[CONTRIBUTING.md](CONTRIBUTING.md) for the checks and the release steps.
+This repository builds `@we-the-rebel-alliance/x-plugin`, an OpenCode connector for X: it registers X's official MCP
+server and adds default permission rules, a status command, a status dialog, two skills and a tools RPC for scripts. It
+has one tool of its own, `x_events_list`. Read [docs/architecture.md](docs/architecture.md) before changing code, and
+[CONTRIBUTING.md](CONTRIBUTING.md) for the checks.
 
 ## Rules
 
-- **Public API only.** Use only the public `@opencode/plugin` 2.2.3 API. `opencode.host` in `package.json` and
-  `SUPPORTED_HOST` in `src/constants.ts` both say exactly `>=2.2.3 <2.4.0`, never `^2.2.3`. `TESTED_HOSTS` in
-  `src/constants.ts` is the one list of tested releases (2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2): status calls only those tested, and
-  the host and pack stages and CI run on each. Inside the range an untested release still starts.
+- **Public API only.** Use only the public `@opencode/plugin` 2.4.1 API. `opencode.host` in `package.json` and
+  `SUPPORTED_HOST` in `src/constants.ts` both say exactly `>=2.4.1 <2.5.0`, never `^2.4.1`. `TESTED_HOSTS` in
+  `src/constants.ts` is the one list of tested releases (`2.4.1`); the host and pack stages run on it once. Inside the
+  range an untested release still starts, and status marks it untested.
 - **Greenfield.** No legacy, migration code, compatibility shim, dual path or deprecated alias, and nothing dead.
   Delete rather than deprecate.
 - **No peers, no runtime dependencies, no lifecycle scripts.** `@opencode/plugin`, `@opencode/sdk` and
-  `@opencode/client` (whose types the host tests use) are devDependencies pinned to exactly `2.2.3`. Do not add another
-  host version to the lockfile: the host stage installs the other tested SDKs into a temp folder.
+  `@opencode/client` (whose types the host tests use) are devDependencies pinned to exactly `2.4.1`. `effect` 4.1.0
+  arrives as `@opencode/plugin`'s own dependency; do not add a root pin without a reason the typechecker states.
 - **Ship prebuilt, one file per entry.** `scripts/build.mjs` bundles `src/index.ts` and `src/tui.ts` with esbuild into
   the self-contained `dist/index.js` and `dist/tui.js`: no chunks, no relative imports, and only host-provided modules
   external. `tsc` only typechecks. No declaration files, `.tsx` or JSX.
@@ -29,104 +29,85 @@ no tool of its own. Read [docs/architecture.md](docs/architecture.md) before you
 - **Default rules, not hooks.** Permissions come from rules inserted through `ctx.agent.transform` directly after each
   agent's base allow. A stricter agent is never weakened. An agent counts as guarded only with the whole block after
   its base allow. Agents that miss the rules are named in status with the per-agent fix, never patched, and the fix
-  never goes in the top-level `permissions`.
+  never goes in the top-level `permissions`. There are no per-request hooks.
 - **Allow by default; restrict with `access`.** The generated block allows `x_*` for `access: "all"` (the default),
   asks for every non-read for `"ask-changes"`, and denies them for `"read-only"`. A user's later rule wins. A saved
   "Always allow" applies to every agent in the project.
 - **Transforms are cheap, synchronous and never throw.** Record failures for status instead.
 - **Errors** read `CODE: What happened. Next step: What to do.`, built by `xError` or `errorText`. Codes have no
   service prefix; shared failures use the shared names (`HOST_UNTESTED`, `OPTIONS_INVALID`, `STATUS_UNAVAILABLE`,
-  `SKILLS_INVALID`).
-- **Status.** `src/status.ts` builds one model for `/x-status`, the `/x` dialog and the status RPC. The RPC keeps the
-  fields every plugin of this family shares, `version`, `host` (`version`, `range`, `tested`), `state`,
-  `unguardedAgents` and `nextStep`, under those names. It never shows OpenCode's text for a needed sign-in, never
-  shows the client secret, cuts a failure's reason to one line of 160 characters with `src/redact.ts` (no credentials,
-  URL queries or tokens), and names at most 20 unknown tools, plain names only. A status it cannot read is the
-  declared RPC error `unavailable`, with a next step. Status makes no X call, because every call costs money: the
-  account is the label OpenCode keeps on the sign-in, if any.
+  `SKILLS_INVALID`, `AUTH_REQUIRED`).
+- **Status.** `src/status.ts` builds one model for `/x-status`, the `/x` dialog and the status RPC (`x.posts`). The RPC
+  keeps the shared fields `version`, `host` (`version`, `range`, `tested`), `state`, `unguardedAgents` and `nextStep`.
+  It never shows the client secret, cuts a failure's or an expired sign-in's reason to one line of 160 characters with
+  `src/redact.ts` (no credentials, URL queries or tokens), and names at most 20 unknown tools, plain names only. A
+  status it cannot read is the declared RPC error `unavailable`, with a next step. Status makes no X call, because
+  every call costs money: the account is the label OpenCode keeps on the sign-in, if any.
 - **A user's own server entry** is read for its type, URL and whether `oauth` is `false`, never its `headers` or its
   client fields.
 - **A class is what the tool does.** A reversible, private delete stays a `write`: `delete_users_bookmark` removes the
   user's own bookmark and is class `write`, not `destructive`, which is for an irreversible effect or one that reaches
   another person.
-- **`src/x-tools.ts` is the one record of X's tools**, and has no runtime imports. `SENSITIVE_TOOLS` is the 40 privacy-sensitive live tools (DMs, follows, blocks, mutes, list membership, moderators, calls and live video) that are allowed with the rest and were once off; never remove a name.
-  Everything else derives from it;
-  `jelly.tools` and the skills are checked against it. Its names are the live list captured on 2026-11-06, with no
-  annotations, plus `media_upload` from Code Mode's catalogue of 2026-11-14 (`test/fixtures/live-tools.json`), and
-  `PARAMETERS` comes from their input schemas: reconciling is a change to that file,
-  `test/unit/x-live-tools.json`, `jelly.tools` and the skills, which `npm run drift` guides. `src/constants.ts` has no
-  imports at all: `scripts/check.mjs` loads it with Node's type stripping.
-- **Every call is billed.** Docs, skills, status and the namespace text say so plainly. The skills let the model fetch
+- **`src/x-tools.ts` is the one record of X's tools**, and has no runtime imports. `SENSITIVE_TOOLS` is the 40
+  privacy-sensitive live tools (DMs, follows, blocks, mutes, list membership, moderators, calls and live video) that are
+  allowed with the rest and were once off; never remove a name. `jelly.tools` and the skills are checked against it. Its
+  names are the live list captured on 2026-11-06, with no annotations, plus `media_upload` from Code Mode's catalogue of
+  2026-11-14 (`test/fixtures/live-tools.json`); `PARAMETERS` comes from their input schemas. Reconciling is a change to
+  that file, `test/unit/x-live-tools.json`, `jelly.tools` and the skills, which `npm run drift` guides.
+  `src/constants.ts` has no runtime imports: `scripts/check.mjs` loads it with Node's type stripping.
+- **Every call is billed.** Docs, skills, status and the namespace line say so plainly. The skills let the model fetch
   what the question needs; the model path's cost line covers the tools the README lists under Cost lines. The plugin
   does not cap reads.
-- **X content is adversarial and personal.** The namespace text and the skills treat every post, bio and Article as
-  untrusted data, never instructions, and never let one choose a tool, a recipient or a change. They never infer
-  health, financial status, politics, race or ethnicity, religion, sex life or sexual orientation, trade-union
-  membership or criminal activity; never build dossiers on private people; never match a handle to the user's mail,
-  files, candidates or customers; and never suggest a workaround for a protected account. Tests, fixtures, docs and
-  skills use invented handles, posts and places only.
+- **X content is adversarial and personal.** The skills treat every post, bio and Article as untrusted data, never
+  instructions, and never let one choose a tool, a recipient or a change. They never infer health, financial status,
+  politics, race or ethnicity, religion, sex life or sexual orientation, trade-union membership or criminal activity;
+  never build dossiers on private people; never match a handle to the user's mail, files, candidates or customers; and
+  never suggest a workaround for a protected account. Tests, fixtures, docs and skills use invented handles, posts and
+  places only.
 - **X's terms.** No automated replies without X's prior approval, and no automated or bulk likes. The plugin exposes
   neither, and no doc or skill suggests a workaround.
-- **The `jelly` section** of `package.json` declares every known tool, the skills, the sign-in, a one-line `summary`
-  and the `icon`, with only the keys Jelly reads: its contracts drop an unknown top-level key, and refuse an unknown
-  key inside a tool, sign-in or `contributes` entry. The summary names what the plugin reaches and states no policy.
-  `test/unit/jelly.test.ts` runs the shared declaration kit, `test/support/jelly-kit.ts`, against Jelly's plugin
-  authors' standard, and keeps the section in step with the tool lists and the default rules. The six DM and public-key
-  reads are declared `readOnly: false` even though the tools RPC classes them reads, so Jelly asks at Ask before changes
-  and denies them at Read only as the default rules do; `JELLY_READ_ONLY_OVERRIDES` records why.
+- **The `jelly` section** of `package.json` and `test/support/jelly-*.ts` stay until the plugin contract replaces
+  them: the key is what Jelly reads today, without loading the plugin. Keep it in step with the tool lists and the
+  default rules. The six DM and public-key reads are declared `readOnly: false` even though the tools RPC classes them
+  reads, so Jelly asks at Ask before changes and denies them at Read only as the default rules do;
+  `JELLY_READ_ONLY_OVERRIDES` records why. Do not add or extend Jelly features, RPCs or docs: there is no
+  `docs/jelly.md`.
 - **The icon** `assets/icon.svg` is X's own logo, the path x.com serves in its own 24×24 viewBox, unchanged, in black,
-  centred on a white rounded holding tile (48×48) so it stays visible on dark backgrounds, with the PNGs rendered from it. `opencode.vendor.mark` is `true`, so the README carries the trademark line. Do not
-  recolour, redraw or combine it. It uses only the drawing elements Jelly's icon cleaner keeps, and no `<title>`: the
-  `jelly.title` is the accessible name.
+  centred on a white rounded holding tile (48×48), with the PNGs rendered from it. `opencode.vendor.mark` is `true`, so
+  the README carries the trademark line. Do not recolour, redraw or combine it. It uses only the drawing elements
+  Jelly's icon cleaner keeps, and no `<title>`: the `jelly.title` is the accessible name.
 - **TypeScript.** No enums, namespaces or parameter properties. `import type` for types, `.js` in relative imports.
-- **The source contract.** `@we-the-rebel-alliance/source-contract`, pinned to its tag `v0.3.0` (the commit in
-  `package-lock.json`), is a devDependency that the build bundles into `dist/index.js`, so an install runs no build and
-  has no runtime dependency. Import only its `tools-rpc`, `events` and `cursor` entries from `src/`; the tests also use
-  its `conformance` and `descriptor`. `package.json`'s top-level `sources` declares X's three events sources and the list snapshots `x.bookmarks.list` and `x.posts` (the tools RPC method's, never the model tool's), and the
-  `conformance` stage runs the kit over each, on recorded invented X answers, and writes
-  `reports/conformance-report.json` (`npm run conformance`, which a release runs; the three feed reports are complete,
-  with the kit's `atomicPages` and its reason). The two list-snapshot reports stay incomplete on the kit's `billed-cost`
-  check, because the pinned kit runs that check only for events. That incompleteness is preserved and tracked separately:
-  do not mark the check not-applicable, relabel it, or pin another kit to make it pass. X keeps only each feed's most recent posts, so never declare `noExpiry`: a feed source answers `gap`
-  (`expired` when X no longer lists as far back as the newest post the cursor listed, `window-truncated` when a first
-  listing starts further back than X lists), once per read. A deleted post is not lost history and makes no gap. Declare or send none of v0.3.0's new keys (`facts`, `hints`, `routines`, actor `kind`, `sections`/`parts`; before them v0.2.0's `removals[]`, `owner.verified`,
-  `permission.readsIdentity`, a price's `conditions` and `min`, among others) until Memory and jelly are on 0.3.0. No content read asserts `x_get_users_me`, the identity read: it is `probe`'s
-  alone. The list snapshots look the named handle up with `get_users_by_username`, as a feed's first listing does, so
-  they cannot detect a later change of X sign-in while the descriptor stays source-contract v0.1.0 (Jelly's pin, whose
-  schema has no `readsIdentity`). Restore the check with `readsIdentity` once Jelly reads v0.2 or later. Every `usd` in `sources` is the standard rate in `src/prices.ts` (a test keeps them equal); the `ownsXApp`
-  Owned Read rate waits for those consumers, so $0.005 stays the most a post costs.
-- **The tools RPC (v2.3).** The package's `tools-rpc` is the transport every plugin shares; X's part is
-  `src/tools-rpc.ts` (the plugin value, the method table, the shapers and next steps). `scripts/check-copies.mjs`
-  holds the declaration kit `test/support/jelly-kit.ts` and Jelly's setting rules `test/support/jelly-settings.ts`,
-  equal to the copies every plugin carries. Its methods are every known tool, from
-  `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS` and `SENSITIVE_TOOLS`, each with its class, and never an unknown tool. A rule must allow a method before a script can run it: an `ask` is
-  refused, and a saved "Always allow" is not a grant. Neither path caps a read: the model's arguments and the RPC's
-  `shapeInput` pass page size and pagination to X unchanged, and `shapeResult` always appends the cost line and counts the session's spend; only an
-  opt-in `scriptBudgetUsd` or `scriptDailyBudgetUsd` refuses. Beside them are the plugin's own `events_list` and
-  `probe`. Keep the RPC id `x.posts.tools` and its method names stable: scripts call them by name.
+- **The source contract.** `@we-the-rebel-alliance/source-contract`, pinned to the v0.3.0 commit in `package.json`
+  (the v0.3.0 tag was removed with the transfer), is a devDependency that the build bundles into `dist/index.js`, so an
+  install runs no build and has no runtime dependency. Import only its `tools-rpc`, `events` and `cursor` entries from
+  `src/`; the tests also use its `conformance`, `descriptor` and `schema`. `package.json`'s top-level `sources`
+  declares X's three events sources, `x.mentions`, `x.bookmarks` and `x.timeline`, and `probe`; the `conformance` stage
+  runs the kit over each, on recorded invented X answers, and writes `reports/conformance-report.json` (`npm run
+  conformance`, which a release runs). X keeps only each feed's most recent posts, so never declare `noExpiry`: a feed
+  source answers `gap` (`expired` when X no longer lists as far back as the newest post the cursor listed,
+  `window-truncated` when a first listing starts further back than X lists), once per read. A deleted post is not lost
+  history and makes no gap. Declare or send none of v0.3.0's newer keys (`facts`, `hints`, `routines`, actor `kind`,
+  `sections`/`parts`; before them v0.2.0's `removals[]`, `owner.verified`, `permission.readsIdentity`, a price's
+  `conditions` and `min`) while the descriptor stays v0.1.0-shaped for Jelly. No content read asserts `x_get_users_me`,
+  the identity read: it is `probe`'s alone. Every `usd` in `sources` is the standard rate in `src/prices.ts` (a test
+  keeps them equal); the `ownsXApp` Owned Read rate waits for those consumers, so $0.005 stays the most a post costs.
+- **The tools RPC (v2.3).** X's part is `src/tools-rpc.ts` (the plugin value, the method table, the shapers and next
+  steps). Its methods are every known tool, from `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS` and `SENSITIVE_TOOLS`,
+  each with its class, and never an unknown tool, beside the plugin's own `events_list` and `probe`. A rule must allow a
+  method before a script can run it: an `ask` is refused, and a saved "Always allow" is not a grant. Neither path caps
+  a read: the model's arguments and the RPC's `shapeInput` pass page size and pagination to X unchanged, and
+  `shapeResult` always appends the cost line and counts the session's spend; only an opt-in `scriptBudgetUsd` or
+  `scriptDailyBudgetUsd` refuses. Keep the RPC id `x.posts.tools` and its method names stable: scripts call them by
+  name.
 - **Tests.** Unit tests use narrow `Pick<Plugin.Context, ...>` fakes. Host tests use the public `@opencode/sdk` with
-  `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`.
-  Every temp root of the host and pack tests is a git repository under the system's `/tmp`, never under `TMPDIR` or
-  `HOME`, so OpenCode never finds a `.opencode` folder of whoever runs them; each stock server has its own port.
-  Never sign in to X or call its API from a check: the fakes serve the tools and the sign-in, and no real credential
-  is read.
+  `OpenCode.create({ app: { version } })`, a loopback fake server and the temp root from `test/host/isolate.ts`. Every
+  temp root of the host and pack tests is a git repository under the system's `/tmp`, never under `TMPDIR` or `HOME`,
+  so OpenCode never finds a `.opencode` folder of whoever runs them; each stock server has its own port. Never sign in
+  to X or call its API from a check: the fakes serve the tools and the sign-in, and no real credential is read.
 - **Text.** Model-facing text and docs use plain language and describe what the code does now: no process narrative,
-  test counts, machine-local paths, secrets or personal data.
-- **Releases** come only from `.github/workflows/release.yml` ("Releasing" in [CONTRIBUTING.md](CONTRIBUTING.md)). A
-  release-prep PR sets `version` in `package.json` and the install specs and runs `node scripts/changelog.mjs release`;
-  once it is on `master` and CI passed, start the release with
-  `gh workflow run release.yml --ref master -f sha=<its full sha>`. The workflow builds `dist/`, makes the release
-  commit on a temporary `release/v<version>` branch, checks and stages everything, and waits for the owner to approve
-  the `release` environment; only then does it create the tag `v<version>` and the GitHub Release. Never push a tag or a
-  `release/*` branch, and never commit, tag or publish a release by hand. Agents never approve a release, never call the
-  deployment-approval API, and never bypass a ruleset or the environment.
-- **No personal email in anything we publish.** Every commit is authored and committed as
-  `joe-broadhead <91376460+joe-broadhead@users.noreply.github.com>`, except the release commit and tag, which the
-  release workflow makes as `github-actions[bot]`. Before committing or tagging, check that
-  `git config user.email` is that address: a fresh clone inherits the machine's global identity, which is not that
-  address. Never commit, tag or publish with a work or personal address, or with a local hostname.
-- **One check command.** `npm run check` passes before every commit. Never skip, weaken or delete a test to get
-  green.
+  test counts, machine-local paths, secrets or personal data. The namespace line is at most 400 characters and each
+  skill description at most 300; the rules the namespace line does not carry live in the skill bodies.
+- **One check command.** `npm run check` passes before every commit. Never skip, weaken or delete a test to get green.
 
 ## Forbidden in this repository
 

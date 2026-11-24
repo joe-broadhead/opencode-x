@@ -1,8 +1,8 @@
-// The docs and skills must match the code: tool names, counts, error codes, the uninstall order and the Jelly guide.
+// The docs and skills must match the code: tool names, counts, error codes, the host range and the uninstall order.
 // Every tool count they state is checked against src/x-tools.ts, so a change there cannot leave a stale number behind.
 import { VERSION } from "../../src/version.js"
 import { describe, expect, test } from "bun:test"
-import { readdirSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { SENSITIVE_TOOLS, PUBLIC_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../../src/x-tools.js"
@@ -24,7 +24,7 @@ const KNOWN = [...READ_TOOLS, ...WRITE_TOOLS, ...PUBLIC_TOOLS, ...SENSITIVE_TOOL
 const text = (file: string) => readFileSync(join(ROOT, file), "utf8").replace(/\s+/g, " ")
 // Every code the plugin raises, from the one typed table in src/constants.ts.
 const CODES: readonly string[] = PLUGIN_CODES
-// The tools RPC's budget code names the vendor on purpose: it is the plugin's own, not a shared host code.
+// The tools RPC's own codes name the vendor on purpose: they are the plugin's, not shared host codes.
 const PREFIXED = ["X_BUDGET_EXCEEDED", "X_PRICE_UNKNOWN"]
 
 // The owner removed every read limit: no text the model or a user reads may bring back a page, result-count or
@@ -44,6 +44,8 @@ const REMOVED_READ_LIMITS = [
   "read cap",
 ]
 
+const readmes = () => readFileSync(join(ROOT, "README.md"), "utf8")
+
 describe("no read limits in the text", () => {
   test("the skills, the namespace description, README, docs, SECURITY and AGENTS name no page, count or spend cap", () => {
     const sources: Record<string, string> = { NAMESPACE_DESCRIPTION }
@@ -56,7 +58,6 @@ describe("no read limits in the text", () => {
 describe("docs", () => {
   test.each(FILES)("%s states no count of read, write or declared tools that could go stale", (file) => {
     const counts = [...text(file).matchAll(/\b\d+ (?:known )?(?:read|write|private write|read-only)(?:s\b| tools\b| read-only)|\b\d+ tools are declared/g)].map((match) => match[0])
-    // The declaration holds every known tool and the plugin's own x_events_list.
     const stale = counts.filter((count) => !count.startsWith(`${READ_TOOLS.length} read`) && !count.startsWith(`${WRITE_TOOLS.length} write`) && !count.startsWith(`${WRITE_TOOLS.length} private write`) && count !== `${KNOWN.length + 1} tools are declared`)
     expect(stale).toEqual([])
   })
@@ -66,7 +67,7 @@ describe("docs", () => {
     expect(named.filter((tool) => ![...KNOWN, "events_list", "probe"].includes(tool))).toEqual([])
   })
 
-  test.each(["docs/configuration.md", "docs/scripting.md", "docs/jelly.md", "SECURITY.md", "CHANGELOG.md"])("%s says nothing provisional or pending", (file) => {
+  test.each(["docs/configuration.md", "docs/scripting.md", "SECURITY.md", "CHANGELOG.md"])("%s says nothing provisional or pending", (file) => {
     expect(text(file)).not.toMatch(/provisional|not yet (?:checked|published|signed)|private package|TODO/i)
   })
 
@@ -78,47 +79,18 @@ describe("docs", () => {
     expect(readme).toContain("The plugin ships **no client ID**")
     const guide = text("docs/configuration.md")
     expect(guide).toContain("## Team app")
-    for (const words of [
-      "Native App",
-      "http://127.0.0.1:8766/callback",
-      "http://localhost:8766/callback",
-      "Pay-per-use → Production",
-      "spending limit",
-      "owned-reads discount",
-      "Enterprise plan",
-      "Developer Agreement",
-      "Never** put a client secret in managed config",
-    ]) {
+    for (const words of ["Native App", "http://127.0.0.1:8766/callback", "http://localhost:8766/callback", "Pay-per-use → Production", "spending limit", "owned-reads discount", "Enterprise plan", "Developer Agreement", "Never** put a client secret in managed config"]) {
       expect(guide).toContain(words)
     }
     expect(text("SECURITY.md")).toContain("A public client ID is not a secret")
     expect(text("SECURITY.md")).toContain("must never be distributed")
-    expect(readme).toContain("X issued a Native App (public client) a refresh token on 2026-11-06")
   })
 
-  test("the README's Known limits says the table was reconciled with the live list, which has no annotations", () => {
-    const readme = readFileSync(join(ROOT, "README.md"), "utf8")
-    const limits = readme.split("## Known limits")[1]?.split("## Uninstall")[0] ?? ""
-    expect(limits).toContain("checked against X's live list on 2026-11-06")
-    expect(limits).toContain("X publishes no tool annotations")
-    expect(readme).not.toMatch(/provisional/i)
-  })
-
-  test("the README names no version of the plugin, not even in an example, except the install spec", () => {
-    // D19: the README's install specs name release tags (the current one, and the previous one in the upgrade example),
-    // and nothing else may name a version.
-    expect(text("README.md").replace(/opencode-x#v\d+\.\d+\.\d+/g, "")).not.toMatch(/opencode-x@\d|\bv\d+\.\d+\.\d+\b|(?<![\d.])0\.\d+\.\d+(?![\d.])/)
-  })
-
-  test("the README and the configuration guide give the narrowing recipes, and no allow for any write", () => {
-    for (const file of ["README.md", "docs/configuration.md"]) {
-      const body = text(file)
-      expect(body).toContain('{ "action": "x_create_posts", "resource": "*", "effect": "deny" }')
-    }
-    expect(text("docs/configuration.md")).toContain("The docs give no `allow` for a write")
+  test("the README's access levels and error table are the plugin's, and no example grants a write", () => {
+    const readme = text("README.md")
+    for (const access of ["`all` (default)", "`ask-changes`", "`read-only`"]) expect(readme).toContain(access)
     // No document may teach an allow for a private write or the public write, except the scripting guide's own session
-    // grant: v2 requires a write to be granted by a prior rule, and that rule must be reviewable and scoped to the
-    // script's session.
+    // grant: the rule must be reviewable and scoped to the script's session.
     const writeActions = [...WRITE_TOOLS, ...PUBLIC_TOOLS].map((tool) => `x_${tool}`)
     for (const file of FILES.filter((name) => name !== "docs/scripting.md")) {
       const raw = readFileSync(join(ROOT, file), "utf8")
@@ -126,9 +98,7 @@ describe("docs", () => {
         expect({ file, action, allowed: new RegExp(`"action":\\s*"${action}"[^}]*"effect":\\s*"allow"`).test(raw) }).toEqual({ file, action, allowed: false })
       }
     }
-    expect(text("README.md")).toContain("nothing asks: a change runs unattended")
-    // The scripting guide's one grant for a write is a session's own permissions, after a blanket deny, never an
-    // agent's rules or the top-level config.
+    expect(readme).toContain("nothing asks: a change runs unattended")
     const scripting = readFileSync(join(ROOT, "docs/scripting.md"), "utf8")
     const grant = /"permissions":\[([^\]]*)\]/.exec(scripting)?.[1] ?? ""
     expect(grant).toContain('{"action":"x_create_users_bookmark","resource":"*","effect":"allow"}')
@@ -155,7 +125,7 @@ describe("docs", () => {
     const readme = text("README.md")
     expect(readme).toContain("dropping `offline.access` means no refresh token")
     expect(readme).toContain("| Connection: sign-in required soon after signing in |")
-    expect(readme).toContain("the two-hour token expired")
+    expect(readme).toContain("two-hour token expired")
   })
 
   test.each(FILES)("%s puts no ask or allow recipe for an X tool at the top level, where it would reach Explore", (file) => {
@@ -193,12 +163,13 @@ describe("docs", () => {
   })
 
   test("the README prints the generated default block for access all", () => {
-    const readme = text("README.md")
-    const block = defaultRules("all")
-    expect(readme.replace(/\s+/g, " ")).toContain(JSON.stringify(block))
+    const readme = readmes()
+    const at = readme.indexOf("The default block for `all`")
+    const start = readme.indexOf("```json", at)
+    const end = readme.indexOf("```", start + 7)
+    expect(JSON.parse(readme.slice(start + 7, end))).toEqual(defaultRules("all"))
   })
 
-  // R7: the configuration guide prints every value's generated block in full, and none of them is elided.
   test.each(["all", "ask-changes", "read-only"] as const)("the configuration guide prints the %s block in full", (access) => {
     const guide = readFileSync(join(ROOT, "docs/configuration.md"), "utf8")
     const marker = `\`access: "${access}"\``
@@ -210,38 +181,33 @@ describe("docs", () => {
     expect(guide.slice(start, end)).not.toMatch(/…|\.\.\.|the rest/)
   })
 
-  // R8: a release added to the list cannot leave a stale "tested on …" sentence behind.
   test.each([
     ["README.md", "README.md"],
     ["AGENTS.md", "AGENTS.md"],
     ["SECURITY.md", "SECURITY.md"],
     ["docs/configuration.md", "docs/configuration.md"],
-    ["CHANGELOG.md (Unreleased or newest release)", "CHANGELOG.md"],
+    ["CHANGELOG.md (newest release)", "CHANGELOG.md"],
   ])("%s names exactly TESTED_HOSTS wherever it says what is tested", (_label, file) => {
     const full = readFileSync(join(ROOT, file), "utf8")
-    // While a release is prepared, its Unreleased section; otherwise the newest released one. Older released
-    // sections are history and keep their own list.
-    const sections = full.split(/\n(?=## \[)/)
-    const unreleased = sections.find((section) => section.startsWith("## [Unreleased]"))
-    const newest = sections.find((section) => /^## \[\d+\.\d+\.\d+\]/.test(section))
-    const body = file === "CHANGELOG.md" ? [sections[0], unreleased ?? newest].join("\n") : full
+    const sections = full.split(/\n(?=## )/)
+    const newest = sections.find((section) => section.startsWith("## 0.0.0")) ?? sections[0]
+    const body = file === "CHANGELOG.md" ? newest : full
     const mentions = body
       .split("\n")
       .flatMap((line) => line.split(/\.\s+/))
       .filter((sentence) => /\btested\b/i.test(sentence))
-      // The supported range is not a tested release: drop a backticked `>=a.b.c <d.e.f` span before reading versions.
       .map((sentence) => sentence.replace(/`[^`]*>=[^`]*`/g, ""))
       .map((sentence) => [...sentence.matchAll(/\b\d+\.\d+\.\d+\b/g)].map((version) => version[0]!))
       .filter((versions) => versions.length > 0)
     for (const versions of mentions) expect({ file, versions: [...new Set(versions)].sort() }).toEqual({ file, versions: [...TESTED_HOSTS].sort() })
   })
 
-  test("the untested example is 2.2.99, and no doc names an untested later 2.2 or 2.3 release as tested", () => {
+  test("the untested example is 2.4.2, and no doc names another release inside the range as tested", () => {
     const all = ["README.md", "AGENTS.md", "SECURITY.md", "docs/configuration.md", "CHANGELOG.md"].map((file) => readFileSync(join(ROOT, file), "utf8")).join("\n")
-    expect(all).toContain("2.2.99")
-    // Every 2.2 or 2.3 release a doc names is one the checks run on, apart from the example outside the list.
-    const named = [...new Set([...all.matchAll(/\b2\.[23]\.\d+\b/g)].map((match) => match[0]!))]
-    expect(named.filter((version) => version !== "2.2.99" && !TESTED_HOSTS.includes(version))).toEqual([])
+    expect(all).toContain("2.4.2")
+    const named = [...new Set([...all.matchAll(/\b2\.4\.\d+\b/g)].map((match) => match[0]!))]
+    // 2.4.0 is the release below the range, 2.4.2 the untested one inside it; every other 2.4.x must be tested.
+    expect(named.filter((version) => version !== "2.4.0" && version !== "2.4.2" && !TESTED_HOSTS.includes(version))).toEqual([])
   })
 
   test("every call is billed, in the README, the skills, the namespace and status", () => {
@@ -253,18 +219,17 @@ describe("docs", () => {
     expect(text("docs/configuration.md")).toContain("X bills every tool call to the X developer account that owns the app")
   })
 
-  // Once the plugin is removed and OpenCode reloads, `mcp logout x` finds no server: sign out first.
   test("the README's Uninstall signs out before it removes the plugin", () => {
     const uninstall = /## Uninstall(.*?)## Links/.exec(text("README.md"))?.[1] ?? ""
     const logout = uninstall.indexOf("opencode mcp logout x")
     const list = uninstall.indexOf("opencode auth list")
-    const remove = uninstall.indexOf(`opencode plugin remove github:joe-broadhead/opencode-x#v${VERSION}`)
+    const remove = uninstall.indexOf("opencode plugin remove github:we-the-rebel-alliance/x-plugin")
     expect(logout).toBeGreaterThanOrEqual(0)
     expect(list).toBeGreaterThan(logout)
     expect(remove).toBeGreaterThan(list)
   })
 
-  // R6: a code raised anywhere is in a table, and every table entry is raised. The shared tools RPC's codes are the
+  // A code raised anywhere is in a table, and every table entry is raised. The shared tools RPC's codes are the
   // family's, documented in the scripting guide's refusal table; this plugin's own are CODES above.
   test("every code raised in src is in one of the two tables, and every plugin code is raised", () => {
     // The shared RPC's table, plus ACCOUNT_UNKNOWN, which only a per-account server raises and this plugin has none of.
@@ -312,7 +277,7 @@ describe("docs", () => {
     expect(documented.filter((code) => !CODES.includes(code))).toEqual([])
   })
 
-  test("the README's X-specific rows name enrollment, scopes, cost and the missing posting tools", () => {
+  test("the README's X-specific rows name enrollment, scopes, cost, credit and posting", () => {
     const readme = text("README.md")
     expect(readme).toContain("client-not-enrolled")
     expect(readme).toContain("Pay-per-use")
@@ -322,21 +287,7 @@ describe("docs", () => {
     expect(readme).toContain("`x_create_posts` is public. With `access: all` (the default) it runs without a prompt")
     expect(readme).toContain("Answers cost more than expected")
     expect(readme).toContain("`429`")
-  })
-
-  test("the Jelly guide describes the declaration as Jelly reads it, with no placeholder or version", () => {
-    const guide = text("docs/jelly.md")
-    expect(guide).not.toMatch(/`latest` is|None yet/)
-    expect(guide).toContain("the one line in `jelly.summary`, and beside it the mark in `jelly.icon`")
-    // Jelly's contracts drop an unknown top-level key; they do not refuse the declaration for it.
-    expect(guide).toContain("drop a top-level key they don't know")
-    expect(guide).not.toMatch(/refuses this declaration|accepts no unknown keys/)
-    // A tool X adds later is undeclared, and Jelly runs it unasked: the guide says so plainly, a write included.
-    expect(guide).toContain("A tool X adds later, a write included, is not declared, so in Jelly it is not asked about")
-    expect(guide).toContain("it runs without asking, even if it changes something")
-    expect(guide).toContain("**public**")
-    const skills = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).jelly.skills as string[]
-    expect(guide).toContain(`Declared: ${skills.map((name) => `\`${name}\``).join(", ")}.`)
+    expect(readme).toContain("AUTH_REQUIRED")
   })
 
   test("the scripting guide points at the methods table, and gives X's cost, budget and rate limits", () => {
@@ -357,5 +308,39 @@ describe("docs", () => {
       const body = text(file)
       for (const bad of ["since:", "until:", "min_faves:"]) expect({ file, bad, found: body.includes(bad) }).toEqual({ file, bad, found: false })
     }
+  })
+})
+
+describe("the new organization's shape", () => {
+  // Every repository URL, install line and doc link points at the new repository, on master.
+  test("no doc or file names the old organization or the old package, and there is no Jelly guide", () => {
+    expect(existsSync(join(ROOT, "docs", "jelly.md"))).toBe(false)
+    const offenders: string[] = []
+    for (const file of [...FILES, "package.json"]) {
+      const body = readFileSync(join(ROOT, file), "utf8")
+      // Split so this check itself does not put the old names back in the tree.
+      for (const bad of ["joe-broad" + "head", "opencode" + "-x", "blob/" + "HEAD", "@joe-broad" + "head"]) if (body.includes(bad)) offenders.push(`${file}: ${bad}`)
+    }
+    expect(offenders).toEqual([])
+  })
+
+  test("the package is the new name and version, and its install line names the new repository", () => {
+    const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { name: string; version: string; repository: { url: string }; homepage: string; bugs: { url: string } }
+    expect(pkg.name).toBe("@we-the-rebel-alliance/x-plugin")
+    expect(pkg.version).toBe("0.0.0")
+    for (const url of [pkg.repository.url, pkg.homepage, pkg.bugs.url]) expect(url).toContain("we-the-rebel-alliance/x-plugin")
+    expect(text("README.md")).toContain("opencode plugin add github:we-the-rebel-alliance/x-plugin#vX.Y.Z")
+    expect(text("README.md")).toContain("No `v0.0.0` release is cut yet")
+  })
+
+  test("the changelog is one 0.0.0 section and no older release", () => {
+    const changelog = readFileSync(join(ROOT, "CHANGELOG.md"), "utf8")
+    expect(changelog).toContain("## 0.0.0 (unreleased)")
+    expect(changelog).not.toMatch(/^## \[\d+\.\d+\.\d+\]/m)
+    expect(changelog.match(/^## /gm)).toHaveLength(1)
+  })
+
+  test("the version in src/version.ts is the package's", () => {
+    expect(VERSION).toBe("0.0.0")
   })
 })

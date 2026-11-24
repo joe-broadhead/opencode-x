@@ -5,7 +5,7 @@ import { METHODS } from "../../src/tools-rpc.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { parseOptions } from "../../src/options.js"
-import { type Declaration, type DeclaredTool, declarationProblems, docProblems, readPackage } from "../support/jelly-kit.js"
+import { type Declaration, type DeclaredTool, declarationProblems, readPackage } from "../support/jelly-kit.js"
 import { ACCESS_CHOICES, type PluginSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
 
 /**
@@ -144,11 +144,5 @@ describe("the jelly settings", () => {
       const parsed = parseOptions({})
       expect(parsed.ok && parsed.options[key as "scriptBudgetUsd" | "scriptDailyBudgetUsd"]).toBeUndefined()
     }
-  })
-})
-
-describe("docs/jelly.md", () => {
-  test("follows the plugin authors' standard", () => {
-    expect(docProblems(ROOT)).toEqual([])
   })
 })

@@ -44,7 +44,7 @@ const payload = (command: string) => {
 }
 
 describe("the scripting examples", () => {
-  for (const file of ["docs/scripting.md", "README.md"]) {
+  for (const file of ["docs/scripting.md"]) {
     test(`${file} names known methods and carries the header and envelope`, () => {
       const found = commands(readFileSync(join(ROOT, file), "utf8"))
       expect(found.length).toBeGreaterThan(0)

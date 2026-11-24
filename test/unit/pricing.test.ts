@@ -27,9 +27,9 @@ describe("the sources' declared prices", () => {
       if (price === undefined || !("perResourceUsd" in price)) throw new Error(`${method} has no per-resource price`)
       return price.perResourceUsd
     }
-    expect(sources.items.length).toBe(5)
+    expect(sources.items.length).toBe(3)
     for (const item of sources.items) {
-      const feed = item.permission.operations.find((operation) => ["get_users_mentions", "get_users_bookmarks", "get_users_timeline", "get_users_posts"].includes(operation))!
+      const feed = item.permission.operations.find((operation) => ["get_users_mentions", "get_users_bookmarks", "get_users_timeline"].includes(operation))!
       // A post at its feed's standard rate (the Owned Read rate depends on ownsXApp and cannot be declared); an author
       // and a looked-up user at the user rate X bills for each user it returns; the probe's one get_users_me user.
       const expected: Record<string, number> = { post: rate(feed), author: rate("get_users_by_id"), user: rate("get_users_by_username") }
@@ -71,8 +71,8 @@ describe("jelly.cost", () => {
 
 describe("the answers that carry the cost line", () => {
   // The model path appends a line only where `costOf` prices the answer, so the list comes from `costOf` itself: a
-  // one-post, one-author, one-user answer for every method. README and docs/jelly.md must name exactly that list, so a
-  // doc cannot promise a cost line for a tool that has none, and a new one there fails here until the docs say so.
+  // one-post, one-author, one-user answer for every method. The README must name exactly that list, so it cannot promise
+  // a cost line for a tool that has none, and a new one there fails here until the README says so.
   const sample = { output: { data: [{ id: "1" }], includes: { users: [{ id: "1" }] } } }
   const priced = METHODS.map((method) => method.name)
     .filter((name) => costOf(`x_${name}`, sample) !== undefined)
@@ -87,10 +87,9 @@ describe("the answers that carry the cost line", () => {
     return [...new Set([...found[0]!.matchAll(/`(x_[a-z0-9_]+)`/g)].map((match) => match[1]!))].sort()
   }
 
-  test("are the tools `costOf` prices, and README and docs/jelly.md name every one", () => {
+  test("are the tools `costOf` prices, and the README names every one", () => {
     expect(priced.length).toBeGreaterThan(0)
     expect(listed("README.md")).toEqual(priced)
-    expect(listed("docs/jelly.md")).toEqual(priced)
   })
 })
 

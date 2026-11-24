@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// check-icons.mjs -- the icon contract for the @joe-broadhead OpenCode plugins.
+// check-icons.mjs -- the icon contract for the OpenCode plugins of this family.
 //
 // Contract: CONTRACT.md revision 2 (2026-11-12), in the family's icon kit
 //   (the family's shared icon set). Copy this file verbatim into a plugin as
@@ -264,12 +264,12 @@ const ASSET_EXPORTS = [
 
 /** Our own products: no vendor's service is behind them, so no vendor is declared. */
 const OWN_PACKAGES = new Set([
-  "@joe-broadhead/opencode-utilities",
-  "@joe-broadhead/opencode-history",
-  "@joe-broadhead/opencode-jobs",
-  "@joe-broadhead/opencode-charts",
-  "@joe-broadhead/opencode-mem",
-  "@joe-broadhead/opencode-voice",
+  "@we-the-rebel-alliance/utilities-plugin",
+  "@we-the-rebel-alliance/history-plugin",
+  "@we-the-rebel-alliance/jobs-plugin",
+  "@we-the-rebel-alliance/charts-plugin",
+  "@we-the-rebel-alliance/mem-plugin",
+  "@we-the-rebel-alliance/voice-plugin",
 ])
 
 const ICON_PATH_SHAPE = /^(?!\/)(?!.*(?:^|\/)\.\.?(?:\/|$))[A-Za-z0-9._/-]+\.(?:svg|png)$/u
