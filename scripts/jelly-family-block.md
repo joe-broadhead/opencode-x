@@ -1,7 +1,7 @@
-<!-- Jelly's shared sentences for every family plugin's docs/jelly.md, word for word: the text between the markers below
-is jelly's guide, docs/guides/plugin-authors.md lines 701-714 at commit 875026118 (identical to rd912's comment
-6866914058). Kit file, pinned by check-copies.mjs; check-drift.mjs requires docs/jelly.md to carry exactly this block.
-Change it only when jelly's guide changes, in every plugin at once. -->
+<!-- The family's shared sentences for a declaration's docs page: the text between the markers below restates the
+declaration guide, docs/guides/plugin-authors.md lines 701-714 at commit 875026118 (identical to rd912's comment
+6866914058), with the host named neutrally. Kit file, pinned by check-copies.mjs; check-drift.mjs requires a docs page
+to carry exactly this block. Change it only when the guide changes, in every plugin at once. -->
 <!-- family-block:start -->
 - At Allowed (`all`), the default, every tool runs without asking, declared or not, whatever its `effect`.
 - At Ask before changes (`ask-changes`), a `readOnly` tool runs, and every other tool asks first, including a tool this plugin does not declare.
@@ -12,7 +12,7 @@ Change it only when jelly's guide changes, in every plugin at once. -->
 - An action listed in `asks` asks first at Ask before changes and at Read only, and never at Allowed.
 - A tool named with one `*`, such as another account's `plaud-*.get_file`, follows the same rules as a tool named in full.
 - A choice the person makes for one tool wins over the access choice and the declared `effect`.
-- jelly leaves out a key it does not know at the top level of the `jelly` block, and reads the rest.
-- jelly refuses the plugin for a key it does not know inside anything it reads, such as a tool, a sign-in or a setting.
-- jelly refuses the plugin, with one plain line, when `requires` names a field or a feature it does not read.
+- The host leaves out a key it does not know at the top level of the `jelly` block, and reads the rest.
+- The host refuses the plugin for a key it does not know inside anything it reads, such as a tool, a sign-in or a setting.
+- The host refuses the plugin, with one plain line, when `requires` names a field or a feature it does not read.
 <!-- family-block:end -->

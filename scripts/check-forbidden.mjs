@@ -1,6 +1,6 @@
 // Fails when a forbidden API, legacy surface, private host reference or machine-local path appears
 // in src/, test/, scripts/ or dist/. The list is the "Forbidden in this repository" list in AGENTS.md. APIs that the
-// public @opencode/plugin 2.2.3 types already reject fail the typecheck instead. The family's internal working-folder
+// public @opencode/plugin 2.4.1 types already reject fail the typecheck instead. The family's internal working-folder
 // path is refused in every git-tracked file, so a note in a doc or a skill is caught too.
 import { execFileSync } from "node:child_process"
 import { existsSync, readdirSync, readFileSync } from "node:fs"

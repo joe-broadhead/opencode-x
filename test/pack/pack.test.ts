@@ -1,8 +1,7 @@
 // Pack, install and load the published shape. The tarball holds exactly the files whitelist and installs with
 // lifecycle scripts disabled. Installed alone, it loads in each stock OpenCode release it is tested on, which provides
 // @opencode/plugin, OpenTUI and Solid itself; next to those packages, both entry points also import under Bun.
-// OPENCODE_BIN_2_2_3 to OPENCODE_BIN_2_3_0 name stock binaries; otherwise each release is
-// installed with npm, once per run. Every temp folder is a git repository under the system's /tmp, never under TMPDIR
+// OPENCODE_BIN_2_4_1 names a stock binary; otherwise the one tested release is installed with npm, once per run. Every temp folder is a git repository under the system's /tmp, never under TMPDIR
 // or HOME, so OpenCode's upward search for `.opencode` folders never reaches the agents of whoever runs the test.
 // PACK_TARBALL names a tarball that was already packed, such as the one the release publishes, to test it instead.
 // On each release a script also calls X's known reads through the tools RPC, against a loopback fake X, and the
@@ -48,7 +47,7 @@ const DIST = ["dist/index.js", "dist/tui.js"]
 // Modules the host serves to plugins at runtime. Everything else must be inlined in the bundle.
 const SERVER_HOST_MODULES = [/^node:/, /^@opencode\/plugin(?:\/|$)/]
 const TUI_HOST_MODULES = [/^node:/, /^@opencode\/plugin(?:\/|$)/, /^@opentui\//, /^solid-js(?:\/|$)/]
-// The host packages OpenCode 2.2.3 ships; the versions come from devDependencies.
+// The host packages the tested OpenCode release ships; the versions come from devDependencies.
 const HOST_PACKAGES = ["@opencode/plugin", "@opentui/core", "@opentui/solid", "solid-js"]
 // The stock OpenCode releases the package is tested on: the one list in src/constants.ts.
 const HOST_VERSIONS = TESTED_HOSTS
@@ -365,22 +364,6 @@ describe.each(HOST_VERSIONS)("the tools RPC on stock OpenCode %s", (version) => 
     expect(result).toMatchObject({ type: "failed", code: "UPSTREAM_UNREADABLE" })
     expect(String(result.message)).toContain("UPSTREAM_UNREADABLE: X's get_users_me answered in a shape events_list does not read.")
     expect(toolCalls(from)).toEqual(["get_users_me"])
-  })
-
-  test("a list read on the packed plugin answers the contract's list shape, through the handle lookup and the feed", async () => {
-    const from = fake.calls.length
-    const result = await call("build", "events_list", { source: "bookmarks", list: "bookmarks", account: "samrivera" })
-    expect(result).toMatchObject({
-      value: {
-        source: "bookmarks",
-        account: "samrivera",
-        data: { items: [{ id: "1900000000000000001", text: "A saved post" }], editable: false },
-        trust: "untrusted",
-      },
-    })
-    expect(result.value.events).toBeUndefined()
-    // The named handle is looked up, then the feed read: no identity read, as the v0.1.0 declaration says.
-    expect(toolCalls(from)).toEqual(["get_users_by_username", "get_users_bookmarks"])
   })
 
   test("probe runs the packed plugin's own spec, reads who is signed in through OpenCode, and reports an answer it cannot read", async () => {

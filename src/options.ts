@@ -19,7 +19,7 @@ export interface Options {
   readonly access: Access
   /** True only when the signed-in account owns the developer app, so Owned Read pricing applies. */
   readonly ownsXApp: boolean
-  /** The feeds `x_events_list` reads for Memory, in order. */
+  /** The feeds `x_events_list` reads for a collector, in order. */
   readonly feeds: readonly Feed[]
   /** The most X reads one `x_events_list` call makes, the owner's included. */
   readonly maxCalls: number
@@ -160,7 +160,7 @@ export function parseOptions(input: unknown): ParsedOptions {
   }
   const feeds: unknown = events.feeds ?? DEFAULT_FEEDS
   if (!Array.isArray(feeds) || feeds.length === 0 || !feeds.every((feed) => (FEEDS as readonly unknown[]).includes(feed))) {
-    return fail("events.feeds", `Must be a non-empty list of ${FEEDS.join(", ")}.`, `List the feeds Memory collects, for example ${JSON.stringify(DEFAULT_FEEDS)}.`)
+    return fail("events.feeds", `Must be a non-empty list of ${FEEDS.join(", ")}.`, `List the feeds a collector reads, for example ${JSON.stringify(DEFAULT_FEEDS)}.`)
   }
   if (new Set(feeds).size !== feeds.length) return fail("events.feeds", "Lists a feed more than once.", "Remove the duplicate feed.")
   const maxCalls = events.maxCalls ?? DEFAULT_MAX_CALLS

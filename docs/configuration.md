@@ -1,10 +1,11 @@
 # Configuration
 
-Every option is optional. The smallest setup is one entry in `plugins`, then the X app in `/connect`:
+Every option is optional. Install from a release; the first release on plugin-contract is v0.0.0 (phase 4b). The
+smallest setup is one entry in `plugins`, then the X app in `/connect`:
 
 ```json
 {
-  "plugins": ["github:joe-broadhead/opencode-x#v0.0.9"]
+  "plugins": ["github:we-the-rebel-alliance/x-plugin#v<version>"]
 }
 ```
 
@@ -14,7 +15,7 @@ To set options, use the object form:
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.9",
+      "package": "github:we-the-rebel-alliance/x-plugin#v<version>",
       "options": {
         "oauth": { "client_id": "YOUR_X_CLIENT_ID", "client_secret": "{env:X_CLIENT_SECRET}" }
       }
@@ -121,18 +122,18 @@ cap when it is set.
 - Type: `true` or `false`.
 - Default: `false`.
 
-The plugin supports OpenCode `>=2.2.3 <2.4.0`, the range `opencode.host` in `package.json` declares, and every check
-runs on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2, the tested releases. Status shows the version, whether it is tested and the supported
-range in its `OpenCode` row, for example `2.2.5 (tested; supported range >=2.2.3 <2.4.0)`.
+The plugin supports OpenCode `>=2.4.1 <2.5.0`, the range `opencode.host` in `package.json` declares, and every check
+runs on 2.4.1, the tested release. Status shows the version, whether it is tested and the supported
+range in its `OpenCode` row, for example `2.4.1 (tested; supported range >=2.4.1 <2.5.0)`.
 
 - **A tested release:** the plugin starts.
-- **Another release inside the range, such as 2.2.99:** the plugin starts too. Status marks the version `untested`,
+- **Another release inside the range, such as 2.4.2:** the plugin starts too. Status marks the version `untested`,
   and the status RPC's `host.tested` is `false`. The next step is the same as on a tested release.
-- **Outside the range, including 2.4.0, prereleases and development builds:** the plugin does not set itself up, and
+- **Outside the range, including 2.4.0 and 2.5.0, prereleases and development builds:** the plugin does not set itself up, and
   `/x-status` shows `host untested` with the fix. `/plugins` shows the same code:
 
   ```text
-  HOST_UNTESTED: OpenCode 2.4.0 is outside the supported range >=2.2.3 <2.4.0, so X is not set up. Next step: Use OpenCode >=2.2.3 <2.4.0, or set "allowUntestedHost": true in this plugin's options to run anyway.
+  HOST_UNTESTED: OpenCode 2.5.0 is outside the supported range >=2.4.1 <2.5.0, so X is not set up. Next step: Use OpenCode >=2.4.1 <2.5.0, or set "allowUntestedHost": true in this plugin's options to run anyway.
   ```
 
 - **Outside the range with `"allowUntestedHost": true`:** it starts anyway, and `/x-status` and `/x` show a warning.
@@ -169,7 +170,7 @@ no secret, and no per-member app.
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-x#v0.0.9",
+      "package": "github:we-the-rebel-alliance/x-plugin#v<version>",
       "options": { "oauth": { "client_id": "YOUR_TEAM_APP_CLIENT_ID" } }
     }
   ]
@@ -181,10 +182,11 @@ Each member runs `/connect` and chooses X, then presses `o` or Enter. Status sho
 
 **The consequences, plainly:**
 
-- Every member's calls bill the team's X developer account. The plugin does not cap a model read; the model path's
-  cost line covers the tools the README lists under Cost lines, and a script has no budget unless the admin sets
-  `scriptBudgetUsd` (per session) or `scriptDailyBudgetUsd` (per rolling 24 hours), so the app's spending limit in X's
-  Developer Console is what caps many sessions.
+- Every member's calls bill the team's X developer account. The plugin does not cap a model read and adds no cost line to
+  a model-path result (it has no per-request tool or context hook); the README's Cost lines section says what carries
+  one. A script has
+  no budget unless the admin sets `scriptBudgetUsd` (per session) or `scriptDailyBudgetUsd` (per rolling 24 hours), so
+  the app's spending limit in X's Developer Console is what caps many sessions.
 - The owned-reads discount (about $0.001 a post) applies only when the authenticated user owns the app. Other members'
   timeline, mention and bookmark reads bill at the full rate.
 - X describes pay-per-use as for "applications with limited end-users". A larger team may need X's Enterprise plan.
@@ -580,28 +582,25 @@ is the shipped minimum; X may change an endpoint's scope, in which case the `403
 
 ## Sources
 
-This plugin's sources are declared in `package.json`'s `sources` key, by the shared source contract
-(`@we-the-rebel-alliance/source-contract` v0.3.0), so Memory, jelly and any other project read them the same way:
+The plugin's three sources are declared in `package.json`'s `sources` key, by the shared source contract
+(`@we-the-rebel-alliance/source-contract` v0.3.0), so a consumer reads them the same way:
 
-| Source | Kind | Reads | `events_list` source | X reads | Price units |
-| --- | --- | --- | --- | --- | --- |
-| `x.mentions` | events | `message` | `mentions` | `get_users_mentions` | post $0.005, author $0.01, user $0.01 |
-| `x.bookmarks` | events | `bookmark` | `bookmarks` | `get_users_bookmarks` | post $0.005, author $0.01, user $0.01 |
-| `x.timeline` | events | `message` | `timeline` | `get_users_timeline` | post $0.005, author $0.01, user $0.01 |
-| `x.bookmarks.list` | snapshot | `list` | `bookmarks` | `get_users_bookmarks` | post $0.005, author $0.01, user $0.01 |
-| `x.posts` | snapshot | `list` | `posts` | `get_users_posts` | post $0.005, author $0.01, user $0.01 |
+| Source | Kind | `events_list` source | X reads | Price units |
+| --- | --- | --- | --- | --- |
+| `x.mentions` | events | `mentions` | `get_users_mentions` | post $0.005, author $0.01, user $0.01 |
+| `x.bookmarks` | events | `bookmarks` | `get_users_bookmarks` | post $0.005, author $0.01, user $0.01 |
+| `x.timeline` | events | `timeline` | `get_users_timeline` | post $0.005, author $0.01, user $0.01 |
 
-Each also names `get_users_by_username` (a first listing's account lookup, and a list snapshot's) and `get_users_me` (the probe's, its one
-identity read) among its operations. All five are billed (`cost.class: "billed"`) at X's standard rates from this
+Each also names `get_users_by_username` (a first listing's account lookup) and `get_users_me` (the probe's one
+identity read) among its operations. All three are billed (`cost.class: "billed"`) at X's standard rates from this
 plugin's price table (`src/prices.ts`), and a test keeps each `usd` equal to its row there. The declared post price,
-$0.005, is the most a post costs: mentions, bookmarks and the account's own posts cost $0.001 a post when you own the X app (`ownsXApp`), but
-the Owned Read rate is not declared: v0.2.0 and later state it (a price's `conditions` and `min`), but
-Memory and jelly on v0.1.x refuse those keys, so it waits until both are on v0.2.0. A probe costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` and `x.bookmarks.list` are private; the other
-sources read public posts. `x.bookmarks` is not renamed: it stays the events feed. `x.bookmarks.list` is that same read as the contract's `list` output, so an app can render it without knowing X. `x.posts` is the signed-in account's own posts, the same way. A list snapshot is read through the tools RPC method `events_list` with `{ "list": "bookmarks" }` or `{ "list": "posts" }`, plus `account`; it asks for no author expansion, because an item names no author, so X bills no author for it; the model's tool `x_events_list` takes no `list` and never answers a list. It does not replace the events feeds. Posts are listed newest first, once each; a post whose text holds a secret is screened whole and left out before any of it is cut; the answer stays inside the source's 64 KB, and whole items would be dropped from its end (marked `shortened: true`) rather than cut. The method declares both answers, the events page and the list, so the host accepts the list. A list looks up the handle it is asked for with `get_users_by_username`, as a feed's first listing does, and **does not check which account is signed in**: the declaration is source-contract v0.1.0, which Jelly pins and whose schema cannot say a content read also reads the identity (`readsIdentity` is v0.2.0). So if the X sign-in changes after a consumer's grant, a list for the old handle still runs: X refuses another account's bookmarks itself, while `x.posts` would list that handle's public posts labelled as the grant's. The check returns once Jelly reads v0.2.0 or later. **A list is off when its feed is:** `events.feeds` not naming `bookmarks` answers `x.bookmarks.list` with `SOURCE_DISABLED`, as the feed itself does, before any billed read. `x.posts` has no plugin switch, because it is not an events feed: the consumer's consent is what turns it off.
+$0.005, is the most a post costs: mentions, bookmarks and the account's own posts cost $0.001 a post when you own the
+X app (`ownsXApp`), but the Owned Read rate is not declared while the descriptor stays v0.1.0-shaped. A probe
+costs one user, $0.01. The tools RPC is `x.posts.tools`, and the probe's action is `x_probe`. `bookmarks` is private;
+the other sources read public posts.
 
-A feed the `events.feeds` option leaves out is `SOURCE_DISABLED`, which is how you turn a source off: the home
-timeline is off unless you name it, and `x.bookmarks.list` is off with `x.bookmarks`. `x.posts` is not a feed and has no
-switch of its own: only the consumer's consent turns it off.
+A feed the `events.feeds` option leaves out is `SOURCE_DISABLED`, which is how you turn a source off: the home timeline
+is off unless you name it.
 
 ### `events_list`
 
@@ -611,80 +610,68 @@ It is not for answering questions.
 ```text
 events_list({ since?, cursor?, limit?, account?, source? })
   → { source, account, owner: { id, label }, events, cursor, more, trust: "untrusted",
-      refused?, cost?, plugin?, asOf? }
+      refused?, failed?, cost?, plugin?, asOf? }
 ```
 
-- **Sources**: `source` is `mentions`, `bookmarks` or `timeline` for one feed, the contract's sources; or `x`, the
-  default, for every feed in `events.feeds` in one listing, in that order, as earlier versions listed them. Another
-  name is `SOURCE_UNKNOWN`.
+- **Sources**: `source` is `mentions`, `bookmarks` or `timeline` for one feed, or `x`, the default, for every feed in
+  `events.feeds` in one listing. Another name is `SOURCE_UNKNOWN`.
 - **What it lists**:
   - `mentions` (`get_users_mentions`) and `timeline` (`get_users_timeline`, your home timeline): the posts after the
     cursor's last one (`since_id`), or from the start time on the first listing (`start_time`). X lists them newest
-    first, so the whole window is read before its oldest posts are listed; a window the call cap does not let it
-    finish is narrowed with `until_id` to its older part and read on the next call, so nothing is skipped.
-  - `bookmarks` and the two above as feed sources: X lists only a limited number of each feed's most recent posts, and
-    moves an older `since_id` forward without saying so. A feed source therefore says when it may have missed posts,
-    once, with the contract's `gap` (below).
-  - `bookmarks` (`get_users_bookmarks`): X gives bookmarks no time, so they are read newest first until one the
-    cursor knows (it keeps the five newest), page by page; a walk the cap stops continues from X's page token. A
-    read with nothing new is one small read (five posts, with no author expansion, which X bills for every author).
-    The new bookmarks are those before the first known one, so removing an older bookmark lists nothing again. The
-    walk goes on to a next page only while every post of a page is new, and each page that has new posts is read once
-    more, for those posts alone, to look up their authors. The first listing notes the newest five bookmarks and lists
-    those of them whose post is from the start time on; every bookmark added after them is listed.
+    first, so the whole window is read before its oldest posts are listed; a window the call cap does not let it finish
+    is narrowed with `until_id` to its older part and read on the next call, so nothing is skipped.
+  - `bookmarks` (`get_users_bookmarks`): X gives bookmarks no time, so they are read newest first until one the cursor
+    knows (it keeps the five newest), page by page; a walk the cap stops continues from X's page token. A read with
+    nothing new is one small read (five posts, with no author expansion, which X bills for every author). The new
+    bookmarks are those before the first known one. The first listing notes the newest five bookmarks and lists those
+    of them whose post is from the start time on; every bookmark added after them is listed.
 - **An event**: kind `message` (a mention or a timeline post, `external_id` the post id) or `bookmark`
   (`bookmark:<post id>`), `occurred_at` the post's time, thread `x-conversation:<id>`, the author as `x:@<handle>`
   with their name, the first line as the title, the text (a long post's whole text, at most 4,096 characters), the
-  link `https://x.com/i/status/<id>`, and the label `mention`, `timeline` or `bookmark`. Each event's `source` is the
-  page's. A post in two feeds is listed once by source `x`.
+  link `https://x.com/i/status/<id>`, and the label `mention`, `timeline` or `bookmark`. A post in two feeds is listed
+  once by source `x`.
 - **Account and owner**: `account` is your handle, lowercase, without `@`; `owner` is `x:@<handle>` with your name.
-  - A feed source never asks X who is signed in: `probe` does. Every listing names `account` (the handle `probe`
+  - A feed source never asks X who is signed in: `probe` does. Every feed listing names `account` (the handle `probe`
     answers; without it, `INPUT_INVALID`), as a consumer's grant does. A first listing looks it up once with
     `get_users_by_username`, billed as one user; the cursor then carries the account's X id and the owner's label,
     bound to the plugin, the feed and the account, so later listings make no lookup. A cursor that names another
     account than `account` is `ACCOUNT_MISMATCH`; another feed's or plugin's cursor is `CURSOR_INVALID`.
-  - A sign-in changed to another X account is noticed only when the caller passes the new account (its cursor is then
-    refused) or calls `probe`: a content read may assert the identity read only with `permission.readsIdentity` (source-contract v0.2.0), which Memory and jelly on v0.1.x refuse, so a feed
-    does not ask X who is signed in. Until then a feed cursor reads its own account's feed: X refuses bookmarks and
-    the home timeline of anyone but the signed-in user, and mentions are public posts.
+  - A sign-in changed to another X account is noticed when the caller passes the new account (its cursor is then
+    refused) or calls `probe`: a feed does not ask X who is signed in, so the descriptor can declare no identity read
+    while it stays v0.1.0-shaped. Until then a feed cursor reads its own account's feed: X refuses bookmarks and the
+    home timeline of anyone but the signed-in user, and mentions are public posts.
   - Source `x` looks up who is signed in with `get_users_me` on every call; another handle in `account` is
     `ACCOUNT_UNKNOWN`.
 - **Gaps**: a feed source answers `gap` once, on the page where it finds that X no longer lists what is behind its
-  cursor; the next page carries none. Source `x` answers no gap, as contract 1 lists.
+  cursor; the next page carries none. Source `x` answers no gap.
   - `mentions` and `timeline`: every call first checks, with one small read (up to five posts, ids and times only),
     that X still lists a post with an id up to the cursor's (`until_id`), the newest post it listed. When X lists
-    none, it no longer reaches back that far, and the page answers `gap: { reason: "expired", since }` from that
-    post's time, with the posts X still lists. The check is by id, as the cursor is, so a cut inside one second is
-    seen too. A first listing checks for a post from before its start (`end_time`), and answers `gap: { reason:
+    none, the page answers `gap: { reason: "expired", since }` from that post's time, with the posts X still lists. A
+    first listing checks for a post from before its start (`end_time`), and answers `gap: { reason:
     "window-truncated", since }` from the start when X lists none.
   - `bookmarks`: a walk that ends without meeting any bookmark the cursor knows, after reading 700 or more, answers
-    `gap: { reason: "expired", since }` from when the known ones were confirmed. X lists its 800 most recent, and may
-    count toward them posts it no longer returns (deleted, protected or suspended authors), hence a margin of 100. A
-    shorter walk means they were removed, and answers no gap. A false gap needs all five known bookmarks removed and
-    more than 700 added.
-  - A deleted post, or a removed bookmark, loses nothing and makes no gap: the check asks for any post from that far
-    back, not for one post.
-  - X can move past a read between any two of its calls, even minutes apart: a busy account passes X's 800 mentions
-    in minutes. So every call checks, not only a read's first. A cursor from an earlier version is checked on its
-    first read too; the gap's time comes from its post's id (a snowflake).
-  - The check's cost: up to five posts a call, the newest at or below the cursor's post. This read or an earlier one
-    has just been answered those posts, and X charges a post once in a 24-hour UTC window, so the check costs next to
-    nothing. It is not counted against `events.maxCalls`, so it never takes a read from the listing; the text the
-    model reads counts it apart.
+    `gap: { reason: "expired", since }` from when the known ones were confirmed. X lists its 800 most recent, hence a
+    margin of 100. A shorter walk means they were removed, and answers no gap.
+  - A deleted post, or a removed bookmark, loses nothing and makes no gap.
+  - The check's cost: up to five posts a call, the newest at or below the cursor's post, which X charges once in a
+    24-hour UTC window. It is not counted against `events.maxCalls`.
 - **Refused posts**: a feed source refuses for good a post whose title or text holds a secret (an API key, a token, a
   private key or a password in a URL), with the contract's own detector. It is listed in `refused[]` with `reason:
   "secret"` and never in `events`; the cursor moves past it.
+- **A failed feed**: with more than one enabled feed, a feed whose read fails does not abort the page. The other feeds'
+  events are listed, the failed feed's previous state is kept in the cursor, `more` is true, and `failed[]` names it
+  with a code (the installed contract's `{ external_id, code }` shape). The next call retries that feed. With one feed,
+  the read's own error is raised, as before.
 - **Cost**: X bills every tool call to the X developer account that owns the app, per post and per author returned.
-  One call makes at most `events.maxCalls` reads, an account lookup included, plus a feed source's reach check
-  (Gaps, above), and asks for each author's handle, which
-  X bills as a user read. A feed source's page, and the combined source `x`'s page, carry `cost.units`: the posts,
-  authors and users X returned for this call's reads, per the declared price units; source `x` includes its one
-  `get_users_me` identity read as a user unit. X reports no price itself, so the page has no `usd`. With the default
-  feeds and cap, one call costs a few cents for a quiet account. When the cap stops it, the result says `more`, and
-  the text the model reads gives the actual cost line.
-- **Cursor**: opaque, at most 1,024 characters, bound to the plugin, the source and the account. Source `x`'s also
-  holds a digest of the signed-in owner, and a cursor an earlier version issued is still read. A cursor wins over the
-  `since` input; without either, or for a feed turned on later, listing starts 24 hours ago.
+  One call makes at most `events.maxCalls` reads, an account lookup included, plus a feed source's reach check, and
+  asks for each author's handle, which X bills as a user read. A feed page, and the combined source `x`'s page, carry
+  `cost.units`: the posts, authors and users X returned, per the declared price units; source `x` includes its one
+  `get_users_me` identity read as a user unit. X reports no price itself, so the page has no `usd`. When the cap
+  stops it, the result says `more`, and the text the model reads gives the actual cost line.
+- **Cursor**: opaque, at most 1,024 characters, bound to the plugin, the source and the account. Every feed state
+  carries the newest post's time (`w`), or `g` after a gap; source `x`'s cursor also holds a digest of the signed-in
+  owner. A cursor wins over the `since` input; without either, or for a feed turned on later, listing starts 24 hours
+  ago. An older-format cursor is refused: there is no compatibility path, in either source.
 - **Limits**: `limit` is 1 to 500 (100 by default), and a result stays within 900 KB, every source's `maxBytes`.
 - **Permissions**: it asserts `x_events_list`, then each read goes through OpenCode's own executor with its own rules.
   The call cap bounds these reads. Every result carries `trust: "untrusted"`.
@@ -701,13 +688,14 @@ probe({ source?, account? })
 
 It asserts `x_probe`, then makes one billed read, `get_users_me`. `source` is `x` (the default) or a feed; a feed that
 `events.feeds` leaves out is `SOURCE_DISABLED`. An `account` other than the signed-in handle is `ACCOUNT_MISMATCH`.
+When the host reports a sign-in failure for X with a reason, `probe` answers `AUTH_REQUIRED` with the redacted reason
+and the `/connect` step.
 
 ### Conformance
 
 `npm run conformance` (and `npm run check`) runs the contract's conformance kit over each source with recorded, invented
-X answers (no X call), and writes its report to `reports/conformance-report.json`, which a release attaches. The report
-is complete and ok: every check that applies runs, `gap-and-cursor-expired` and `gap-once-per-read` included, on a
-cursor from further back than X still lists and a first listing from further back than X lists. One does not apply, and the
+X answers (no X call), and writes its report to `reports/conformance-report.json`, which a release attaches. Every
+report is complete and ok: `gap-and-cursor-expired` and `gap-once-per-read` included. One check does not apply, and the
 report says why: `failed-holds-cursor` (`atomicPages`: X answers each feed read in one call, so no single post can fail
 on its own).
 
@@ -727,7 +715,8 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `UPSTREAM_ERROR` | `x_events_list` or `probe`: X refused one of its reads, such as a rate limit. The message holds the first line of X's text, at most 300 characters, with tokens and URL query strings removed. | Run `/x-status`, then call again with the same cursor. |
 | `UPSTREAM_UNREADABLE` | `x_events_list` or `probe`: one of its reads answered in a shape it does not read. | Call the read the message names directly, and run `/x-status`. |
 | `TOOL_UNAVAILABLE` | `x_events_list` or `probe`: OpenCode does not list a read it needs. While X cannot be called, it gives status's own code and next step instead. | Wait a few seconds, then run `/x-status` and follow its next step. |
-| `HOST_UNTESTED` | Setup: OpenCode is outside `>=2.2.3 <2.4.0`, and `allowUntestedHost` is not set. | Use OpenCode `>=2.2.3 <2.4.0`, or set `"allowUntestedHost": true`. |
+| `AUTH_REQUIRED` | Status and `probe`: the host reported a failed sign-in for X, with a reason. A bare `needs_auth` with no reason is `sign_in_required` without this code. The reason is redacted and cut to 160 characters. | Run `/connect` and choose X, then sign in again. |
+| `HOST_UNTESTED` | Setup: OpenCode is outside `>=2.4.1 <2.5.0`, and `allowUntestedHost` is not set. | Use OpenCode `>=2.4.1 <2.5.0`, or set `"allowUntestedHost": true`. |
 | `CLIENT_ID_MISSING` | Setup: no X app client ID is in the options or the `/connect` X app entry. | Run `/connect` and choose X app, and paste your X app's client ID. |
 | `CLIENT_ID_INVALID` | Setup: the saved client ID is empty or has spaces. | Save the client ID again from the app's User authentication settings. |
 | `STATUS_UNAVAILABLE` | `/x-status`, `/x` or the status RPC: the status could not be read, or the plugin is not running on the server. The RPC answers with its error `unavailable`. | The message's own next step: restart OpenCode and run the command again, or, when the plugin is not running, run `/plugins` to see why. |
@@ -762,8 +751,8 @@ meanings:
 | --- | --- |
 | `version` | The plugin's version |
 | `state` | `connected`, `sign_in_required`, `connecting`, `disabled`, `failed`, `not_configured`, `conflict` or `host_untested`. The `Connection` row shows the same states as `connected`, `sign-in required`, `connecting`, `disabled`, `failed`, `not configured`, `conflict` and `host untested`. |
-| `code`, `message` | For a setup state, or a missing or unusable client: `OPTIONS_INVALID`, `HOST_UNTESTED`, `CLIENT_ID_MISSING` or `CLIENT_ID_INVALID`, and one sentence on it. |
-| `error` | For a failed connection only: OpenCode's reason, on one line of at most 160 characters, with any URL cut before its query. The text for a needed sign-in can hold an authorization URL, so it is never shown. |
+| `code`, `message` | For a setup state, a missing or unusable client, or a reported sign-in failure: `OPTIONS_INVALID`, `HOST_UNTESTED`, `CLIENT_ID_MISSING`, `CLIENT_ID_INVALID` or `AUTH_REQUIRED`, and one sentence on a setup or client code. |
+| `error` | A failed connection's or a failed sign-in's reason, on one line of at most 160 characters, with any URL cut before its query and token shapes redacted. It is present only when the host reported a reason. |
 | `source` | `type` (`plugin`, `adopted` or `conflict`), `url`, `signIn` (`oauth`, or `own` for your own entry with `"oauth": false`), and for a conflict the `expected` URL |
 | `account` | The name OpenCode keeps on the active sign-in, on one line of at most 80 characters; absent when it keeps none. Status makes no X call, so the plugin learns nothing else about the account. |
 | `client` | `id`, `mode` (`public_pkce` for a Native App, `confidential` when a secret is set) and `source` (`options` or `connect`). The `Client` row names `your own app` when it came from `/connect`, or `configured app` when it came from plugin options, as a team app does; status cannot tell managed config from a user's own options. The secret is never shown. |
@@ -774,7 +763,7 @@ meanings:
 | `unknownCount`, `unknownTools` | How many of them the plugin does not know, and at most 20 of their names, only those made of lowercase letters, digits and `_` |
 | `unguardedAgents` | Agents where a new X tool would run without asking; empty when there are none. An agent whose own rules already ask or deny for every X tool is not listed. |
 | `shadowedSkills` | Present only when a skill with one of the plugin's ids, such as your own `x` skill, replaces the plugin's: each `id` and the `path` OpenCode loads instead |
-| `host` | `version` (`null` if OpenCode reports none), `range` (the supported range) and `tested` (true only for 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2) |
+| `host` | `version` (`null` if OpenCode reports none), `range` (the supported range) and `tested` (true only for 2.4.1) |
 | `problems` | Setup problems, each `CODE: What happened. Next step: What to do.` |
 | `nextStep` | Exactly one next step: the `Next step` row, `Nothing to do.` when nothing is needed |
 

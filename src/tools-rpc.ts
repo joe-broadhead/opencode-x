@@ -60,10 +60,10 @@ export function shapeInput(method: string, input: unknown, call: ShapeCall, owns
 }
 
 /**
- * What the model path's `execute.after` hook does to a result, which the executor skips: the actual cost from what X
- * returned (the estimate when it reports no usage), recorded against the session and the rolling daily ledger, the
- * cost line, and the structured `cost` beside the output. The model path's one line per Code Mode program is a Code
- * Mode aggregate; a script has no program, so each call gets its own line, as a direct call does.
+ * A script result's cost: the actual cost from what X returned (the estimate when it reports no usage), recorded
+ * against the session and the rolling daily ledger, the cost line, and the structured `cost` beside the output. The
+ * model path carries no cost line, because the plugin registers no hook; a script has no program either, so each call
+ * gets its own line.
  */
 export function shapeResult(method: string, result: McpResult, call: ShapeCall, owns?: boolean): McpResult {
   if (priceOf(method) === undefined) {

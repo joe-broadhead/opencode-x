@@ -12,7 +12,7 @@ import { viewMessage } from "../../src/tui.js"
 import { mcpEditor, transforms, type McpEditor } from "./fake.js"
 
 const SECRETS = ["hunter2", "abcdefghijklmnop", "sk-live-0123456789abcdef", "eyJhbGciOi.eyJzdWIiOi.c2lnbmF0dXJl", "secret-path-123", "fake-signature", "x".repeat(48)]
-const host = checkHost("2.2.3", false)
+const host = checkHost("2.4.1", false)
 const plugin: ServerSource = { type: "plugin", url: ENDPOINT, signIn: "oauth" }
 const parsed = parseOptions({ oauth: { client_id: "client-1" } })
 if (!parsed.ok) throw new Error(parsed.error.message)

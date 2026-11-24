@@ -402,8 +402,8 @@ describe("the release commit's identity", () => {
     const cases = {
       unverified: [(c) => (c.commit.verification = { verified: false, reason: "unsigned" }), /does not verify the release commit's signature \(reason: unsigned\)/],
       "reason not valid": [(c) => (c.commit.verification.reason = "expired_key"), /reason: expired_key/],
-      "a person's noreply author": [(c) => (c.commit.author.email = "91376460+joe-broadhead@users.noreply.github.com"), /author is another address, not github-actions\[bot\]/],
-      "the bot's address, another login": [(c) => (c.author = { login: "joe-broadhead", type: "User" }), /author account is not the github-actions\[bot\] app/],
+      "a person's noreply author": [(c) => (c.commit.author.email = "123456+some-user@users.noreply.github.com"), /author is another address, not github-actions\[bot\]/],
+      "the bot's address, another login": [(c) => (c.author = { login: "some-user", type: "User" }), /author account is not the github-actions\[bot\] app/],
       "the bot's address, not a Bot": [(c) => (c.author.type = "User"), /author account is not the github-actions\[bot\] app/],
       "no author account": [(c) => (c.author = null), /author account is not/],
       "another committer": [(c) => (c.commit.committer = { name: "GitHub", email: "someone@example.com" }), /committer is not GitHub's web-flow/],
@@ -446,8 +446,8 @@ describe("the release tag object", () => {
       "another message": [(t) => (t.message = "Release v0.0.1\n"), /message is not exactly v0\.0\.1/],
       "another commit": [(t) => (t.object.sha = "d".repeat(40)), /points at dddddddddddd, not the release commit/],
       "a tree": [(t) => (t.object.type = "tree"), /points at a tree, not a commit/],
-      "another tagger": [(t) => (t.tagger.email = "91376460+joe-broadhead@users.noreply.github.com"), /tagger is not github-actions\[bot\]/],
-      "another tagger name": [(t) => (t.tagger.name = "joe-broadhead"), /tagger is not github-actions\[bot\]/],
+      "another tagger": [(t) => (t.tagger.email = "123456+some-user@users.noreply.github.com"), /tagger is not github-actions\[bot\]/],
+      "another tagger name": [(t) => (t.tagger.name = "some-user"), /tagger is not github-actions\[bot\]/],
       "a signature GitHub cannot check": [(t) => (t.verification = { verified: false, reason: "invalid" }), /must be unsigned, and GitHub says not verified \(invalid\)/],
       "a bad email": [(t) => (t.verification = { verified: false, reason: "bad_email" }), /\(bad_email\)/],
       "a valid signature": [(t) => (t.verification = { verified: true, reason: "valid" }), /says verified \(valid\)/],
@@ -697,7 +697,7 @@ describe("check-release-shape.mjs: the tag and the commit, as GitHub has them", 
 
     const { repo, commit: release } = tagged()
     const tagSha = repo.git("rev-parse", "refs/tags/v0.0.1")
-    repo.setRoutes({ [`git/tags/${tagSha}`]: { ...kitTag({ sha: tagSha, tag: "v0.0.1", commit: release }), tagger: { name: "joe-broadhead", email: "91376460+joe-broadhead@users.noreply.github.com" } } })
+    repo.setRoutes({ [`git/tags/${tagSha}`]: { ...kitTag({ sha: tagSha, tag: "v0.0.1", commit: release }), tagger: { name: "some-user", email: "123456+some-user@users.noreply.github.com" } } })
     assert.match(shapeOf(repo, "v0.0.1"), /FAIL the tag: the tagger is not github-actions\[bot\]/)
 
     const parent = repo.git("rev-parse", `${release}^`)
@@ -1224,7 +1224,7 @@ describe("release-github.mjs plan: resuming a release whose tag exists", () => {
     github.state.releases = [published("v0.0.1")]
     assert.throws(run, /v0\.0\.1 is already a published Release/)
     ;({ github, run } = setup())
-    github.state.tagObjects.get("a".repeat(40)).tagger = { name: "joe-broadhead", email: "91376460+joe-broadhead@users.noreply.github.com" }
+    github.state.tagObjects.get("a".repeat(40)).tagger = { name: "some-user", email: "123456+some-user@users.noreply.github.com" }
     assert.throws(run, /the tag v0\.0\.1 exists and is not one this release can resume \(the tagger is not github-actions\[bot\]\): release the next version/)
     const other = setup()
     other.github.state.commits.set(other.release, botCommit({ sha: other.release, parents: ["f".repeat(40)] }))
@@ -1972,13 +1972,6 @@ describe("CI: macOS on pushes to master and for releases, never on pull requests
     assert.deepEqual(ciJobsProblems(fullJobs(), RUNNERS), [])
     assert.deepEqual(ciJobsProblems([...fullJobs(RUNNERS.slice(0, 3)), ...fullJobs(["macos-26-intel"], "cancelled")], RUNNERS), ["no successful job on macos-26-intel"])
     assert.deepEqual(ciJobsProblems(undefined, ["macos-26"]), ["no successful job on macos-26"])
-  })
-
-  test("this repository's ci.yml: a pull request's matrix has no macOS entry, and a master push's does (npm run check)", () => {
-    const matrix = ciMatrix(readFileSync(join(SCRIPTS, "..", ".github", "workflows", "ci.yml"), "utf8"))
-    assert.deepEqual(matrix.problems, [])
-    assert.equal(matrix.pullRequest.some((runner) => /^macos-/.test(runner)), false)
-    assert.ok(matrix.push.includes("macos-26"), `a push to master runs ${matrix.push.join(", ")}`)
   })
 })
 

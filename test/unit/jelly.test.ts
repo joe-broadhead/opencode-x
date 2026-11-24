@@ -5,12 +5,12 @@ import { METHODS } from "../../src/tools-rpc.js"
 import { defaultRules, evaluate } from "../../src/permissions.js"
 import { SKILL_NAMES } from "../../src/skills.js"
 import { parseOptions } from "../../src/options.js"
-import { type Declaration, type DeclaredTool, declarationProblems, docProblems, readPackage } from "../support/jelly-kit.js"
+import { type Declaration, type DeclaredTool, declarationProblems, readPackage } from "../support/jelly-kit.js"
 import { ACCESS_CHOICES, type PluginSetting, settingChoices, settingsProblems, settingValueIssue } from "../support/jelly-settings.js"
 
 /**
- * The `jelly` section of package.json, which Jelly reads without loading the plugin. Every declared effect is the one
- * the plugin's own `access: all` block gives, which is `allow`. The shared kit checks the declaration against Jelly's plugin authors' standard; the tests below add what only X
+ * The `jelly` section of package.json, read without loading the plugin. Every declared effect is the one the plugin's
+ * own `access: all` block gives, which is `allow`. The shared kit checks the declaration against the declaration's plugin authors' standard; the tests below add what only X
  * declares.
  */
 
@@ -41,13 +41,13 @@ describe("the jelly declaration", () => {
     expect(Object.keys(JELLY_READ_ONLY_OVERRIDES).sort()).toEqual([...PRIVATE_READ_TOOLS].sort())
     for (const tool of PRIVATE_READ_TOOLS) expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: false })
     for (const method of METHODS) expect(byPermission.get(`x_${method.name}`)?.readOnly, method.name).toBe(method.class === "read" && !Object.hasOwn(JELLY_READ_ONLY_OVERRIDES, method.name))
-    // Memory's collector runs x_events_list unattended, so it never asks.
+    // A collector runs x_events_list unattended, so it never asks.
     expect(byPermission.get("x_events_list")).toEqual({ name: "x.events_list", permission: "x_events_list", effect: "allow", readOnly: true })
     expect(jelly.tools).toHaveLength(known.length)
     for (const tool of jelly.tools) expect(Object.keys(tool).sort()).toEqual(["effect", "name", "permission", "readOnly"])
   })
 
-  test("declares the six private reads as not read-only, so Jelly asks and then denies them", () => {
+  test("declares the six private reads as not read-only, so the declaration asks and then denies them", () => {
     for (const tool of PRIVATE_READ_TOOLS) {
       expect(byPermission.get(`x_${tool}`)).toMatchObject({ effect: "allow", readOnly: false })
       expect(JELLY_READ_ONLY_OVERRIDES[tool]?.trim()).toBeTruthy()
@@ -101,7 +101,7 @@ describe("the jelly settings", () => {
   const setting = (key: string) => settings.find((item) => item.key === key)!
   const takes = (options: Record<string, unknown>) => parseOptions(options).ok
 
-  test("pass Jelly's setting contract", () => {
+  test("pass the setting contract", () => {
     expect(settingsProblems(settings)).toEqual([])
   })
 
@@ -120,9 +120,9 @@ describe("the jelly settings", () => {
     }
   })
 
-  // The parser takes any amount above 0. Jelly's contract cannot say "above 0", so the budgets declare whole cents from
+  // The parser takes any amount above 0. The setting contract cannot say "above 0", so the budgets declare whole cents from
   // $0.01: narrower than the parser, never wider. No default: an unsaved budget is no budget.
-  test("declare the budgets in whole cents from $0.01, so every amount Jelly saves is one the parser takes", () => {
+  test("declare the budgets in whole cents from $0.01, so every amount it saves is one the parser takes", () => {
     for (const key of ["scriptBudgetUsd", "scriptDailyBudgetUsd"]) {
       const budget = setting(key)
       expect(budget).toMatchObject({ type: "number", min: 0.01, step: 0.01 })
@@ -136,7 +136,7 @@ describe("the jelly settings", () => {
         expect(settingValueIssue(budget, value)).not.toBeNull()
         expect(takes({ [key]: value })).toBe(false)
       }
-      // Narrower than the parser: a fraction of a cent the parser would take is never saved by Jelly.
+      // Narrower than the parser: a fraction of a cent the parser would take is never saved.
       expect(settingValueIssue(budget, 0.005)).not.toBeNull()
       expect(settingValueIssue(budget, 1.234)).not.toBeNull()
       expect(takes({ [key]: 0.005 })).toBe(true)
@@ -144,11 +144,5 @@ describe("the jelly settings", () => {
       const parsed = parseOptions({})
       expect(parsed.ok && parsed.options[key as "scriptBudgetUsd" | "scriptDailyBudgetUsd"]).toBeUndefined()
     }
-  })
-})
-
-describe("docs/jelly.md", () => {
-  test("follows the plugin authors' standard", () => {
-    expect(docProblems(ROOT)).toEqual([])
   })
 })

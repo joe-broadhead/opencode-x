@@ -18,7 +18,7 @@ import type { Status } from "../../src/status.js"
 
 const root = fileURLToPath(new URL("../..", import.meta.url))
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { name: string; version: string; sources: unknown; jelly: { tools: { name: string; readOnly: boolean }[] } }
-/** The declaration as Memory's schema parses it, which is what the kit takes. */
+/** The declaration as the source contract's schema parses it, which is what the kit takes. */
 const checked = SOURCES_SCHEMA.check(pkg.sources)
 if (!checked.ok) throw new Error(`the sources declaration is invalid: ${checked.problems.join("; ")}`)
 const sources: Sources = checked.value
@@ -31,7 +31,7 @@ const SINCE = "2026-11-01T00:00:00Z"
 const ACCOUNT = "samrivera"
 /** Each feed answers one page at a time from X, so no single post can fail on its own. */
 const ATOMIC = "X answers each feed read (get_users_mentions, get_users_timeline, get_users_bookmarks) as one page in one call, so no single post can fail on its own"
-const TOOL_FEED: Record<string, Feed> = { x_get_users_mentions: "mentions", x_get_users_timeline: "timeline", x_get_users_bookmarks: "bookmarks", x_get_users_posts: "timeline" }
+const TOOL_FEED: Record<string, Feed> = { x_get_users_mentions: "mentions", x_get_users_timeline: "timeline", x_get_users_bookmarks: "bookmarks" }
 
 const answer = (value: unknown) => ({ output: value, content: [{ type: "text", text: JSON.stringify(value) }] })
 
@@ -155,9 +155,8 @@ describe("the source contract's conformance kit", () => {
     expect(declarationProblems(pkg.sources, { tools })).toEqual([])
     expect(sources.rpc).toBe(TOOLS_RPC_ID)
     expect(pkg.name).toBe(PACKAGE)
-    expect(sources.items.filter((item) => item.kind === "events").map((item) => item.id)).toEqual(FEEDS.map((feed) => `${NAMESPACE}.${feed}`))
-    expect(sources.items.filter((item) => item.kind === "snapshot").map((item) => item.id)).toEqual(["x.bookmarks.list", "x.posts"])
-    for (const item of sources.items) if (item.kind === "snapshot") expect(item.output).toBe("list")
+    expect(sources.items.map((item) => item.kind)).toEqual(FEEDS.map(() => "events"))
+    expect(sources.items.map((item) => item.id)).toEqual(FEEDS.map((feed) => `${NAMESPACE}.${feed}`))
   })
 
   for (const feed of FEEDS) {
@@ -227,48 +226,16 @@ describe("the source contract's conformance kit", () => {
     }
   })
 
-  test("x.bookmarks.list and x.posts keep the contract", async () => {
-    for (const id of ["x.bookmarks.list", "x.posts"]) {
-      // The kit runs on exactly the shipped declaration: no readsIdentity, and no injected flag.
-      const source = sources.items.find((item) => item.id === id)!
-      const report = await sourceConformance({
-        plugin: PACKAGE,
-        source,
-        tools: pkg.jelly.tools.map((tool) => ({ id: tool.name.replace(/^x\./, ""), readOnly: tool.readOnly })),
-        calls: {
-          snapshot: (input, context) => list(input, context),
-          probe: (input, context) => probeMethod(options(context)).run(input, call()),
-        },
-        snapshotCases: [{ ...(source.input ?? {}), account: ACCOUNT }],
-        cases: [],
-        account: ACCOUNT,
-        sources,
-        describe: { id: TOOLS_RPC_ID },
-      })
-      reports.push(report)
-      expect(report.problems).toEqual([])
-      // v0.2.0 and v0.3.0 run billed-cost only for events, and do not mark it inapplicable for a billed snapshot, so
-      // the report stays incomplete. The check has nothing to fail.
-      expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual(["billed-cost"])
-    }
-  })
-
   test("writes the report a release attaches", () => {
-    expect(reports.map((report) => report.source).sort()).toEqual([...FEEDS.map((feed) => `${NAMESPACE}.${feed}`), "x.bookmarks.list", "x.posts"].sort())
-    // Preserved, not worked around: the two list snapshots stay incomplete on billed-cost, tracked separately. Do not
-    // mark the check not-applicable, relabel it, or pin another kit to make it pass.
-    const incomplete = reports.filter((entry) => entry.incomplete).map((entry) => entry.source).sort()
-    expect(incomplete).toEqual(["x.bookmarks.list", "x.posts"])
-    for (const entry of reports.filter((entry) => entry.incomplete)) {
-      expect(entry.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual(["billed-cost"])
-    }
+    expect(reports.map((report) => report.source).sort()).toEqual(FEEDS.map((feed) => `${NAMESPACE}.${feed}`).sort())
+    expect(reports.filter((entry) => entry.incomplete)).toEqual([])
     const installed = readInstalledDescriptor(root, { version: pkg.version })
     const report = {
       contract: `@we-the-rebel-alliance/source-contract@${CONTRACT_VERSION}`,
       plugin: PACKAGE,
       version: pkg.version,
       descriptorHash: installed.ok ? installed.value.hash : null,
-      ok: reports.length === FEEDS.length + 2 && reports.every((entry) => entry.problems.length === 0) && reports.filter((entry) => entry.source.endsWith(".list") || entry.source === "x.posts").every((entry) => entry.checks.filter((check) => !check.ran && !check.notApplicable).every((check) => check.name === "billed-cost")) && reports.filter((entry) => entry.source !== "x.posts" && !entry.source.endsWith(".list")).every((entry) => entry.ok && !entry.incomplete),
+      ok: reports.length === FEEDS.length && reports.every((entry) => entry.ok && !entry.incomplete),
       sources: reports,
     }
     mkdirSync(join(root, "reports"), { recursive: true })

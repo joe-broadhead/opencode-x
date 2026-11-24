@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { billingStatus, configureBilling, costOf, estimateCall, flushBilling, recordModelCost, resetBilling, scriptCostOfCall } from "../../src/billing.js"
+import { billingStatus, configureBilling, costOf, estimateCall, flushBilling, resetBilling, scriptCostOfCall } from "../../src/billing.js"
 import { PRICES, PRICE_AS_OF, PRICE_SOURCE, priceOf, UNPRICED } from "../../src/prices.js"
 import { METHODS, pluginError, resetScriptSpend, shapeInput, shapeResult } from "../../src/tools-rpc.js"
 
@@ -27,9 +27,9 @@ describe("the sources' declared prices", () => {
       if (price === undefined || !("perResourceUsd" in price)) throw new Error(`${method} has no per-resource price`)
       return price.perResourceUsd
     }
-    expect(sources.items.length).toBe(5)
+    expect(sources.items.length).toBe(3)
     for (const item of sources.items) {
-      const feed = item.permission.operations.find((operation) => ["get_users_mentions", "get_users_bookmarks", "get_users_timeline", "get_users_posts"].includes(operation))!
+      const feed = item.permission.operations.find((operation) => ["get_users_mentions", "get_users_bookmarks", "get_users_timeline"].includes(operation))!
       // A post at its feed's standard rate (the Owned Read rate depends on ownsXApp and cannot be declared); an author
       // and a looked-up user at the user rate X bills for each user it returns; the probe's one get_users_me user.
       const expected: Record<string, number> = { post: rate(feed), author: rate("get_users_by_id"), user: rate("get_users_by_username") }
@@ -56,8 +56,7 @@ describe("jelly.cost", () => {
     expect(cost).toContain(`${usd(create.perRequestUsd)} a post created (${usd(create.withUrlUsd)} with a link)`)
     // X's deduplication, which the rates rest on: a resource is charged once in a UTC day, not again.
     expect(cost).toContain("(each post or user once per UTC day)")
-    // The line prices every call and promises nothing about a tool's answer; the test below holds the answers that do
-    // carry a line to `costOf`.
+    // The line prices every call and promises nothing about a tool's answer.
     expect(cost).not.toMatch(/\bends? with (?:what it cost|its actual cost)/)
     // No rate in the line is zero: every call is billed.
     expect(cost).not.toMatch(/\$0(\.0+)?(?![.\d])/)
@@ -66,31 +65,6 @@ describe("jelly.cost", () => {
     expect(cost.length).toBeLessThanOrEqual(300)
     expect(cost).toBe(cost.trim())
     expect(cost).not.toMatch(/[\r\n\u2028\u2029]/)
-  })
-})
-
-describe("the answers that carry the cost line", () => {
-  // The model path appends a line only where `costOf` prices the answer, so the list comes from `costOf` itself: a
-  // one-post, one-author, one-user answer for every method. README and docs/jelly.md must name exactly that list, so a
-  // doc cannot promise a cost line for a tool that has none, and a new one there fails here until the docs say so.
-  const sample = { output: { data: [{ id: "1" }], includes: { users: [{ id: "1" }] } } }
-  const priced = METHODS.map((method) => method.name)
-    .filter((name) => costOf(`x_${name}`, sample) !== undefined)
-    .map((name) => `x_${name}`)
-    .sort()
-  const listed = (file: string) => {
-    const paragraphs = readFileSync(join(import.meta.dir, `../../${file}`), "utf8")
-      .split(/\n\s*\n/)
-      .map((paragraph) => paragraph.replace(/\s+/g, " "))
-    const found = paragraphs.filter((paragraph) => paragraph.includes("carries a cost line only for"))
-    if (found.length !== 1) throw new Error(`${file} names the model path's cost-line tools in ${found.length} paragraphs, not one`)
-    return [...new Set([...found[0]!.matchAll(/`(x_[a-z0-9_]+)`/g)].map((match) => match[1]!))].sort()
-  }
-
-  test("are the tools `costOf` prices, and README and docs/jelly.md name every one", () => {
-    expect(priced.length).toBeGreaterThan(0)
-    expect(listed("README.md")).toEqual(priced)
-    expect(listed("docs/jelly.md")).toEqual(priced)
   })
 })
 
@@ -200,8 +174,8 @@ describe("the budget", () => {
     resetBilling()
   })
 
-  // One basis on every path: the model path's own line and the script path's structured cost read the same flag.
-  test("the model path and the script path report the same basis for the same ownsXApp", () => {
+  // One basis on every path: an events page's cost and the script path's structured cost read the same flag.
+  test("an events page and the script path report the same basis for the same ownsXApp", () => {
     const mentions = { output: { data: [{ id: "1" }, { id: "2" }] }, content: [{ type: "text", text: "" }] }
     const scripted = { output: { data: [{ id: "1" }, { id: "2" }] }, text: "" }
     expect(costOf("x_get_users_mentions", mentions, true)).toMatchObject({ basis: "owned", total: 0.002 })
@@ -244,12 +218,6 @@ describe("the budget", () => {
     store.data.set("billing.ledger.v1", { entries: [{ at: Date.now() - 25 * 60 * 60 * 1000, usd: 0.5 }, { at: Date.now() - 23 * 60 * 60 * 1000, usd: 0.1 }] })
     await configureBilling({ storage: store, sessionBudgetUsd: 1, dailyBudgetUsd: 1 })
     expect(billingStatus().dailySpentUsd).toBe(0.1)
-  })
-
-  test("the model path's own cost counts toward the same daily ledger", async () => {
-    await fresh()
-    recordModelCost(0.15)
-    expect(billingStatus().dailySpentUsd).toBe(0.15)
   })
 
   test("the actual cost falls back to the estimate when X reports no usage", async () => {

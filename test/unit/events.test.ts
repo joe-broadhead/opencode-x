@@ -4,8 +4,7 @@
 // handle, post and id below is invented. test/conformance runs the contract's full kit over the declared sources.
 import { describe, expect, test } from "bun:test"
 import { decodeBoundCursor, encodeBoundCursor } from "@we-the-rebel-alliance/source-contract/cursor"
-import { createHash } from "node:crypto"
-import { EVENTS_ACTION, EVENTS_INPUT, EVENTS_METHOD_INPUT, EVENTS_METHOD_OUTPUT, EVENTS_OUTPUT, PACKAGE, PROBE_ACTION, eventsMethod, eventsTool, meOf, postEvent, postsPage, probeMethod, xList, type EventsToolOptions, type Feed } from "../../src/events.js"
+import { EVENTS_ACTION, PACKAGE, PROBE_ACTION, eventsMethod, eventsTool, meOf, postEvent, postsPage, probeMethod, type EventsToolOptions, type Feed } from "../../src/events.js"
 import { assertEventsListConformance, encodeCursor, resultProblems, type EventsListInput, type EventsListResult } from "@we-the-rebel-alliance/source-contract/events"
 import type { ToolCall } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import type { Status } from "../../src/status.js"
@@ -446,13 +445,74 @@ describe("x_events_list", () => {
     expect(await eventsMethod(options()).available!()).toBeUndefined()
   })
 
-  test("source x still reads a cursor an earlier version issued, and lists from it what the current cursor lists", async () => {
-    const list = run()
-    const first = await list({ since: SINCE, limit: 2 })
-    const state = JSON.parse(Buffer.from(first.cursor, "base64url").toString("utf8")) as Record<string, unknown>
-    expect([state["v"], state["s"], typeof state["b"]]).toEqual([2, "x", "string"])
-    const old = encodeCursor("x", { o: createHash("sha256").update(`samrivera\u0000${ME}`).digest("hex").slice(0, 16), f: state["f"] })
-    expect((await list({ cursor: old })).events.map((event) => event.external_id)).toEqual((await list({ cursor: first.cursor })).events.map((event) => event.external_id))
+})
+
+describe("the combined source's cursor", () => {
+  test("refuses an older cursor: every feed state needs w, or g after a gap", async () => {
+    const host = x(fixture(), 50)
+    const list = run(host)
+    const first = await list({ since: SINCE })
+    const binding = { plugin: "x", source: "x", account: "samrivera" }
+    const decoded = decodeBoundCursor(binding, first.cursor)
+    if (!decoded.ok) throw new Error("the cursor did not decode")
+    const state = decoded.state as { o: string; f: Record<string, { s?: string; k?: string[]; w?: number; g?: 1 }> }
+    // A current combined cursor carries each feed's newest post time (w): the window feeds and bookmarks alike.
+    expect(state.f["m"]?.w).toBeDefined()
+    expect(state.f["h"]?.w).toBeDefined()
+    expect(state.f["b"]?.w).toBeDefined()
+    for (const key of ["m", "b"] as const) {
+      const { w: _w, ...older } = state.f[key]!
+      const legacy = encodeBoundCursor(binding, { o: state.o, f: { ...state.f, [key]: older } })
+      await expect(list({ cursor: legacy })).rejects.toThrow(/^CURSOR_INVALID: /)
+    }
+    // The untouched current cursor still decodes and lists (nothing new on this page).
+    const next = await list({ cursor: first.cursor })
+    expect(next.source).toBe("x")
+    expect(resultProblems(next)).toEqual([])
+  })
+})
+
+describe("a combined page when one feed fails", () => {
+  type Entry = { id: string; execute: (input: Record<string, unknown>) => Promise<unknown> }
+  /** The host, with one tool failing `times` times before it answers as the fake does. */
+  const failing = (host: ReturnType<typeof x>, tool: string, times = Number.POSITIVE_INFINITY): ReturnType<typeof x> => {
+    let left = times
+    const list = async () =>
+      (await (host.tool.list as unknown as () => Promise<Entry[]>)()).map((entry) =>
+        entry.id === tool
+          ? {
+              ...entry,
+              execute: async (input: Record<string, unknown>) => {
+                if (left > 0) {
+                  left--
+                  throw new Error("X's timeline read failed")
+                }
+                return entry.execute(input)
+              },
+            }
+          : entry,
+      )
+    return { ...host, tool: { list: list as never } }
+  }
+
+  test("lists the other feeds, holds the failed feed's state, records failed[], and retries it next call", async () => {
+    const list = run(failing(x(fixture(), 50), "x_get_users_timeline", 1), { feeds: ["timeline", "mentions"] })
+    const first = await list({ since: SINCE })
+    expect(resultProblems(first)).toEqual([])
+    // The timeline read fails first; the mentions still page, and the page says which feed failed.
+    expect(first.events.map((event) => event.external_id)).toEqual(fixture().mentions.slice(1).map((item) => item.id))
+    expect(first.failed).toEqual([{ external_id: "feed:timeline", code: "UNAVAILABLE" }])
+    expect(first.more).toBe(true)
+    // The cursor kept the timeline's start state, so the next call retries it and lists its posts.
+    const second = await list({ cursor: first.cursor })
+    expect(second.failed).toBeUndefined()
+    expect(second.events.map((event) => event.external_id)).toEqual(fixture().timeline.slice(1).map((item) => item.id))
+    expect(second.more).toBe(false)
+  })
+
+  test("a single feed still fails the call: there is no other feed's page to keep", async () => {
+    const list = run(failing(x(fixture(), 50), "x_get_users_timeline"), { feeds: ["timeline"] })
+    await expect(list({ since: SINCE })).rejects.toThrow("X's timeline read failed")
   })
 })
 
@@ -690,7 +750,7 @@ describe("x_events_list's feed sources", () => {
     }
   })
 
-  test("a v0.0.5 cursor, with no w, is checked on its first read from its post's own time (review L2)", async () => {
+  test("refuses a cursor without the newest post's time: no older format is read", async () => {
     for (const feed of ["mentions", "timeline"] as const) {
       const host = x(fixture(), 10)
       const list = run(host)
@@ -698,20 +758,13 @@ describe("x_events_list's feed sources", () => {
       const binding = { plugin: "x", source: feed, account: ACCOUNT }
       const decoded = decodeBoundCursor(binding, first.cursor)
       if (!decoded.ok) throw new Error("the cursor did not decode")
-      const state = decoded.state as { a: string; i: string; l: string; p: { s: string } }
-      // v0.0.5's cursor holds only the post it listed last.
+      const state = decoded.state as { a: string; i: string; l: string; p: { s: string; w?: number } }
+      // A v0.0.5 cursor holds only the post it listed last, with no `w`; this version does not read it.
+      expect(state.p.w).toBeDefined()
       const legacy = encodeBoundCursor(binding, { a: state.a, i: state.i, l: state.l, p: { s: state.p.s } })
-      // X still lists that post: no gap, and what came after is listed.
-      host.data[feed].push(post("2026-11-06T09:00:00Z", 0, "New", 1))
-      const fine = await list({ source: feed, account: ACCOUNT, cursor: legacy })
-      expect([fine.gap, fine.events.map((event) => event.title)]).toEqual([undefined, ["New"]])
-      expect(host.calls.at(-2)!.input["until_id"]).toBe((BigInt(state.p.s) + 1n).toString())
-      // X moved past it: one gap from that post's own time, read from its id.
-      host.data[feed] = Array.from({ length: 2 }, (_, n) => post("2026-11-07T09:00:00Z", 1, `Kept ${n}`, 10 + n))
-      const stale = await list({ source: feed, account: ACCOUNT, cursor: legacy })
-      expect(stale.gap).toEqual({ reason: "expired", since: fixture()[feed].at(-1)!.created_at })
-      expect(stale.events.map((event) => event.title)).toEqual(["Kept 0", "Kept 1"])
-      expect((await list({ source: feed, account: ACCOUNT, cursor: stale.cursor })).gap).toBeUndefined()
+      await expect(list({ source: feed, account: ACCOUNT, cursor: legacy })).rejects.toThrow(/^CURSOR_INVALID: /)
+      // The cursor this version issued still decodes and reads.
+      expect((await list({ source: feed, account: ACCOUNT, cursor: first.cursor })).source).toBe(feed)
     }
   })
 
@@ -837,7 +890,7 @@ describe("x_events_list's feed sources", () => {
     expect((await read(listFewer, { source: "bookmarks", account: ACCOUNT, cursor: start.cursor, limit: 500 }, { source: "bookmarks", account: ACCOUNT, limit: 500 })).gaps).toEqual([])
   })
 
-  test("source x answers no gap, as contract 1 lists", async () => {
+  test("source x answers no gap", async () => {
     const data = fixture()
     data.mentions.shift()
     expect((await run(x(data))({ since: SINCE })).gap).toBeUndefined()
@@ -851,166 +904,8 @@ describe("x_events_list's feed sources", () => {
     expect(result.refused).toEqual([{ external_id: data.mentions[0]!.id, reason: "secret", detail: "holds a secret (connection string)" }])
     expect(result.events.map((event) => event.external_id)).not.toContain(data.mentions[0]!.id)
     expect((await list({ source: "mentions", account: ACCOUNT, cursor: result.cursor })).events).toEqual([])
-    // Source x keeps contract 1's answers: it lists the post.
+    // The combined source lists the same post from every feed that has it.
     expect((await list({ since: SINCE })).events.map((event) => event.external_id)).toContain(data.mentions[0]!.id)
-  })
-})
-
-describe("list snapshots", () => {
-  const call: ToolCall = { sessionID: "ses_1", agent: "build", messageID: "msg_1", id: "call_1", signal: new AbortController().signal, progress: async () => {} }
-  const snapshot = async (host: ReturnType<typeof x>, input: Record<string, unknown>) => (await eventsMethod(options(host)).run(input, call)) as Record<string, any>
-
-  test("the model's tool has no list input and the tools RPC method does; the tool's output is the events page", () => {
-    const opts = options()
-    expect(eventsTool(opts).input).toBe(EVENTS_INPUT)
-    expect("list" in (EVENTS_INPUT.properties as Record<string, unknown>)).toBe(false)
-    const method = eventsMethod(opts)
-    expect(method.input).toBe(EVENTS_METHOD_INPUT)
-    expect((EVENTS_METHOD_INPUT.properties as Record<string, unknown>)["list"]).toMatchObject({ enum: ["bookmarks", "posts"] })
-    expect(method.output).toBe(EVENTS_METHOD_OUTPUT)
-    expect((EVENTS_METHOD_OUTPUT.anyOf as unknown[])[0]).toBe(EVENTS_OUTPUT)
-  })
-
-  test("reads the signed-in account's posts through the existing posts read and returns the list shape", async () => {
-    const host = x(fixture(), 50)
-    const output = await snapshot(host, { list: "posts", source: "posts", account: "samrivera" })
-    expect(output.trust).toBe("untrusted")
-    expect(output.account).toBe("samrivera")
-    expect(output.source).toBe("posts")
-    expect(output.data.editable).toBe(false)
-    expect(output.data.items.map((item: { text: string }) => item.text)).toEqual(["A week later", "Notes from the launch", "Launch day", "Before since"])
-    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_by_username", "x_get_users_posts"])
-  })
-
-  test("leaves out a bookmark whose text holds a secret", async () => {
-    const secret = post("2026-11-06T09:00:00Z", 0, "the files are at https://pilot:Wq7rZp4xLm9@files.example.net/share")
-    const host = x({ ...fixture(), bookmarks: [secret, post("2026-11-02T12:00:00Z", 0, "Worth keeping")] }, 50)
-    const output = await snapshot(host, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
-    expect(output.data.items.map((item: { text: string }) => item.text)).toEqual(["Worth keeping"])
-  })
-
-  test("screens the whole text before it cuts, sorts newest first and lists a post once", async () => {
-    // 195 characters, then a secret that starts at 196: cut first, the answer would hold " password=hu".
-    const secret = post("2026-11-06T09:00:00Z", 0, "x".repeat(195) + " password=hunter2 and more")
-    const older = post("2026-11-02T12:00:00Z", 0, "Older post")
-    const newest = post("2026-11-07T12:00:00Z", 0, "Newest post")
-    const host = x({ ...fixture(), bookmarks: [older, secret, newest, newest] }, 50)
-    const output = await snapshot(host, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
-    expect(output.data.items.map((item: { text: string }) => item.text)).toEqual(["Newest post", "Older post"])
-    // A long text without a secret is cut to 200 characters.
-    const long = post("2026-11-08T12:00:00Z", 0, "y".repeat(240))
-    const cutHost = x({ ...fixture(), bookmarks: [long] }, 50)
-    const cut = await snapshot(cutHost, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
-    // `cut` keeps 200 characters, an ellipsis in the last when there is more.
-    expect(cut.data.items[0].text).toBe(`${"y".repeat(199)}…`)
-  })
-
-  test("50 maximal items fit inside the source's 64 KB, with three-byte text and ids", async () => {
-    // A post's id is X's (digits and underscores) and its text at most 200 characters, so 50 items cannot reach 64 KB;
-    // this pins the bound with the widest text the source keeps, and that the answer is not marked shortened.
-    const many = Array.from({ length: 50 }, (_, index) => post(new Date(Date.parse("2026-11-01T00:00:00Z") + index * 60_000).toISOString().replace(".000Z", "Z"), 0, "字".repeat(200)))
-    const host = x({ ...fixture(), bookmarks: many }, 100)
-    const output = await snapshot(host, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
-    expect(output.shortened).toBeUndefined()
-    expect(output.data.items).toHaveLength(50)
-    for (const item of output.data.items) expect([...item.text]).toHaveLength(200)
-    expect(new TextEncoder().encode(JSON.stringify(output)).length).toBeLessThanOrEqual(65_536)
-  })
-
-  test("a list asks for no author expansion: its items name no author, so X bills none", async () => {
-    const host = x(fixture(), 50)
-    const output = await snapshot(host, { list: "bookmarks", source: "bookmarks", account: "samrivera" })
-    const read = host.calls.filter((call) => call.tool === "x_get_users_bookmarks")
-    expect(read).toHaveLength(1)
-    expect(read[0]!.input).toEqual({ id: ME, max_results: 50, "post.fields": "created_at,text,note_tweet" })
-    expect(read[0]!.billed).toEqual({ posts: fixture().bookmarks.length, users: 0 })
-    expect(output.cost.units).toContainEqual({ per: "author", count: 0 })
-    const posts = await snapshot(host, { list: "posts", source: "posts", account: "samrivera" })
-    expect(posts.cost.units).toContainEqual({ per: "author", count: 0 })
-  })
-
-  test("a list of a feed the user turned off is off, before any X call; posts has no plugin switch", async () => {
-    const host = x()
-    const off = options(host, { feeds: ["mentions"] })
-    await expect(eventsMethod(off).run({ list: "bookmarks", source: "bookmarks", account: "samrivera" }, call)).rejects.toThrow(/^SOURCE_DISABLED: /)
-    expect(host.calls).toEqual([])
-    // `posts` is not an events feed: events.feeds does not turn it off, and the consumer's consent is what does.
-    const posts = await eventsMethod(options(host, { feeds: ["mentions"] })).run({ list: "posts", source: "posts", account: "samrivera" }, call)
-    expect((posts as { source: string }).source).toBe("posts")
-  })
-
-  test("names the handle it was asked for and does not read who is signed in: the v0.1.0 gap", async () => {
-    // source-contract v0.1.0, which Jelly pins, cannot declare a content read that also reads the identity, so the list
-    // looks up the named handle (`get_users_by_username`) and never calls `get_users_me`. A later sign-in change is not
-    // detected here; docs/configuration.md and the CHANGELOG say so and when it will be restored.
-    const host = x()
-    const output = (await eventsMethod(options(host)).run({ list: "posts", source: "posts", account: "samrivera" }, call)) as { account: string }
-    expect(output.account).toBe("samrivera")
-    expect(host.calls.map((entry) => entry.tool)).toEqual(["x_get_users_by_username", "x_get_users_posts"])
-    expect(host.calls.some((entry) => entry.tool === "x_get_users_me")).toBe(false)
-  })
-
-  test("the 50 cap holds when X answers more than asked, newest first", async () => {
-    // A read that answers 60 posts in its own order: the list sorts them newest first and keeps the newest 50.
-    const many = Array.from({ length: 60 }, (_, index) => post(new Date(Date.parse("2026-11-01T00:00:00Z") + index * 60_000).toISOString().replace(".000Z", "Z"), 0, `Post ${index}`))
-    const base = x({ ...fixture(), bookmarks: [] }, 100)
-    const read = async (tool: string, input: Record<string, unknown>) => {
-      base.calls.push({ tool, input })
-      if (tool === "get_users_by_username") return { output: { data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }, content: [] }
-      // Oldest first, so a cap before the sort would keep the oldest 50, not the newest.
-      if (tool === "get_users_bookmarks") return { output: { data: many, meta: { result_count: 60 } }, content: [] }
-      throw new Error(`unexpected ${tool}`)
-    }
-    const output = (await xList(read, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW)) as { data: { items: { text: string }[] } }
-    expect(output.data.items).toHaveLength(50)
-    expect(output.data.items[0]!.text).toBe("Post 59")
-    expect(output.data.items.at(-1)!.text).toBe("Post 10")
-  })
-
-  test("drops whole items and says shortened when the answer cannot fit its bytes", async () => {
-    // A test seam: the real cap is 64 KB and 50 items cannot reach it, so a lowered one shows the drop loop works.
-    const many = Array.from({ length: 10 }, (_, index) => post(new Date(Date.parse("2026-11-01T00:00:00Z") + index * 60_000).toISOString().replace(".000Z", "Z"), 0, "字".repeat(200)))
-    const base = x({ ...fixture(), bookmarks: [] }, 100)
-    const read = async (tool: string, input: Record<string, unknown>) => {
-      base.calls.push({ tool, input })
-      if (tool === "get_users_by_username") return { output: { data: { id: ME, username: "SamRivera", name: "Sam Rivera" } }, content: [] }
-      if (tool === "get_users_bookmarks") return { output: { data: many.slice().reverse(), meta: { result_count: 10 } }, content: [] }
-      throw new Error(`unexpected ${tool}`)
-    }
-    const output = (await xList(read, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW, 4_000)) as { shortened?: boolean; data: { items: { text: string }[] } }
-    expect(output.shortened).toBe(true)
-    expect(output.data.items.length).toBeGreaterThan(0)
-    expect(output.data.items.length).toBeLessThan(10)
-    for (const item of output.data.items) expect([...item.text]).toHaveLength(200)
-    expect(new TextEncoder().encode(JSON.stringify(output)).length).toBeLessThanOrEqual(4_000)
-  })
-
-  test("refuses a lookup that answers a user other than the handle asked for, before any feed read", async () => {
-    // The username check is the only guard that the id the feed is read with belongs to the handle asked for.
-    const base = x({ ...fixture(), bookmarks: [] }, 100)
-    const read = async (tool: string, input: Record<string, unknown>) => {
-      base.calls.push({ tool, input })
-      if (tool === "get_users_by_username") return { output: { data: { id: ME, username: "SomeoneElse", name: "Someone Else" } }, content: [] }
-      throw new Error(`unexpected ${tool}`)
-    }
-    await expect(xList(read, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW)).rejects.toThrow(/^UPSTREAM_UNREADABLE: X's get_users_by_username answered in a shape events_list does not read/)
-    expect(base.calls.map((entry) => entry.tool)).toEqual(["get_users_by_username"])
-    // An answer that is X's own error is refused as UPSTREAM_ERROR, with no feed read either.
-    const empty = x({ ...fixture(), bookmarks: [] }, 100)
-    const none = async (tool: string, input: Record<string, unknown>) => {
-      empty.calls.push({ tool, input })
-      if (tool === "get_users_by_username") return { output: { errors: [{ title: "Not Found Error", detail: "Could not find user." }] }, content: [] }
-      throw new Error(`unexpected ${tool}`)
-    }
-    await expect(xList(none, options(), { list: "bookmarks", source: "bookmarks", account: "samrivera" }, NOW)).rejects.toThrow(/^UPSTREAM_ERROR: /)
-    expect(empty.calls.map((entry) => entry.tool)).toEqual(["get_users_by_username"])
-  })
-
-  test("refuses a list it does not have and a list read with no account, before any X call", async () => {
-    const host = x()
-    await expect(eventsMethod(options(host)).run({ list: "timeline", account: "samrivera" }, call)).rejects.toThrow(/^SOURCE_UNKNOWN: /)
-    await expect(eventsMethod(options(host)).run({ list: "posts" }, call)).rejects.toThrow(/^INPUT_INVALID: A list of X's posts names the account it reads/)
-    expect(host.calls).toEqual([])
   })
 })
 

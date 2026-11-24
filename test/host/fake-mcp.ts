@@ -25,11 +25,10 @@ export const DENIED_SAMPLE = ["add_lists_member", "send_chat_message", "users_id
 const TOOLS = [
   tool("search_posts_all", true),
   tool("get_users_me", true),
-  // The list snapshot's two reads: the account lookup by handle, and a page of saved posts.
+  // A feed's first listing looks the handle up; mentions and bookmarks pages carry posts.
   tool("get_users_by_username", true),
   tool("get_users_mentions", true),
   tool("get_users_bookmarks", true),
-  tool("get_users_posts", true),
   ...WRITE_TOOLS.map((name) => tool(name, false)),
   ...PUBLIC_TOOLS.map((name) => tool(name, false)),
   ...DENIED_SAMPLE.map((name) => tool(name, false)),
@@ -60,6 +59,12 @@ export interface FakeMcpOptions {
   readonly expireFirstAccessToken?: boolean
   /** Answer get_users_me with a signed-in user. Default false: the call itself, which a read cannot parse. */
   readonly meAsUser?: boolean
+  /**
+   * Answer the 2.4 host's `server/discover` probe with 401 and X's bearer challenge, before any other method. A 401
+   * that cannot be refreshed ends the attempt: `@opencode/core` 2.4.1 `dist/mcp/client.js:673-675` turns an
+   * UnauthorizedError into NeedsAuthError, and the MCP client sends no `initialize` after it.
+   */
+  readonly discoverUnauthorized?: boolean
 }
 
 /** The scripted model's id, as the fake's model API lists it. */
@@ -110,6 +115,8 @@ export interface FakeMcp {
   readonly markers: (string | undefined)[]
   /** The `authorization` header of every MCP request. */
   readonly authorizations: (string | undefined)[]
+  /** Every MCP request's JSON-RPC method, in order, including `server/discover` when the host probes for it. */
+  readonly methods: string[]
   close(): Promise<void>
 }
 
@@ -121,6 +128,7 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
   const callArguments: Record<string, unknown>[] = []
   const markers: (string | undefined)[] = []
   const authorizations: (string | undefined)[] = []
+  const methods: string[] = []
   const registrations: Record<string, unknown>[] = []
   const tokens: Record<string, string>[] = []
   const tokenAuthorizations: (string | undefined)[] = []
@@ -131,6 +139,10 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
   const answer = (message: Message, path: string) => {
     const reply = (result: unknown) => ({ jsonrpc: "2.0", id: message.id, result })
     switch (message.method) {
+      // The 2.4 host probes a server that declares no `protocol` with `server/discover` first. X's legacy server has
+      // no such method, so a clean method-not-found is what lets the host fall back to `initialize`.
+      case "server/discover":
+        return { jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Method not found: server/discover" } }
       case "initialize":
         return reply({ protocolVersion: message.params?.protocolVersion, capabilities: { tools: {} }, serverInfo: { name: "fake-x", version: "0.0.0" } })
       case "tools/list":
@@ -146,21 +158,15 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
           const users = Array.from({ length: 2 }, (_, index) => ({ id: String(index), username: `user${index}` }))
           return reply({ content: [{ type: "text", text: JSON.stringify({ data, includes: { users }, meta: { result_count: 2 } }) }], structuredContent: { data, includes: { users }, meta: { result_count: 2 } } })
         }
-        // The signed-in user: probe's read, and the list snapshots' identity check.
+        // The signed-in user: probe's read.
         if (name === "get_users_me" && options.meAsUser === true) {
           const data = { id: "2000000000000000001", username: "SamRivera", name: "Sam Rivera" }
           return reply({ content: [{ type: "text", text: JSON.stringify({ data }) }], structuredContent: { data } })
         }
-        // The list snapshot's two reads: the account lookup by handle, and a page of its saved posts.
+        // A feed's first listing: the account lookup by handle.
         if (name === "get_users_by_username") {
           const data = { id: "2000000000000000001", username: String(args.username ?? ""), name: "Sam Rivera" }
           return reply({ content: [{ type: "text", text: JSON.stringify({ data }) }], structuredContent: { data } })
-        }
-        if (name === "get_users_posts") {
-          const data = [{ id: "1900000000000000002", text: "An own post", created_at: "2026-11-05T00:00:00Z", author_id: "2000000000000000001" }]
-          const users = [{ id: "2000000000000000001", username: "samrivera", name: "Sam Rivera" }]
-          const meta = { result_count: 1 }
-          return reply({ content: [{ type: "text", text: JSON.stringify({ data, includes: { users }, meta }) }], structuredContent: { data, includes: { users }, meta } })
         }
         if (name === "get_users_bookmarks") {
           const data = [{ id: "1900000000000000001", text: "A saved post", created_at: "2026-11-06T00:00:00Z", author_id: "2000000000000000001" }]
@@ -265,15 +271,19 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
     if (route.startsWith("/.well-known/") || route.startsWith("/i/oauth2") || route.startsWith("/2/oauth2")) return signIn(request, response, route)
     markers.push(header(request, "x-x-test"))
     authorizations.push(header(request, "authorization"))
-    if (fake.challenge || (options.expireFirstAccessToken && header(request, "authorization") === "Bearer fake-access-1")) {
+    if (request.method !== "POST") return void response.writeHead(405, { allow: "POST" }).end()
+    const body = JSON.parse(await read(request)) as Message | Message[]
+    const messages = Array.isArray(body) ? body : [body]
+    for (const message of messages) methods.push(message.method)
+    const challenge = () => {
       const metadata = `${fake.origin}/.well-known/oauth-protected-resource`
       return void response
         .writeHead(401, { "content-type": "application/json", "www-authenticate": `Bearer resource_metadata="${metadata}"` })
         .end(JSON.stringify({ error: "invalid_token" }))
     }
-    if (request.method !== "POST") return void response.writeHead(405, { allow: "POST" }).end()
-    const body = JSON.parse(await read(request)) as Message | Message[]
-    const replies = (Array.isArray(body) ? body : [body]).filter((message) => message.id !== undefined).map((message) => answer(message, route))
+    if (options.discoverUnauthorized && messages.some((message) => message.method === "server/discover")) return challenge()
+    if (fake.challenge || (options.expireFirstAccessToken && header(request, "authorization") === "Bearer fake-access-1")) return challenge()
+    const replies = messages.filter((message) => message.id !== undefined).map((message) => answer(message, route))
     if (!replies.length) return void response.writeHead(202).end()
     response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(Array.isArray(body) ? replies : replies[0]))
   })
@@ -294,6 +304,7 @@ export async function startFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
     callArguments,
     markers,
     authorizations,
+    methods,
     close: () => new Promise<void>((resolve) => (server.closeAllConnections(), server.close(() => resolve()))),
   })
   return fake

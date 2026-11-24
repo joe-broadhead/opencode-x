@@ -13,7 +13,7 @@ import { loadSkills, registerSkills } from "./skills.js"
 import { clientNextStep, readStatus, registerStatusCommand, registerStatusRpc, type ServerSource } from "./status.js"
 import { registerAppIntegration, resolveClient, sameClient, type ClientState } from "./connect.js"
 import { serverConfig } from "./server.js"
-import { configureBilling, registerBilling } from "./billing.js"
+import { configureBilling } from "./billing.js"
 
 /** Internal seam: tests point the server at a loopback fake without OAuth, and at their own skills. */
 interface XSeam {
@@ -115,7 +115,6 @@ export function createXPlugin(seam: XSeam) {
       let client: ClientState = { invalid: false }
       let stopWatch = async () => {}
       let stopTools = async () => {}
-      let stopBilling = async () => {}
       const stopped = new AbortController()
       let listening: Promise<void> = Promise.resolve()
       let queue = Promise.resolve()
@@ -144,8 +143,6 @@ export function createXPlugin(seam: XSeam) {
           if (source && source.type !== "conflict") editor.namespace({ name: SERVER_NAME, description: NAMESPACE_DESCRIPTION })
           editor.add(eventsTool(events))
         })
-        // The cost line, on the model path and in Code Mode; reads pass to X unchanged. A conflicting server is not ours.
-        stopBilling = await registerBilling(ctx.tool, () => source === undefined || source.type !== "conflict", options.ownsXApp)
         await registerDefaultRules(ctx.agent, defaultRules(options.access), report("rules"))
         await registerSkills(ctx.skill, skills)
         // A client saved, switched or removed in /connect applies without a restart: the server transform reads the
@@ -229,7 +226,6 @@ export function createXPlugin(seam: XSeam) {
         await queue
         await stopWatch()
         await stopTools()
-        await stopBilling()
         await listing.stop()
       }
     },

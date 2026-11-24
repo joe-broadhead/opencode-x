@@ -39,7 +39,7 @@ const defaultStatus = (): Status =>
     version: "0.0.0",
     state: "connected",
     access: "all",
-    host: { version: "2.2.6", range: ">=2.2.3 <2.4.0", tested: true },
+    host: { version: "2.4.1", range: ">=2.4.1 <2.5.0", tested: true },
     tools: [],
     unknownCount: 1,
     unknownTools: ["shiny_new_tool"],
@@ -53,7 +53,7 @@ const defaultStatus = (): Status =>
 describe("the model-facing text at access all", () => {
   const all = {
     "the Code Mode namespace": NAMESPACE_DESCRIPTION,
-    "the Jelly summary": jellySummary(),
+    "the `jelly` summary": jellySummary(),
     "the /x-status text": formatStatus(defaultStatus()),
     ...Object.fromEntries(readdirSync(join(ROOT, "skills")).map((name) => [`skills/${name}/SKILL.md`, read(`skills/${name}/SKILL.md`)] as const)),
   }
@@ -62,11 +62,12 @@ describe("the model-facing text at access all", () => {
     for (const [claim, pattern] of STALE) expect({ claim, hit: pattern.exec(atAll(text))?.[0] ?? null }).toEqual({ claim, hit: null })
   })
 
-  test("the namespace says what the default does on the user's real account, and that access restricts it", () => {
-    expect(NAMESPACE_DESCRIPTION).toContain("with all (the default) they run without a prompt")
-    expect(NAMESPACE_DESCRIPTION).toContain("on the user's own real X account")
-    expect(NAMESPACE_DESCRIPTION).toContain("with ask-changes they ask")
-    expect(NAMESPACE_DESCRIPTION).toContain("with read-only they are denied")
+  test("the namespace fits the budget and names the skills that carry the rules", () => {
+    expect(NAMESPACE_DESCRIPTION.length).toBeLessThanOrEqual(400)
+    expect(NAMESPACE_DESCRIPTION).toContain("Load the x skill first")
+    expect(NAMESPACE_DESCRIPTION).toContain("x-write before any change")
+    expect(NAMESPACE_DESCRIPTION).toContain("changes act on the user's real account and posts are public")
+    expect(NAMESPACE_DESCRIPTION).toContain("Every call is billed: state costs from X's rates, never invent one")
   })
 
   test("status says every tool is allowed, and that an unknown tool runs too", () => {

@@ -92,11 +92,11 @@ export function declarationProblems(root: URL, options: DeclarationOptions): str
   const pkg = readPackage(root)
   const jelly = pkg.jelly
   if (!jelly) return ["package.json has no jelly declaration"]
-  if (!/^@joe-broadhead\/opencode-[a-z0-9-]+$/u.test(pkg.name)) problems.push(`the package is named ${pkg.name}, not @joe-broadhead/opencode-<name>`)
+  if (!/^@we-the-rebel-alliance\/[a-z0-9-]+-plugin$/u.test(pkg.name)) problems.push(`the package is named ${pkg.name}, not @we-the-rebel-alliance/<name>-plugin`)
   if (Object.keys(pkg.dependencies ?? {}).length > 0) problems.push("the package has runtime dependencies, so its tarball does not stand alone")
 
   for (const key of Object.keys(jelly)) {
-    if (!(DECLARATION_KEYS as readonly string[]).includes(key)) problems.push(`jelly.${key} is not a key Jelly knows`)
+    if (!(DECLARATION_KEYS as readonly string[]).includes(key)) problems.push(`jelly.${key} is not a key the schema knows`)
   }
   if (!jelly.title?.trim() || jelly.title.length > 60) problems.push("jelly.title must be 1 to 60 characters")
   problems.push(...summaryProblems(jelly.summary))
@@ -176,19 +176,3 @@ export function iconProblems(root: URL, pkg: Package): string[] {
   if (others.length > 0) problems.push(`the icon has elements Jelly drops: ${[...new Set(others)].join(", ")}`)
   return problems
 }
-
-/** docs/jelly.md: it counts the declared tools, names each declared skill, and names no version. */
-export function docProblems(root: URL): string[] {
-  const path = new URL("docs/jelly.md", root)
-  if (!existsSync(path)) return ["docs/jelly.md is missing"]
-  const doc = readFileSync(path, "utf8")
-  const pkg = readPackage(root)
-  const tools = pkg.jelly?.tools ?? []
-  const reads = tools.filter((tool) => tool.readOnly).length
-  const problems: string[] = []
-  if (!doc.includes(`${tools.length} tools are declared (${reads} read-only)`)) problems.push(`docs/jelly.md does not say "${tools.length} tools are declared (${reads} read-only)"`)
-  for (const skill of pkg.jelly?.skills ?? []) if (!doc.includes(`\`${skill}\``)) problems.push(`docs/jelly.md does not name the skill \`${skill}\``)
-  if (doc.includes(pkg.version)) problems.push(`docs/jelly.md names the version ${pkg.version}, which a release makes untrue`)
-  return problems
-}
-
