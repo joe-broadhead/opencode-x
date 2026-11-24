@@ -20,7 +20,7 @@ const parsed = (oauth: Record<string, unknown> = { client_id: "client-1" }) => {
   return result.options
 }
 
-const host = checkHost("2.2.3", false)
+const host = checkHost("2.4.1", false)
 const URL = "https://api.x.com/mcp"
 const OPTS = parsed()
 const CLIENT = { client: { id: "client-1", source: "options" as const }, invalid: false }
@@ -49,7 +49,7 @@ describe("buildStatus", () => {
       unknownTools: [],
       unguardedAgents: [],
       access: "all",
-      host: { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true },
+      host: { version: "2.4.1", range: ">=2.4.1 <2.5.0", tested: true },
       problems: [],
       nextStep: "Nothing to do.",
     })
@@ -65,7 +65,7 @@ describe("buildStatus", () => {
         `- Scopes: ${SCOPES.join(" ")}`,
         "- Tools: 1 available, 0 unknown",
         "- Agents without default rules: none",
-        "- OpenCode: 2.2.3 (tested; supported range >=2.2.3 <2.4.0)",
+        "- OpenCode: 2.4.1 (tested; supported range >=2.4.1 <2.5.0)",
         "- Next step: Nothing to do.",
       ].join("\n"),
     )
@@ -120,15 +120,34 @@ describe("buildStatus", () => {
     expect(formatStatus(status)).toContain(`- Next step: ${nextStep}`)
   })
 
-  test("shows a failure's reason on one short line, without URL queries, and never the text of a needed sign-in", () => {
+  test("shows a failure's or an expired sign-in's reason on one short line, without URL queries", () => {
     const failed = buildStatus({ ...base, server: { status: "failed", error: "SSE error:\n  fetch https://api.x.com/mcp?token=secret-123 failed.\n" } })
     expect(failed.error).toBe("SSE error: fetch https://api.x.com/mcp failed")
     expect(formatStatus(failed)).toContain(`- Connection: failed (SSE error: fetch https://api.x.com/mcp failed; ${URL}, registered by this plugin)`)
     expect(shortReason("word ".repeat(100))).toHaveLength(160)
     expect(shortReason(" \n. ")).toBeUndefined()
     const signIn = buildStatus({ ...base, server: { status: "needs_auth", error: "Visit https://x.com/i/oauth2/authorize?code=abc to sign in" } })
-    expect(signIn.error).toBeUndefined()
-    expect(formatStatus(signIn)).not.toContain("authorize")
+    expect(signIn).toMatchObject({ state: "sign_in_required", code: "AUTH_REQUIRED", error: "Visit https://x.com/i/oauth2/authorize to sign in" })
+    const text = formatStatus(signIn)
+    expect(text).toContain("- Connection: sign-in required (Visit https://x.com/i/oauth2/authorize to sign in; ")
+    expect(text).not.toContain("code=abc")
+  })
+
+  // A fake server whose token rotation fails: the host keeps the account, reports needs_auth with the reason, and the
+  // plugin turns that into AUTH_REQUIRED, whose next step is /connect and X. The reason is redacted and cut to 160
+  // characters, as every status reason is.
+  test("a failed token rotation is AUTH_REQUIRED, with the redacted reason and the /connect next step", async () => {
+    const reason = `OAuth token refresh failed: invalid_grant for https://api.x.com/2/oauth2/token?client_id=client-1&refresh_token=fake-refresh-1 ${"x".repeat(300)}`
+    const ctx = statusContext("needs_auth", undefined, undefined, undefined, reason)
+    const status = await readStatus(ctx, { source: { type: "plugin", url: URL, signIn: "oauth" }, client: CLIENT, options: OPTS, host })
+    expect(status).toMatchObject({ state: "sign_in_required", code: "AUTH_REQUIRED", nextStep: SIGN_IN })
+    expect(status.error).toBeDefined()
+    expect([...status.error!].length).toBeLessThanOrEqual(160)
+    expect(status.error).toContain("OAuth token refresh failed: invalid_grant")
+    expect(status.error).not.toContain("client_id=")
+    expect(status.error).not.toContain("fake-refresh-1")
+    expect(formatStatus(status)).toContain("- Connection: sign-in required (OAuth token refresh failed: invalid_grant for https://api.x.com/2/oauth2/token")
+    expect(JSON.stringify(status)).not.toContain("fake-refresh-1")
   })
 
   test("adopted and conflicting servers", () => {
@@ -168,9 +187,9 @@ describe("buildStatus", () => {
     const status = buildStatus({ host, setup })
     expect(status).toMatchObject({ state: "not_configured", code: "OPTIONS_INVALID", message: setup.message, nextStep: setup.nextStep })
     expect(formatStatus(status)).toContain('- Connection: not configured. OPTIONS_INVALID: Option apiKey: This option is not supported.')
-    const untested = { code: "HOST_UNTESTED" as const, message: "OpenCode 2.4.0 is outside the supported range, so X is not set up.", nextStep: 'Use OpenCode >=2.2.3 <2.4.0, or set "allowUntestedHost": true in this plugin\'s options to run anyway.' }
-    expect(buildStatus({ host: checkHost("2.4.0", true), setup: untested })).toMatchObject({ state: "host_untested", code: "HOST_UNTESTED", nextStep: untested.nextStep })
-    expect(formatStatus(buildStatus({ host: checkHost("2.4.0", true), setup: untested }))).toContain("- Connection: host untested")
+    const untested = { code: "HOST_UNTESTED" as const, message: "OpenCode 2.5.0 is outside the supported range, so X is not set up.", nextStep: 'Use OpenCode >=2.4.1 <2.5.0, or set "allowUntestedHost": true in this plugin\'s options to run anyway.' }
+    expect(buildStatus({ host: checkHost("2.5.0", true), setup: untested })).toMatchObject({ state: "host_untested", code: "HOST_UNTESTED", nextStep: untested.nextStep })
+    expect(formatStatus(buildStatus({ host: checkHost("2.5.0", true), setup: untested }))).toContain("- Connection: host untested")
   })
 
   test("connected with no tools points at the app's package, Production environment and scopes", () => {
@@ -250,7 +269,7 @@ describe("buildStatus", () => {
     const status = buildStatus({ ...base, server: { status: "needs_auth", error: "x" }, agents: [{ id: "reviewer", permissions: [allow("*")] }] })
     expect(status.nextStep).toBe(SIGN_IN)
     const text = formatStatus(status)
-    expect(text).toContain(`- Connection: sign-in required (${URL}, registered by this plugin)`)
+    expect(text).toContain(`- Connection: sign-in required (x; ${URL}, registered by this plugin)`)
     expect(text).toContain("- Agents without default rules: reviewer\n")
     expect(text.match(/Next step/g)).toHaveLength(1)
   })
@@ -302,19 +321,19 @@ describe("buildStatus", () => {
   })
 
   test("an untested host and setup problems show on the OpenCode row; a problem's own next step comes first", () => {
-    const outside = checkHost("2.4.0", true)
+    const outside = checkHost("2.5.0", true)
     const problem = 'SKILLS_INVALID: The "x" skill was not loaded: skills/x/SKILL.md is missing. Next step: Reinstall the plugin.'
     const status = buildStatus({ ...base, host: outside, problems: [problem] })
     expect(status.nextStep).toBe("Reinstall the plugin.")
     expect(formatStatus(status)).toContain(
-      `- OpenCode: 2.4.0 (untested; supported range >=2.2.3 <2.4.0). It is outside the supported range; the plugin runs because allowUntestedHost is true. If X misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2. ${problem}`,
+      `- OpenCode: 2.5.0 (untested; supported range >=2.4.1 <2.5.0). It is outside the supported range; the plugin runs because allowUntestedHost is true. If X misbehaves, use OpenCode 2.4.1. ${problem}`,
     )
     expect(buildStatus({ ...base, host: outside }).nextStep).toBe(NOTHING_TO_DO)
-    const inside = buildStatus({ ...base, host: checkHost("2.2.99", false) })
-    expect(inside).toMatchObject({ state: "connected", host: { version: "2.2.99", tested: false }, nextStep: NOTHING_TO_DO })
-    expect(buildStatus({ ...base, host: checkHost("2.2.99", false), server: { status: "needs_auth" } }).nextStep).toBe(SIGN_IN)
-    expect(formatStatus(inside)).toContain("- OpenCode: 2.2.99 (untested; supported range >=2.2.3 <2.4.0)\n")
-    expect(formatStatus(buildStatus({ ...base, host: checkHost("2.2.5", false) }))).toContain("- OpenCode: 2.2.5 (tested; supported range >=2.2.3 <2.4.0)\n")
+    const inside = buildStatus({ ...base, host: checkHost("2.4.2", false) })
+    expect(inside).toMatchObject({ state: "connected", host: { version: "2.4.2", tested: false }, nextStep: NOTHING_TO_DO })
+    expect(buildStatus({ ...base, host: checkHost("2.4.2", false), server: { status: "needs_auth" } }).nextStep).toBe(SIGN_IN)
+    expect(formatStatus(inside)).toContain("- OpenCode: 2.4.2 (untested; supported range >=2.4.1 <2.5.0)\n")
+    expect(formatStatus(buildStatus({ ...base, host: checkHost("2.4.1", false) }))).toContain("- OpenCode: 2.4.1 (tested; supported range >=2.4.1 <2.5.0)\n")
   })
 
   test("the writes the Access row covers are the lists', not a fixed sentence", () => {
@@ -323,9 +342,9 @@ describe("buildStatus", () => {
   })
 })
 
-function statusContext(server: string, skills: Promise<unknown> = Promise.resolve({ data: [] }), connection: Promise<unknown> = Promise.resolve({ type: "credential", id: "c1", label: "Example account", method: "oauth" }), granted?: string) {
+function statusContext(server: string, skills: Promise<unknown> = Promise.resolve({ data: [] }), connection: Promise<unknown> = Promise.resolve({ type: "credential", id: "c1", label: "Example account", method: "oauth" }), granted?: string, reason?: string) {
   const ctx = {
-    mcp: { list: async () => ({ data: [{ name: "github", status: { status: "connected" } }, { name: "x", status: { status: server }, integrationID: "mcp_fake" }] }) },
+    mcp: { list: async () => ({ data: [{ name: "github", status: { status: "connected" } }, { name: "x", status: { status: server, ...(reason === undefined ? {} : { error: reason }) }, integrationID: "mcp_fake" }] }) },
     integration: { connection: { active: async (id: string) => (id === "mcp_fake" ? connection : undefined), resolve: async () => ({ type: "oauth", metadata: granted === undefined ? {} : { scope: granted } }) } },
     agent: { list: async () => ({ data: [guarded, { id: "reviewer", permissions: [allow("*")] }] }) },
     tool: {
@@ -465,7 +484,7 @@ describe("status RPC", () => {
     const status = buildStatus(base)
     expect({ version: status.version, host: status.host, state: status.state, unguardedAgents: status.unguardedAgents, nextStep: status.nextStep }).toEqual({
       version: VERSION,
-      host: { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true },
+      host: { version: "2.4.1", range: ">=2.4.1 <2.5.0", tested: true },
       state: "connected",
       unguardedAgents: [],
       nextStep: NOTHING_TO_DO,
@@ -477,7 +496,7 @@ describe("status RPC", () => {
     const { properties, required } = StatusRpc.methods.status.output
     const statuses: Status[] = [
       buildStatus({ ...base, account: "Example account", tools: ["shiny_new_tool"], agents: [{ id: "reviewer", permissions: [allow("*")] }], problems: ["p"], skills: { own: [{ id: "x", path: "/a" }], listed: [{ id: "x", path: "/b" }] } }),
-      buildStatus({ ...base, server: { status: "failed", error: "fetch failed" }, source: { type: "conflict", url: "https://x.example/mcp", expected: URL }, host: checkHost("2.4.0", true) }),
+      buildStatus({ ...base, server: { status: "failed", error: "fetch failed" }, source: { type: "conflict", url: "https://x.example/mcp", expected: URL }, host: checkHost("2.5.0", true) }),
       buildStatus({ host, setup: { code: "OPTIONS_INVALID", message: "Option apiKey: This option is not supported.", nextStep: "Remove it." } }),
     ]
     for (const status of statuses) {

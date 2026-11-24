@@ -1,5 +1,5 @@
 import type { Plugin, Rpc } from "@opencode/plugin"
-import { DISPLAY_NAME, ENDPOINT, PLUGIN_ID, SCOPES, SERVER_NAME, TESTED_HOSTS } from "./constants.js"
+import { DISPLAY_NAME, ENDPOINT, PLUGIN_ID, SCOPES, SERVER_NAME, SUPPORTED_HOST, TESTED_HOSTS } from "./constants.js"
 import { EVENTS_LIST } from "@we-the-rebel-alliance/source-contract/events"
 import { isSupportedHost, type HostCheck } from "./host-version.js"
 import { classify, SENSITIVE_TOOLS, PUBLIC_TOOLS, WRITE_TOOLS } from "./x-tools.js"
@@ -17,8 +17,11 @@ export { shortReason }
 /** The shared status labels in machine form; `/x-status` shows them as `sign-in required` and so on. */
 type State = "connected" | "sign_in_required" | "connecting" | "disabled" | "failed" | "not_configured" | "conflict" | "host_untested"
 
-/** The setup codes status itself can be in, beside the problems a transform or the skills report. */
-type StatusCode = "OPTIONS_INVALID" | "HOST_UNTESTED" | "CLIENT_ID_MISSING" | "CLIENT_ID_INVALID"
+/**
+ * The codes status itself can report, beside the problems a transform or the skills report. `AUTH_REQUIRED` is the one
+ * needs_auth state: X's token could not be refreshed, so the account has to sign in again.
+ */
+type StatusCode = "OPTIONS_INVALID" | "HOST_UNTESTED" | "CLIENT_ID_MISSING" | "CLIENT_ID_INVALID" | "AUTH_REQUIRED"
 
 /**
  * Who owns the `x` server: this plugin, the user's own config (adopted unchanged), or a server at another URL
@@ -73,11 +76,14 @@ export interface Status {
   /** The plugin's version. */
   readonly version: string
   readonly state: State
-  /** For a setup state, or a missing or unusable X app client, the code that explains it. */
+  /** For a setup state, a missing or unusable X app client, or an expired sign-in: the code that explains it. */
   readonly code?: StatusCode
   /** One sentence on the code: what happened. */
   readonly message?: string
-  /** For a failed connection only: OpenCode's reason, on one line of at most 160 characters, URLs without their query. */
+  /**
+   * A failed connection's, or an expired sign-in's, reason: one line of at most 160 characters, URLs without their
+   * query, token shapes redacted.
+   */
   readonly error?: string
   readonly source?: ServerSource
   /**
@@ -138,7 +144,7 @@ const AGENTS_NEXT_STEP =
 
 const NOTHING_TO_DO = "Nothing to do."
 
-const TESTED_TEXT = `${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}`
+const TESTED_TEXT = TESTED_HOSTS.length === 1 ? (TESTED_HOSTS[0] ?? "") : `${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}`
 const LISTED_UNKNOWN = 20
 // A tool name comes from the server; list only plain names.
 const SAFE_NAME = /^[a-z][a-z0-9_]{0,63}$/
@@ -182,15 +188,17 @@ export function buildStatus(facts: StatusFacts): Status {
   const listed = (facts.tools ?? []).filter((tool) => tool !== EVENTS_LIST)
   const unknown = listed.filter((tool) => classify(tool) === "unknown")
   const denied = access === "read-only" ? listed.filter((tool) => classify(tool) !== "read") : []
-  // OpenCode's text for a needed sign-in can hold an authorization URL, so only a failure's reason is kept.
-  const error = facts.server?.status === "failed" && facts.server.error ? shortReason(facts.server.error) : undefined
+  // A failure's and an expired sign-in's reason is kept, redacted: a URL loses its query, so a code in it never shows.
+  const error = (facts.server?.status === "failed" || facts.server?.status === "needs_auth") && facts.server.error ? shortReason(facts.server.error) : undefined
+  // X could not refresh the token: the account has to sign in again. A missing scope has its own next step instead.
+  const expired = facts.server?.status === "needs_auth" && missingScope.length === 0
   const shadowed = shadowedOf(facts)
   const account = facts.account ? cut(oneLine(facts.account), ACCOUNT_LIMIT) : ""
   const setup = facts.setup
   const status = {
     version: VERSION,
     state,
-    ...(setup ? { code: setup.code, message: setup.message } : missing ? missingClient(facts.client) : {}),
+    ...(setup ? { code: setup.code, message: setup.message } : missing ? missingClient(facts.client) : expired ? { code: "AUTH_REQUIRED" as const } : {}),
     ...(error ? { error } : {}),
     ...(facts.source ? { source: facts.source } : {}),
     ...(account ? { account } : {}),
@@ -225,7 +233,7 @@ function nextStepOf(status: Omit<Status, "nextStep">, setupNext: string | undefi
   const { source } = status
   switch (status.state) {
     case "host_untested":
-      return setupNext ?? "Use OpenCode >=2.2.3 <2.4.0, or set \"allowUntestedHost\": true in this plugin's options to run anyway."
+      return setupNext ?? `Use OpenCode ${SUPPORTED_HOST}, or set "allowUntestedHost": true in this plugin's options to run anyway.`
     case "conflict": {
       const { url, expected } = source as Extract<ServerSource, { type: "conflict" }>
       return `Your OpenCode config defines mcp.servers.${SERVER_NAME} with ${url}, but the plugin uses ${expected}. Point it at ${expected} or remove it, then restart OpenCode.`
@@ -343,7 +351,9 @@ const CLIENT_APP = { options: "configured app", connect: "your own app" } as con
 function rows(status: Status): { readonly label: string; readonly value: string }[] {
   const { source, unguardedAgents: agents, client } = status
   const details = [status.error, source && serverText(source), status.listing && "still listing its tools"].filter(Boolean).join("; ")
-  const head = `${STATE_TEXT[status.state]}${status.code === undefined ? "" : `. ${status.code}: ${status.message ?? ""}`}${details ? ` (${details})` : ""}`
+  // A code with a sentence is shown as one; AUTH_REQUIRED has its reason in the details, so it adds no empty label.
+  const label = status.code !== undefined && status.message !== undefined ? `. ${status.code}: ${status.message}` : ""
+  const head = `${STATE_TEXT[status.state]}${label}${details ? ` (${details})` : ""}`
   const out = [
     { label: "Connection", value: head },
     { label: "Account", value: status.account ?? `account name not reported by ${DISPLAY_NAME}'s MCP` },
@@ -465,7 +475,7 @@ export const StatusRpc = {
         properties: {
           version: { type: "string" },
           state: { enum: ["connected", "sign_in_required", "connecting", "disabled", "failed", "not_configured", "conflict", "host_untested"] },
-          code: { enum: ["OPTIONS_INVALID", "HOST_UNTESTED", "CLIENT_ID_MISSING", "CLIENT_ID_INVALID"] },
+          code: { enum: ["OPTIONS_INVALID", "HOST_UNTESTED", "CLIENT_ID_MISSING", "CLIENT_ID_INVALID", "AUTH_REQUIRED"] },
           message: { type: "string" },
           error: { type: "string" },
           source: {
