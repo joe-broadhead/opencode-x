@@ -183,7 +183,8 @@ Each member runs `/connect` and chooses X, then presses `o` or Enter. Status sho
 **The consequences, plainly:**
 
 - Every member's calls bill the team's X developer account. The plugin does not cap a model read and adds no cost line to
-  a model-path result (it has no per-request hook); the README's Cost lines section says what carries one. A script has
+  a model-path result (it has no per-request tool or context hook); the README's Cost lines section says what carries
+  one. A script has
   no budget unless the admin sets `scriptBudgetUsd` (per session) or `scriptDailyBudgetUsd` (per rolling 24 hours), so
   the app's spending limit in X's Developer Console is what caps many sessions.
 - The owned-reads discount (about $0.001 a post) applies only when the authenticated user owns the app. Other members'
@@ -714,7 +715,7 @@ Every error from the plugin reads `CODE: What happened. Next step: What to do.`
 | `UPSTREAM_ERROR` | `x_events_list` or `probe`: X refused one of its reads, such as a rate limit. The message holds the first line of X's text, at most 300 characters, with tokens and URL query strings removed. | Run `/x-status`, then call again with the same cursor. |
 | `UPSTREAM_UNREADABLE` | `x_events_list` or `probe`: one of its reads answered in a shape it does not read. | Call the read the message names directly, and run `/x-status`. |
 | `TOOL_UNAVAILABLE` | `x_events_list` or `probe`: OpenCode does not list a read it needs. While X cannot be called, it gives status's own code and next step instead. | Wait a few seconds, then run `/x-status` and follow its next step. |
-| `AUTH_REQUIRED` | Status and `probe`: the host reported a failed sign-in for X, with a reason. A first sign-in is `sign_in_required` without this code. The reason is redacted and cut to 160 characters. | Run `/connect` and choose X, then sign in again. |
+| `AUTH_REQUIRED` | Status and `probe`: the host reported a failed sign-in for X, with a reason. A bare `needs_auth` with no reason is `sign_in_required` without this code. The reason is redacted and cut to 160 characters. | Run `/connect` and choose X, then sign in again. |
 | `HOST_UNTESTED` | Setup: OpenCode is outside `>=2.4.1 <2.5.0`, and `allowUntestedHost` is not set. | Use OpenCode `>=2.4.1 <2.5.0`, or set `"allowUntestedHost": true`. |
 | `CLIENT_ID_MISSING` | Setup: no X app client ID is in the options or the `/connect` X app entry. | Run `/connect` and choose X app, and paste your X app's client ID. |
 | `CLIENT_ID_INVALID` | Setup: the saved client ID is empty or has spaces. | Save the client ID again from the app's User authentication settings. |
@@ -750,8 +751,8 @@ meanings:
 | --- | --- |
 | `version` | The plugin's version |
 | `state` | `connected`, `sign_in_required`, `connecting`, `disabled`, `failed`, `not_configured`, `conflict` or `host_untested`. The `Connection` row shows the same states as `connected`, `sign-in required`, `connecting`, `disabled`, `failed`, `not configured`, `conflict` and `host untested`. |
-| `code`, `message` | For a setup state, a missing or unusable client, or an expired sign-in: `OPTIONS_INVALID`, `HOST_UNTESTED`, `CLIENT_ID_MISSING`, `CLIENT_ID_INVALID` or `AUTH_REQUIRED`, and one sentence on a setup or client code. |
-| `error` | A failed connection's or an expired sign-in's reason, on one line of at most 160 characters, with any URL cut before its query and token shapes redacted. It is present only when the host reported a real failure, not for a first sign-in. |
+| `code`, `message` | For a setup state, a missing or unusable client, or a reported sign-in failure: `OPTIONS_INVALID`, `HOST_UNTESTED`, `CLIENT_ID_MISSING`, `CLIENT_ID_INVALID` or `AUTH_REQUIRED`, and one sentence on a setup or client code. |
+| `error` | A failed connection's or a failed sign-in's reason, on one line of at most 160 characters, with any URL cut before its query and token shapes redacted. It is present only when the host reported a reason. |
 | `source` | `type` (`plugin`, `adopted` or `conflict`), `url`, `signIn` (`oauth`, or `own` for your own entry with `"oauth": false`), and for a conflict the `expected` URL |
 | `account` | The name OpenCode keeps on the active sign-in, on one line of at most 80 characters; absent when it keeps none. Status makes no X call, so the plugin learns nothing else about the account. |
 | `client` | `id`, `mode` (`public_pkce` for a Native App, `confidential` when a secret is set) and `source` (`options` or `connect`). The `Client` row names `your own app` when it came from `/connect`, or `configured app` when it came from plugin options, as a team app does; status cannot tell managed config from a user's own options. The secret is never shown. |

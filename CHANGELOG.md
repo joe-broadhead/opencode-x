@@ -13,7 +13,8 @@ The repository's first release under `we-the-rebel-alliance`, rebuilt on the plu
   badge, link and repository URL names the new organization and `blob/master`.
 - **Fixed context.** The Code Mode namespace line is 330 characters and each skill description is within 300. The
   search window, the cost line, the "never ask whether to spend" rule, the public-post warning, the "only when asked"
-  list and the sensitive-trait rule live in the two skill bodies. Nothing is pinned and there are no per-request hooks.
+  list and the sensitive-trait rule live in the two skill bodies. Nothing is pinned and there are no per-request tool
+  or context hooks; the tools RPC's permission hook is the one hook.
 - **Three sources.** `x.mentions`, `x.bookmarks` and `x.timeline` remain. The app-only list snapshots
   `x.bookmarks.list` and `x.posts` are deleted, with their method fields, tests, docs and references.
 - **Billed cost, no hook.** `x_events_list` and `probe` carry `cost.units` on every page, and the tests hold each

@@ -108,7 +108,7 @@ allow, lacks the plugin's whole block after it, and its own rules would let a ne
 the plugin's id that OpenCode loads from another path is named, with a next step to rename or move it. OpenCode's text
 for a needed sign-in is never shown as OpenCode wrote it: a failure's or an expired sign-in's reason is cut to one line
 of 160 characters with no URL query and token shapes redacted. A sign-in failure the host reports with a reason is
-`AUTH_REQUIRED`; a bare `needs_auth` (a first sign-in) is not.
+`AUTH_REQUIRED`; a bare `needs_auth` with no reason is not.
 Status makes no X call, because every call costs money.
 
 - `/x-status` posts the text with `ctx.session.synthetic` (`resume: false`).
@@ -123,8 +123,8 @@ Status makes no X call, because every call costs money.
 methods are `describe` and one per entry in `METHODS`, which classifies every known tool by its exact name: the reads,
 the private writes, the public send and the privacy-sensitive tools. A tool that X adds later is not a method.
 `describe` reports each method's class, its availability from what OpenCode lists now, and, given a session, its
-resolved permission. The model path is unchanged; the RPC's shapers price the call and stop it at an opt-in budget when
-one is set (`shapeInput`), and append the script call's actual-cost line (`shapeResult`).
+resolved permission. The RPC does not touch the model path; its shapers price the script call and stop it at an opt-in
+budget when one is set (`shapeInput`), and append the script call's actual-cost line (`shapeResult`).
 
 A call is `{ sessionID, input }`. The module:
 
@@ -185,7 +185,7 @@ hours, so U7 is confirmed. | [`mcp/oauth.ts`](https://github.com/anomalyco/openc
 | **Pinned scope** | OpenCode requests `oauth.scope` if the entry sets one, else the challenge's `scope`. X's 401 carries no `scope`, so the plugin pins `tweet.read users.read follows.read like.read block.read list.read list.write space.read broadcast.read calls.read bookmark.read bookmark.write tweet.write media.write offline.access`, `offline.access` included, which is what makes X issue a refresh token. The authorization request carries exactly that string. | [`mcp/oauth.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/mcp/oauth.ts) |
 | MCP integrations | Integration ID `mcp_` + the first 16 hex digits of sha1(`<name>\0<url>`), so credentials are kept per name and URL. | [`mcp/index.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/mcp/index.ts) |
 | Code Mode | MCP tools are in Code Mode by default (`tools.x.<tool>`). A declined prompt is an error the program can catch. Each tool's signature, with its parameter names, reaches the model; a tool's full description reaches it only through `search()`, so the skills name every tool they use. | [`codemode/tool.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/codemode/tool.ts) |
-| **Tool hooks** | `ctx.tool.hook("execute.before")` runs for an MCP call on the model path and inside Code Mode, and changing `event.input` changes the arguments the server receives. `ctx.tool.hook("execute.after")` can append to the result the model reads. Both exist in the 2.4.1 host. The plugin registers neither: it has no per-request hook, its own results carry `cost` where it computes one, and its only hook is the tools RPC's `permission.hook("evaluate")`, a permission hook, not a tool hook. | `@opencode/plugin` 2.4.1 `dist/promise/tool.d.ts` (`ToolHooks`); `test/unit/plugin.test.ts` asserts the plugin's hooks are exactly `["evaluate"]` |
+| **Tool hooks** | `ctx.tool.hook("execute.before")` runs for an MCP call on the model path and inside Code Mode, and changing `event.input` changes the arguments the server receives. `ctx.tool.hook("execute.after")` can append to the result the model reads. Both exist in the 2.4.1 host. The plugin registers neither: it has no per-request tool or context hook, its own results carry `cost` where it computes one, and its only hook is the tools RPC's `permission.hook("evaluate")`, a permission hook, not a tool hook. | `@opencode/plugin` 2.4.1 `dist/promise/tool.d.ts` (`ToolHooks`); `test/unit/plugin.test.ts` asserts the plugin's hooks are exactly `["evaluate"]` |
 | **Tool descriptions** | `ctx.tool.transform`'s `editor.update` shallow-copies the tool, so `execute` and its permission assert survive: on 2.4.1 a description rewrite still asks, and a declined call is refused before X is contacted. The one change is that a decline then raises an empty `Tool.Error` instead of `Permission.DeclinedError`, which hides the decline from the model. The plugin therefore does not rewrite `create_posts`'s description: the x-write skill carries the public-and-price sentence, and in Code Mode a tool's full description reaches the model only through `search()`. | The isolated host test of `editor.update` on 2.4.1 |
 | Dialog close paths | A plugin's `ui.dialog.alert` resolves on its dialog's `onClose`. Opening another dialog (`replace`), `clear` (also a click outside), Escape and Ctrl+C all call `onClose` for each dialog they remove, so the `/x` dialog's `r` key and listeners stop on every path. | The pack test reads each stock release's terminal UI code for this |
 | Sign-in label | `ctx.integration.connection.active` returns the active credential with a `label`. For an MCP sign-in OpenCode may keep no name there; the Account row then says so. Status makes no X call, so there is no other source. | `@opencode/plugin` 2.4.1 types |

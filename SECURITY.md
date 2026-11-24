@@ -46,11 +46,11 @@ Vulnerabilities in X's service or in OpenCode itself are out of scope. Report th
   forbid automated replies without prior approval and automated or bulk likes. The plugin has no like tool; a reply
   is possible through `x_create_posts`, follows the `access` option, and those reply rules still apply.
 - **Every call is billed** to the X developer account that owns the app. The plugin does not cap reads, and the model
-  path's cost line covers the tools the README lists under Cost lines. A script pays the same rates, reports its cost
-  on every result, and has no budget unless the user sets `scriptBudgetUsd` per session or `scriptDailyBudgetUsd` per
-  rolling 24 hours: then an estimate above either cap is refused with `X_BUDGET_EXCEEDED` before the call. The daily
-  ledger persists across sessions and reloads either way, and an unpriced method is refused with `X_PRICE_UNKNOWN`.
-  X's own app spending limit caps the account.
+  does not cap model reads and adds no cost line to a model-path result. A script pays the same rates, reports its
+  cost on every result, and has no budget unless the user sets `scriptBudgetUsd` per session or
+  `scriptDailyBudgetUsd` per rolling 24 hours: then an estimate above either cap is refused with `X_BUDGET_EXCEEDED`
+  before the call. The daily ledger persists across sessions and reloads either way, and an unpriced method is refused
+  with `X_PRICE_UNKNOWN`. X's own app spending limit caps the account.
 
 ## Permissions
 
@@ -108,7 +108,7 @@ refused before dispatch. A method is not a grant:
   `allow`, so a write or the public `create_posts` runs too; with `ask-changes` or `read-only` it is refused unless
   the agent's or the session's rules allow it.
 - A saved "Always allow" is **not** consulted: it lives outside the agent's and session's rules, so an old click does
-  not authorize a new script. A grant is reviewable in config, or in a Jobs one-off's approval.
+  not authorize a new script. A grant is reviewable in config.
 - After the resolve, the call runs through OpenCode's own executor, which checks `<server>_<tool>` again against the
   agent's rules, the session's rules and saved approvals, as it does for the model. The plugin's permission hook still
   changes only an `ask` on one of its own script calls in flight, only to a deny, and leaves every other call alone.
@@ -123,7 +123,7 @@ refused before dispatch. A method is not a grant:
 - A session in another location is `SESSION_UNKNOWN`, and a call that names no location reaches the service's default
   location: send `x-opencode-directory` with each call.
 - OpenCode's `execute.before` and `execute.after` tool hooks, from any plugin, do not run for a script's call, so
-  another plugin's policy hook does not see it. The plugin's own cost line and any opt-in budget are reproduced by the
-  RPC's shapers. A script's calls are not recorded in the session.
+  another plugin's policy hook does not see it. The script's cost line and any opt-in budget are produced by the RPC's
+  shapers. A script's calls are not recorded in the session.
 - The RPC is reachable only by callers of the OpenCode server API, who already hold the server's full authority. The
   session is not a login: it scopes a script to what its agent may do.

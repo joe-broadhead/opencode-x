@@ -190,8 +190,8 @@ export function buildStatus(facts: StatusFacts): Status {
   const denied = access === "read-only" ? listed.filter((tool) => classify(tool) !== "read") : []
   // A failure's and an expired sign-in's reason is kept, redacted: a URL loses its query, so a code in it never shows.
   const error = (facts.server?.status === "failed" || facts.server?.status === "needs_auth") && facts.server.error ? shortReason(facts.server.error) : undefined
-  // X could not refresh the token: the account has to sign in again. A first sign-in is a bare needs_auth with no
-  // failure reason, and a missing scope has its own next step instead.
+  // X could not refresh the token: the account has to sign in again. A needs_auth with no failure reason is not a
+  // failed refresh, and a missing scope has its own next step instead.
   const expired = facts.server?.status === "needs_auth" && missingScope.length === 0 && facts.server.error !== undefined && facts.server.error.trim() !== ""
   const shadowed = shadowedOf(facts)
   const account = facts.account ? cut(oneLine(facts.account), ACCOUNT_LIMIT) : ""

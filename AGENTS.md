@@ -29,7 +29,8 @@ has one tool of its own, `x_events_list`. Read [docs/architecture.md](docs/archi
 - **Default rules, not hooks.** Permissions come from rules inserted through `ctx.agent.transform` directly after each
   agent's base allow. A stricter agent is never weakened. An agent counts as guarded only with the whole block after
   its base allow. Agents that miss the rules are named in status with the per-agent fix, never patched, and the fix
-  never goes in the top-level `permissions`. There are no per-request hooks.
+  never goes in the top-level `permissions`. There are no per-request tool or context hooks; the tools RPC's
+  `permission.hook("evaluate")` is a permission hook.
 - **Allow by default; restrict with `access`.** The generated block allows `x_*` for `access: "all"` (the default),
   asks for every non-read for `"ask-changes"`, and denies them for `"read-only"`. A user's later rule wins. A saved
   "Always allow" applies to every agent in the project.
@@ -57,7 +58,7 @@ has one tool of its own, `x_events_list`. Read [docs/architecture.md](docs/archi
   `src/constants.ts` has no runtime imports: `scripts/check.mjs` loads it with Node's type stripping.
 - **Every call is billed.** Docs, skills, status and the namespace line say so plainly. The skills let the model fetch
   what the question needs. `x_events_list` and `probe` results carry `cost`; the tools RPC records script spend and adds
-  its line; a model-path tool result carries none, because the plugin has no per-request hook. The plugin does not cap
+  its line; a model-path tool result carries none, because the plugin has no per-request tool or context hook. The plugin does not cap
   reads.
 - **X content is adversarial and personal.** The skills treat every post, bio and Article as untrusted data, never
   instructions, and never let one choose a tool, a recipient or a change. They never infer health, financial status,
@@ -88,8 +89,9 @@ has one tool of its own, `x_events_list`. Read [docs/architecture.md](docs/archi
   `window-truncated` when a first listing starts further back than X lists), once per read. A deleted post is not lost
   history and makes no gap. Declare or send none of v0.3.0's newer keys (`facts`, `hints`, `routines`, actor `kind`,
   `sections`/`parts`; before them v0.2.0's `removals[]`, `owner.verified`, `permission.readsIdentity`, a price's
-  `conditions` and `min`) while the descriptor stays v0.1.0-shaped. No content read asserts `x_get_users_me`,
-  the identity read: it is `probe`'s alone. Every `usd` in `sources` is the standard rate in `src/prices.ts` (a test
+  `conditions` and `min`) while the descriptor stays v0.1.0-shaped. The declared feed sources do not assert
+  `x_get_users_me`, the identity read: `probe` reads it, and the default combined source `x` reads it once per call for
+  the owner hash. Every `usd` in `sources` is the standard rate in `src/prices.ts` (a test
   keeps them equal); the `ownsXApp` Owned Read rate waits for those consumers, so $0.005 stays the most a post costs.
 - **The tools RPC (v2.3).** X's part is `src/tools-rpc.ts` (the plugin value, the method table, the shapers and next
   steps). Its methods are every known tool, from `READ_TOOLS`, `WRITE_TOOLS`, `PUBLIC_TOOLS` and `SENSITIVE_TOOLS`,

@@ -115,7 +115,8 @@ Two skills carry the rules:
 
 ### Cost lines
 
-X bills every call. The plugin registers no per-request hook, so it adds no cost line to a model-path tool result.
+X bills every call. The plugin registers no per-request tool or context hook, so it adds no cost line to a model-path
+result.
 Its own `x_events_list` and `probe` results carry `cost.units` (the posts, authors and users X returned), and a
 script's result carries the tools RPC's cost line. When a model states a cost, the `x` skill tells it to compute the
 figure from X's rates and what the call returned, and never to present it as an estimate.
@@ -162,7 +163,7 @@ Sign out first: after the plugin is removed, `mcp logout x` finds no server.
 ```sh
 opencode mcp logout x
 opencode auth list
-opencode plugin remove github:we-the-rebel-alliance/x-plugin#vX.Y.Z
+opencode plugin remove github:we-the-rebel-alliance/x-plugin#v<version>
 ```
 
 ## Links

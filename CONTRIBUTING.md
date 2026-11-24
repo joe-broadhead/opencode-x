@@ -90,7 +90,7 @@ OPENCODE_BIN_2_4_1=/path/to/opencode-2.4.1 node scripts/check.mjs pack
 Otherwise the stage installs `@opencode/cli` with the binary for your platform (macOS or Linux, arm64 or x64), a few
 hundred megabytes per version, once per run, into a temporary folder that it deletes afterwards.
 
-CI (`.github/workflows/ci.yml`) runs `npm ci --ignore-scripts` and `npm run check` on Linux and macOS.
+CI (`.github/workflows/ci.yml`) runs `npm ci --ignore-scripts` and `npm run check` in the one `ci` job on Node 24.
 
 **No check calls X or reads a real credential.** The fakes exist for that. Never run `opencode mcp auth x` from a
 check, and never save a token, a client secret or X content in this repository.
@@ -189,6 +189,10 @@ check (`SUPPORTED_HOST` in `src/constants.ts`). Both must change together, with 
 
 ### Releasing
 
+**This is the pre-4a release process, kept for reference. 4b replaces it with `plugin-kit release` and cuts
+`v0.0.0`; do not run it from this branch.** The repository's CHANGELOG is currently one `## 0.0.0 (unreleased)`
+section, and the old kit below expects the `## [Unreleased]` and `## [x.y.z]` layout plus the npm history.
+
 Each release is the GitHub tag `v<version>`, where `<version>` is the `version` in `package.json`, and users install from
 that tag. The release is one commit on top of a `master` head that CI passed, and the tag points at it. The release
 workflow makes both, in GitHub Actions: nobody builds, commits or tags a release on their own machine, and no personal
@@ -199,12 +203,12 @@ a `## [x.y.z] - YYYY-MM-DD` heading below it, newest first, and the npm history 
 `## Earlier releases on npm`.
 
 1. On `master`, set `version` in `package.json` to the new version, and change every install spec in the README,
-   `CONTRIBUTING.md` and `docs/` to `#v<version>` (`test/docs.test.ts` fails until they match). Then run
+   `CONTRIBUTING.md` and `docs/` to `#v<version>` (`test/unit/docs.test.ts` checks the README's install line). Then run
    `node scripts/changelog.mjs release`: it turns `## [Unreleased]` into `## [<version>] - <today>`, above the earlier
    releases, and refuses a CHANGELOG it cannot shape. Run `npm run check`.
-2. Push that commit to `master`, and wait for CI to pass on it. A pull request's CI runs the Linux runners only; the
-   push to `master` runs every runner, Apple-silicon macOS (`macos-26`) too, and the release stands on that run. An
-   Intel Mac (`macos-26-intel`) is not required.
+2. Push that commit to `master`, and wait for the one `ci` job to pass on it. The release workflow is the pre-4a kit
+   and still expects the old multi-runner CI; 4b replaces it with `plugin-kit release` before `v0.0.0`, so do not cut a
+   release from this branch.
 3. Start the release with that commit's full sha:
    `gh workflow run release.yml --ref master -f sha=<full sha>`, or from Actions → release →
    Run workflow, on `master`.
@@ -318,5 +322,7 @@ entry with `opencode plugin remove github:we-the-rebel-alliance/x-plugin#v<old v
 Or add the plugin to `opencode.json` instead, with the same spec:
 
 ```json
-{ "plugins": [{ "package": "github:we-the-rebel-alliance/x-plugin#v0.0.0" }] }
+{ "plugins": [{ "package": "github:we-the-rebel-alliance/x-plugin#v<version>" }] }
 ```
+
+The first release on plugin-contract is v0.0.0 (phase 4b).

@@ -9,7 +9,7 @@ const search = (posts: number, users = posts) => ({
 })
 
 // The plugin's own tool results carry these lines: x_events_list's summary and the tools RPC's script results. There
-// is no per-request hook, so a model-path MCP result never gets one.
+// is no per-request cost hook, so a model-path MCP result never gets one.
 describe("the cost line", () => {
   test("counts the posts and authors X actually returned", () => {
     const cost = costOf("x_search_posts_all", { output: search(10) })!

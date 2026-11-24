@@ -120,7 +120,7 @@ describe("buildStatus", () => {
     expect(formatStatus(status)).toContain(`- Next step: ${nextStep}`)
   })
 
-  test("a bare needs_auth is a first sign-in, not a failed refresh: no AUTH_REQUIRED and no reason", () => {
+  test("a bare needs_auth with no reason is not a failed refresh: no AUTH_REQUIRED and no reason", () => {
     const first = buildStatus({ ...base, server: { status: "needs_auth" } })
     expect(first).toMatchObject({ state: "sign_in_required", nextStep: SIGN_IN })
     expect(first).not.toHaveProperty("code")
