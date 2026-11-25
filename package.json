@@ -995,11 +995,11 @@
     "events": {}
   },
   "scripts": {
-    "build": "rm -rf dist && esbuild src/index.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/index.js --external:@opencode/*",
+    "bundle": "rm -rf dist && esbuild src/index.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/index.js --external:@opencode/*",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "bun test ./test/unit ./test/conformance",
     "test:pack": "bun test ./test/pack",
-    "check": "npm run build && npm run typecheck && bun test ./test/unit ./test/conformance ./test/pack && npx plugin-kit check && npx plugin-kit docs --check"
+    "check": "npm run bundle && npm run typecheck && bun test ./test/unit ./test/conformance ./test/pack && npx plugin-kit check && npx plugin-kit docs --check"
   },
   "devDependencies": {
     "@opencode/plugin": "2.4.1",

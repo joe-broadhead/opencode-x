@@ -17,7 +17,7 @@ type Packed = { filename: string; size: number; entryCount: number; files: { pat
 let packed: Packed | undefined
 function pack(): Packed {
   if (packed) return packed
-  run("npm", ["run", "build"], root)
+  run("npm", ["run", "bundle"], root)
   const output = run("npm", ["pack", "--json", "--ignore-scripts", "--pack-destination", work], root)
   packed = (JSON.parse(output) as Packed[])[0]!
   return packed

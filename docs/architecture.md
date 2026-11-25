@@ -15,7 +15,8 @@ Four layers, each with one job:
 
 `dist/index.js` is one esbuild bundle. `@opencode/*` and Node built-ins stay external; the contract's `register`,
 `accounts`, `events`, `cursor` and `manifest` modules are bundled in, so the installed package needs no runtime
-dependency. `dist/` is built by `npm run build` and is not committed.
+dependency. `dist/` is built by `npm run bundle` and committed, so a tag install ships its `./server` entry and runs no
+build.
 
 ## Reading X
 

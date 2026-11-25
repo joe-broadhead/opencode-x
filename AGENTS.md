@@ -28,11 +28,11 @@ for any other.
 | Command | Does |
 |---|---|
 | `npm ci` | installs dev tooling only; there are no runtime dependencies |
-| `npm run build` | builds `dist/index.js` with esbuild |
+| `npm run bundle` | builds the committed `dist/index.js` with esbuild |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | unit and conformance-recording tests |
-| `npm run test:pack` | builds, packs, installs and starts the tarball |
-| `npm run check` | build, typecheck, every test, then `npx plugin-kit check` |
+| `npm run test:pack` | bundles, packs, installs and starts the tarball |
+| `npm run check` | bundle, typecheck, every test, then `npx plugin-kit check` |
 | `npx plugin-kit check` | conformance (T0 and T1), docs drift, forbidden patterns, no bundled kit |
 | `npx plugin-kit docs` | regenerates the generated doc sections from the manifest |
 | `npx plugin-kit record --account <alias>` | redacts `fixtures/conformance.json` after a recording run |
@@ -40,6 +40,11 @@ for any other.
 
 The conformance recording is written by `RECORD=1 bun test ./test/conformance` from the synthetic X in
 `test/support/fake-x.ts`, then redacted with `plugin-kit record`.
+
+`dist/` is committed so a tag install has its `./server` entry without running a build. After a change under `src/`,
+run `npm run bundle` and commit `dist/index.js` in the same commit; `npm run check` and CI fail when it is stale. Never
+add a `prepack`, `prepare`, `preinstall`, `install` or `postinstall` script: npm runs one while preparing a git
+dependency, and that install fails in OpenCode 2.4.1.
 
 ## Layout
 
@@ -117,7 +122,7 @@ manifest, not the section. Hand-written text is plain English: short sentences, 
 
 ## Forbidden
 
-- Editing `dist/` by hand, or committing it outside a release.
+- Editing `dist/` by hand: rebuild it with `npm run bundle` and commit the result with the source change.
 - Adding runtime dependencies, peer dependencies or lifecycle scripts.
 - Naming any app in code, manifest or docs, except in an `x-<app>` key.
 - Copying contract code into this repository.

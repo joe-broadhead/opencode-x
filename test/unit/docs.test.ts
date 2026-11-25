@@ -39,6 +39,16 @@ describe("install paths", () => {
     }
   })
 
+  test("the build notes name npm run bundle and the committed bundle", () => {
+    for (const file of ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs/architecture.md"]) {
+      expect(`${file}: ${/npm run build\b/.test(read(file))}`).toBe(`${file}: false`)
+    }
+    for (const file of ["AGENTS.md", "CONTRIBUTING.md", "docs/architecture.md"]) {
+      expect(`${file}: ${/npm run bundle/.test(read(file))}`).toBe(`${file}: true`)
+    }
+    expect(read("docs/architecture.md")).toContain("committed")
+  })
+
 })
 
 describe("generated sections", () => {

@@ -1,6 +1,7 @@
 // The package and its manifest: the shape the standard names, and the methods inventory's classes.
 import { describe, expect, test } from "bun:test"
-import { readFileSync } from "node:fs"
+import { spawnSync } from "node:child_process"
+import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { manifest } from "../../src/manifest.js"
@@ -20,6 +21,9 @@ interface PackageFile {
 
 const root = fileURLToPath(new URL("../..", import.meta.url))
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as PackageFile
+const git = (...args: string[]) => spawnSync("git", args, { cwd: root, encoding: "utf8" })
+const npm = (...args: string[]) =>
+  spawnSync("npm", args, { cwd: root, encoding: "utf8", env: { ...process.env, npm_config_update_notifier: "false" } })
 
 describe("the package", () => {
   test("is the standard's name, version, exports and files, with devDependencies only", () => {
@@ -35,6 +39,29 @@ describe("the package", () => {
     expect(pkg.scripts.check).toContain("npx plugin-kit check")
   })
 
+})
+
+describe("the committed bundle", () => {
+  test("dist/index.js is committed at HEAD and is what ./server names", () => {
+    expect(pkg.exports["./server"]).toBe("./dist/index.js")
+    expect(existsSync(join(root, "dist/index.js"))).toBe(true)
+    expect(git("cat-file", "-e", "HEAD:dist/index.js").status).toBe(0)
+  })
+
+  test("a fresh bundle leaves the committed dist unchanged", () => {
+    const built = npm("run", "bundle")
+    expect(built.status).toBe(0)
+    const diff = git("diff", "--exit-code", "--", "dist")
+    expect(diff.stdout).toBe("")
+    expect(diff.status).toBe(0)
+    expect(git("status", "--porcelain", "--", "dist").stdout).toBe("")
+  }, 120_000)
+
+  test("no lifecycle script makes npm prepare a git install", () => {
+    for (const name of ["prepack", "prepare", "preinstall", "install", "postinstall"]) expect(pkg.scripts[name]).toBeUndefined()
+    expect(pkg.scripts["build"]).toBeUndefined()
+    expect(pkg.scripts["bundle"]).toContain("esbuild")
+  })
 })
 
 describe("the manifest", () => {
