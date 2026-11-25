@@ -1,10 +1,8 @@
 # Changelog
 
-One section per release. `0.0.0` is the first release in the new organization; the old history is not carried over.
-
 ## [0.0.0] (2026-11-25)
 
-The first release of `@we-the-rebel-alliance/x-plugin`, rebuilt on plugin-contract v0:
+The first release of `@we-the-rebel-alliance/x-plugin`, on plugin-contract v0:
 
 - **One manifest.** `capabilities` declares the plugin identity, the `mcp` accounts, the options, all 104 callables
   (three of the plugin's own and 101 pass-through X tools, classified by the inventory), the three events sources, no
@@ -19,8 +17,8 @@ The first release of `@we-the-rebel-alliance/x-plugin`, rebuilt on plugin-contra
   declared `mcp:<tool>` and owned by the vendor's server; the plugin registers no pass-through handler.
 - **Fixed context.** The namespace line is 294 characters and each skill description is within 300. Nothing is pinned
   and there are no per-request hooks.
-- **Kit, not copies.** The copied release, drift, capture and forbidden scripts are gone; `plugin-kit` runs
-  conformance, generated docs and the forbidden scan, and the plugin's own commands add typecheck, build, unit and
-  pack. CI is one `ci` job and releases are cut from a tag by `plugin-kit release`.
-- **Tests.** Unit tests for the handlers, the feed walk and the provider; a conformance recording for two synthetic
-  aliases; the kit's real-host T1 on OpenCode 2.4.1; and a pack test that builds, installs and starts the tarball.
+- **Kit.** `plugin-kit` runs conformance, generated docs and the forbidden scan; the plugin's own commands add
+  typecheck, build, unit and pack. CI is one `ci` job and releases are cut from a tag.
+- **Tests.** Unit tests for the handlers, the feed walk, the provider and the docs; a same-timestamp page-boundary test
+  that proves both posts are listed exactly once; a conformance recording for two synthetic aliases; the kit's
+  real-host T1 on OpenCode 2.4.1; and a pack test that builds, installs and starts the tarball.
