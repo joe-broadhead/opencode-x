@@ -79,7 +79,7 @@ The full schema and its defaults are in [Configuration](docs/configuration.md).
 |---|---|---|---|
 | `status` | read | none | — |
 | `probe` | read | optional | `get_users_me` |
-| `events_list` | read | optional | — |
+| `events_list` | read | optional | `get_users_me`, `get_users_by_username`, `get_users_mentions`, `get_users_timeline`, `get_users_bookmarks` |
 | `mcp:get_broadcast` | read | optional | `get_broadcast` |
 | `mcp:get_broadcast_chat` | read | optional | `get_broadcast_chat` |
 | `mcp:get_chat_conversation` | read | optional | `get_chat_conversation` |

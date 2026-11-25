@@ -137,7 +137,14 @@
       },
       "events_list": {
         "class": "read",
-        "accounts": "optional"
+        "accounts": "optional",
+        "operations": [
+          "get_users_me",
+          "get_users_by_username",
+          "get_users_mentions",
+          "get_users_timeline",
+          "get_users_bookmarks"
+        ]
       },
       "mcp:get_broadcast": {
         "class": "read",

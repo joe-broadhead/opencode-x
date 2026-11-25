@@ -106,7 +106,13 @@ describe("the manifest", () => {
       expect(source.urlHosts).toEqual(["x.com"])
       expect(source.operations).toEqual(["get_users_me", { mentions: "get_users_mentions", bookmarks: "get_users_bookmarks", timeline: "get_users_timeline" }[(source.input as { source: "mentions" | "bookmarks" | "timeline" }).source]])
     }
-    expect(manifest.methods["events_list"]?.operations).toBeUndefined()
+    expect(manifest.methods["events_list"]?.operations).toEqual([
+      "get_users_me",
+      "get_users_by_username",
+      "get_users_mentions",
+      "get_users_timeline",
+      "get_users_bookmarks",
+    ])
     expect(manifest.actions).toEqual([])
     expect(manifest.events).toEqual({})
   })
