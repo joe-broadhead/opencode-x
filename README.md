@@ -15,8 +15,9 @@ Install a release:
 opencode plugin add github:we-the-rebel-alliance/x-plugin#v0.0.0
 ```
 
-The package has no runtime dependencies: OpenCode and the contract are bundled at build time. An install outside the
-tested range (`>=2.4.1 <2.5.0`) is refused with `HOST_UNTESTED` unless `allowUntestedHost` is set.
+The package has no runtime dependencies: the contract is bundled at build time, and OpenCode provides the host
+modules. An install outside the tested range (`>=2.4.1 <2.5.0`) is refused with `HOST_UNTESTED` unless
+`allowUntestedHost` is set.
 
 ## Sign in
 

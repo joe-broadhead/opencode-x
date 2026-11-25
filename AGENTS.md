@@ -95,7 +95,8 @@ docs/
   access rules and the bus writer. Use `registration.bus` or `call.bus`; never call `ctx.rpc.register` or `ctx.tool.add`.
   This manifest declares no events, so there is nothing to emit.
 - **Status is a builder.** `statusAnswer` from `accounts` takes the manifest, the installed and host versions, every
-  alias's state, the setup problems and `await call.unguardedAgents()`. No handler keeps state after `register`.
+  alias's state, the setup problems and `await call.unguardedAgents()`. The register's access state is not read by a
+  handler; only the per-alias observations in `src/accounts.ts` are, and they are created before `register`.
 - **Reuse the output schemas.** `STATUS_SCHEMA` from `accounts`; `PAGE_SCHEMA`, `PROBE_SCHEMA` and
   `EVENTS_LIST_INPUT_SCHEMA` from `events`. Copying those shapes into the plugin is drift.
 - **Use the four events calls.** `parseEventsListInput`, `startTime`, `fitPage` and `eventsListResult` (and
