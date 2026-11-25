@@ -59,7 +59,7 @@ describe("generated sections", () => {
   })
 
   test("the changelog has the release section", () => {
-    expect(read("CHANGELOG.md")).toContain("## [0.0.0]")
+    expect(read("CHANGELOG.md")).toContain("## 0.0.0 (2026-11-25)")
   })
 })
 

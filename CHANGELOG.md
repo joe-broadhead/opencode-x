@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.0.0] (2026-11-25)
+## 0.0.0 (2026-11-25)
 
 The first release of `@we-the-rebel-alliance/x-plugin`, on plugin-contract v0:
 
