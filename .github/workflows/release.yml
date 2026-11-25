@@ -1,51 +1,64 @@
-name: release
+name: Release
 
-# The owner cuts a tag with `plugin-kit release`, then pushes it. This workflow builds and checks that tag again, and
-# publishes the GitHub Release with the packed tarball, the built dist/, the conformance report and SHA256SUMS. It never
-# moves the tag, never publishes to npm and never creates a release for a branch.
+# A tag v<package.json version> on a master commit whose CI passed creates the GitHub Release. Releases are not
+# published to npm: a consumer pins the tag, github:we-the-rebel-alliance/x-plugin#v<version>, and dist/ is built by
+# this workflow. Only the owner decides a release; an agent never pushes a tag on its own.
 
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "v*"
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  publish:
-    name: publish the release
+  release:
+    name: release
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 20
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: package-lock.json
+          package-manager-cache: false
+      # The tests run on Bun (bun:test); Node alone cannot execute them.
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.5
           no-cache: true
+      - name: Fetch the contract over HTTPS
+        run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
       - run: npm ci --ignore-scripts
-      - name: The tag names the package's version
-        run: test "$GITHUB_REF_NAME" = "v$(node -p 'require("./package.json").version')"
       - run: npm run check
-      - name: Build, pack, and write SHA256SUMS and the conformance report
+      - name: The tag names this package's version
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          npm run build
-          mkdir -p "$RUNNER_TEMP/release"
-          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/release"
-          tar -czf "$RUNNER_TEMP/release/dist.tar.gz" dist
-          npx plugin-kit conformance --json > "$RUNNER_TEMP/release/conformance-report.json"
-          cd "$RUNNER_TEMP/release"
-          sha256sum ./* > SHA256SUMS
-          cat SHA256SUMS
-      - name: Publish the GitHub Release
+          version="$(node -p "require('./package.json').version")"
+          test "v${version}" = "$TAG"
+      - name: Pack the release files
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          npx plugin-kit check --json > release/conformance.json
+          npm pack --pack-destination release
+          sha256sum release/*.tgz release/conformance.json > release/SHA256SUMS
+      - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP"/release/* --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" release/*.tgz release/conformance.json release/SHA256SUMS --repo "$REPO" --verify-tag --title "$TAG" --generate-notes

@@ -1,8 +1,9 @@
 # X
 
-X for OpenCode. The plugin passes X's own MCP tools through, one vendor MCP server per account alias, and adds three
-read methods of its own: `events_list` lists mentions, bookmarks or the home timeline as contract events with a cursor,
-`probe` reads which account is signed in, and `status` reports the plugin and every alias.
+X for OpenCode, on [plugin-contract](https://github.com/we-the-rebel-alliance/plugin-contract) v0. The plugin passes
+X's own MCP tools through, one vendor MCP server per account alias, and adds three read methods of its own:
+`events_list` lists mentions, bookmarks or the home timeline as contract events with a cursor, `probe` reads which
+account is signed in, and `status` reports the plugin and every alias.
 
 Each alias signs in to X's hosted MCP server with the person's own X developer app, so one alias's token never reads
 another alias's posts. Every X call is billed to that app's developer account; the plugin says what each page cost.
@@ -57,6 +58,17 @@ Reads run at every level. X's writes are its own MCP tools, classified by what t
 write, a send, a delete, an export or an admin tool, and `read-only` turns them off. Six private reads (private chat
 conversations and public-key reads) declare `effect: "ask"`, so they ask under `ask-changes` and are off under
 `read-only`. The rules are generated per alias, so a rule for `work` never reaches `personal`'s tools.
+
+## Options
+
+| Option | Default | Meaning |
+|---|---|---|
+| `access` | `all` | How much the plugin's methods may do: `all`, `ask-changes` or `read-only`. |
+| `accounts` | one `default` account | One profile per alias, each naming its X app; see [Configuration](docs/configuration.md). |
+| `maxCalls` | `4` | The most X reads one `events_list` call makes, the account lookup included. |
+| `allowUntestedHost` | `false` | Start outside the tested OpenCode range instead of refusing with `HOST_UNTESTED`. |
+
+The full schema and its defaults are in [Configuration](docs/configuration.md).
 
 ## Capabilities
 
@@ -220,6 +232,23 @@ Every failure reads `CODE: What happened. Next step: What to do.` The contract's
 A refused credential is `NEEDS_SIGN_IN` for that alias, not an older transport's code. An unknown source,
 `SOURCE_UNKNOWN`; a cursor from another feed or account, `CURSOR_INVALID`; an X rate limit, `RATE_LIMITED`.
 
+## Troubleshooting
+
+- **One alias says `needs_sign_in`.** Only that alias's OAuth is refused; the others stay signed in. Sign in to its
+  server again: `opencode mcp auth x` for `default`, `opencode mcp auth x-work` for `work`. `probe` reports the handle
+  the alias actually holds.
+- **`OPTIONS_INVALID` names a missing `clientId`.** X has no dynamic client registration: every alias's profile names
+  the OAuth 2.0 client id of the X developer app that alias signs in with.
+- **`CURSOR_INVALID`.** The cursor came from another feed, account or plugin. Start that feed again without a cursor,
+  with `since`; one state per feed and alias.
+- **`RATE_LIMITED`.** X asked the plugin to slow down. Wait, then retry; lower an automation's cadence.
+- **`HOST_UNTESTED`.** OpenCode is outside `>=2.4.1 <2.5.0`. Use a tested release, or set `allowUntestedHost` if you
+  accept that the tested behaviour does not apply.
+- **`UNAVAILABLE` naming `x` or `x-work`.** That MCP server is not connected. Check `status` for the alias, sign it in,
+  and make sure the server is enabled.
+- **A page costs more than expected.** Every page and probe carries `cost.units`, billed at X's published per-post,
+  per-author and per-user rates; lower `maxCalls` or the page's `limit`.
+
 ## Docs
 
 - [Capabilities](docs/capabilities.md)
@@ -229,3 +258,4 @@ A refused credential is `NEEDS_SIGN_IN` for that alias, not an older transport's
 - [Architecture](docs/architecture.md)
 - [Security](docs/security.md)
 - [Contributing](CONTRIBUTING.md)
+- [plugin-contract](https://github.com/we-the-rebel-alliance/plugin-contract)

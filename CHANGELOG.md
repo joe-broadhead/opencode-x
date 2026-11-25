@@ -2,7 +2,7 @@
 
 One section per release. `0.0.0` is the first release in the new organization; the old history is not carried over.
 
-## [0.0.0]
+## [0.0.0] (2026-11-25)
 
 The first release of `@we-the-rebel-alliance/x-plugin`, rebuilt on plugin-contract v0:
 

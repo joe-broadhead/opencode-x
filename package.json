@@ -2,17 +2,18 @@
   "name": "@we-the-rebel-alliance/x-plugin",
   "version": "0.0.0",
   "description": "X for OpenCode: X's own MCP tools passed through per account, and one events read each for mentions, bookmarks and the home timeline.",
-  "keywords": [
-    "opencode",
-    "opencode-plugin",
-    "x",
-    "plugin-contract"
-  ],
   "license": "MIT",
   "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/we-the-rebel-alliance/x-plugin.git"
+  },
+  "homepage": "https://github.com/we-the-rebel-alliance/x-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/we-the-rebel-alliance/x-plugin/issues"
+  },
+  "engines": {
+    "node": ">=24"
   },
   "exports": {
     "./server": "./dist/index.js"
@@ -23,6 +24,12 @@
     "assets",
     "README.md",
     "LICENSE"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "x",
+    "plugin-contract"
   ],
   "capabilities": {
     "version": 1,
@@ -985,7 +992,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "bun test ./test/unit ./test/conformance",
     "test:pack": "bun test ./test/pack",
-    "check": "npm run build && npm run typecheck && bun test ./test/unit ./test/conformance ./test/pack && npx plugin-kit check"
+    "check": "npm run build && npm run typecheck && bun test ./test/unit ./test/conformance ./test/pack && npx plugin-kit check && npx plugin-kit docs --check"
   },
   "devDependencies": {
     "@opencode/plugin": "2.4.1",
