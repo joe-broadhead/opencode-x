@@ -1,6 +1,7 @@
 // The feed walk: a window the call cap cannot finish is narrowed instead of skipped, and a first listing starts 24
 // hours back when no `since` is named. Every page here is the synthetic X's.
 import { describe, expect, test } from "bun:test"
+import { resultProblems } from "@we-the-rebel-alliance/plugin-contract/events"
 import { savePost } from "../support/fake-x.js"
 import { harness } from "../support/handlers.js"
 
@@ -121,6 +122,27 @@ describe("the feed walk", () => {
     const second = (await run.handlers.events_list!.run({ source: "bookmarks", cursor: first.cursor }, run.call("work"))) as { cursor: string; events: unknown[]; more: boolean }
     expect(second.events).toEqual([])
     expect(second.more).toBe(false)
+  })
+
+  test("a bookmark page X returns newest first is listed oldest first, before and after a cursor", async () => {
+    const run = harness({ accounts: { pair: {} } })
+    const first = (await run.handlers.events_list!.run({ source: "bookmarks", since: SINCE }, run.call("pair"))) as {
+      events: { external_id: string }[]
+      cursor: string
+      more: boolean
+    }
+    expect(first.events.map((event) => event.external_id)).toEqual(["bookmark:9801", "bookmark:9802"])
+    expect(first.more).toBe(false)
+    expect(resultProblems(first, 100, 900_000)).toEqual([])
+    savePost("pair", "bookmarks", { id: "9804", created: "2026-11-22T08:40:00.000Z", text: "A third bookmark.", conversation: "7804" })
+    savePost("pair", "bookmarks", { id: "9803", created: "2026-11-22T08:30:00.000Z", text: "A fourth bookmark.", conversation: "7803" })
+    const second = (await run.handlers.events_list!.run({ source: "bookmarks", cursor: first.cursor }, run.call("pair"))) as {
+      events: { external_id: string }[]
+      more: boolean
+    }
+    expect(second.events.map((event) => event.external_id)).toEqual(["bookmark:9803", "bookmark:9804"])
+    expect(second.more).toBe(false)
+    expect(resultProblems(second, 100, 900_000)).toEqual([])
   })
 
   test("a bookmark saved after the cursor is still filtered by the first since", async () => {

@@ -15,10 +15,23 @@ The first release of `@we-the-rebel-alliance/x-plugin`, on plugin-contract v0:
   Cursors are bound to the plugin, feed and account.
 - **Doors.** `register` wires every method as an agent tool, a Code Mode entry and an RPC method. X's tools are
   declared `mcp:<tool>` and owned by the vendor's server; the plugin registers no pass-through handler.
+- **Skills.** `skills/x/SKILL.md` and `skills/x-write/SKILL.md` are read, validated and registered through `ctx.skill`,
+  so the host lists both. A broken file is a status problem, never a registered skill.
 - **Fixed context.** The namespace line is 294 characters and each skill description is within 300. Nothing is pinned
   and there are no per-request hooks.
 - **Kit.** `plugin-kit` runs conformance, generated docs and the forbidden scan; the plugin's own commands add
-  typecheck, build, unit and pack. CI is one `ci` job and releases are cut from a tag.
+  typecheck, bundle, unit, host and pack. CI is one `ci` job and releases are cut from a tag.
 - **Tests.** Unit tests for the handlers, the feed walk, the provider and the docs; a same-timestamp page-boundary test
-  that proves both posts are listed exactly once; a conformance recording for two synthetic aliases; the kit's
-  real-host T1 on OpenCode 2.4.1; and a pack test that builds, installs and starts the tarball.
+  that proves both posts are listed exactly once; a two-bookmark page proving the oldest-first order; a host test that
+  reads the skill list from the real 2.4.1 host; a conformance recording for two synthetic aliases; the kit's real-host
+  T1 on OpenCode 2.4.1; and a pack test that builds, installs and starts the tarball.
+
+### Removed since v0.0.8
+
+- **`/x-status` and the `/x` TUI dialog.** Status is now the `status` tool, the Code Mode entry `tools.x.status` and the
+  RPC method `status` on the contract RPC id `x`. The 4b rebuild ships no TUI entry (`./tui` is gone) and no slash
+  command: the old front-ends formatted the old status shape, which the contract's `statusAnswer` replaced, and the
+  standard makes a TUI optional.
+- **The model-path cost line and the script spend budgets.** The standard forbids per-request hooks; every page and
+  probe carries `cost.units`, and the skills state X's published rates. `scriptBudgetUsd`, `scriptDailyBudgetUsd` and
+  `ownsXApp` are gone with the tools-RPC middleware that enforced and priced them.

@@ -28,6 +28,12 @@ const FIELDS = {
 const POST_ID = /^\d{1,19}$/
 const LABELS: Readonly<Record<Feed, string>> = { mentions: "mention", bookmarks: "bookmark", timeline: "timeline" }
 const byId = (left: { readonly id: string }, right: { readonly id: string }) => (BigInt(left.id) < BigInt(right.id) ? -1 : BigInt(left.id) > BigInt(right.id) ? 1 : 0)
+/** Oldest first, then by external id: a total order for events that share a timestamp. */
+const byOldest = (left: SourceEvent, right: SourceEvent): number => {
+  const time = Date.parse(left.occurred_at) - Date.parse(right.occurred_at)
+  if (time !== 0) return time
+  return left.external_id < right.external_id ? -1 : left.external_id > right.external_id ? 1 : 0
+}
 export const iso = (time: number) => new Date(time).toISOString()
 
 /** Where a timeline or mentions feed stands: after post `s`, from time `t` before any, below `u` while a window is narrowed, and `w` the newest post it listed. */
@@ -245,7 +251,7 @@ async function bookmarks(walk: FeedWalk): Promise<FeedRead> {
     const page = await provider.page(account, "bookmarks", pageInput(me, size, FIELDS), call)
     reads -= 1
     cost = add(cost, { posts: page.posts_read, authors: page.authors_read, users: 0 })
-    const events = page.posts.filter((post) => post.created >= start).map((post) => postEvent(account, "bookmarks", post))
+    const events = page.posts.filter((post) => post.created >= start).map((post) => postEvent(account, "bookmarks", post)).sort(byOldest)
     const k = page.posts.slice(0, KNOWN_BOOKMARKS).map((post) => post.id)
     return answer({ t: state.t, w: now, ...(k.length === 0 ? {} : { k }) }, events.slice(0, fitPage(events, limit, maxBytes)), false)
   }
@@ -254,10 +260,11 @@ async function bookmarks(walk: FeedWalk): Promise<FeedRead> {
   let token = state.r
   let walked = 0
   const listed: SourceEvent[] = []
+  const listedPage = () => [...listed].sort(byOldest)
   const followed = new Set<string>(token === undefined ? [] : [token])
   while (reads > 0) {
     const room = limit - listed.length
-    if (room <= 0) return answer({ ...state, r: token, n: newest, w: state.w }, listed, true)
+    if (room <= 0) return answer({ ...state, r: token, n: newest, w: state.w }, listedPage(), true)
     const size = Math.min(BOOKMARK_PAGE, room)
     const page = await provider.page(account, "bookmarks", pageInput(me, size, { ...FIELDS, ...(token === undefined ? {} : { pagination_token: token }) }), call)
     reads -= 1
@@ -267,20 +274,20 @@ async function bookmarks(walk: FeedWalk): Promise<FeedRead> {
     // A post saved after the cursor can have been created before the window start. The cursor keeps `t`, and every
     // page applies it, so the next page cannot list an event outside the first listing's window.
     const fresh = (stop === -1 ? page.posts : page.posts.slice(0, stop)).filter((post) => post.created >= start)
-    const events = fresh.map((post) => postEvent(account, "bookmarks", post))
+    const events = fresh.map((post) => postEvent(account, "bookmarks", post)).sort(byOldest)
     const fit = fitPage(events, limit - listed.length, maxBytes)
-    if (fit < events.length) return answer({ ...state, r: token, n: newest, w: state.w }, listed, true)
+    if (fit < events.length) return answer({ ...state, r: token, n: newest, w: state.w }, listedPage(), true)
     listed.push(...events)
     if (stop !== -1 || page.next === undefined || followed.has(page.next)) {
       const k = [...(newest ?? []), ...known].filter((id, index, all) => all.indexOf(id) === index).slice(0, KNOWN_BOOKMARKS)
       const lost = stop === -1 && walked + page.posts.length >= BOOKMARK_REACH - BOOKMARK_MARGIN
-      return answer({ k, t: state.t, w: now }, listed, false, lost ? { reason: "expired", since: iso(state.w ?? state.t ?? now) } : undefined)
+      return answer({ k, t: state.t, w: now }, listedPage(), false, lost ? { reason: "expired", since: iso(state.w ?? state.t ?? now) } : undefined)
     }
     token = page.next
     followed.add(token)
     walked += page.posts.length
   }
-  return answer({ ...state, r: token, n: newest, w: state.w }, listed, true)
+  return answer({ ...state, r: token, n: newest, w: state.w }, listedPage(), true)
 }
 
 // ── Cursor state ────────────────────────────────────────────────────────

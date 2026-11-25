@@ -31,6 +31,7 @@ for any other.
 | `npm run bundle` | builds the committed `dist/index.js` with esbuild |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | unit and conformance-recording tests |
+| `npm run test:host` | the built bundle in the real 2.4.1 host |
 | `npm run test:pack` | bundles, packs, installs and starts the tarball |
 | `npm run check` | bundle, typecheck, every test, then `npx plugin-kit check` |
 | `npx plugin-kit check` | conformance (T0 and T1), docs drift, forbidden patterns, no bundled kit |
@@ -52,6 +53,7 @@ dependency, and that install fails in OpenCode 2.4.1.
 src/index.ts            Plugin.define → assertHost, accounts, handlers, one register call
 src/manifest.ts         the installed package.json's capabilities and version
 src/accounts.ts         the profile values, the MCP server config per alias, observations and signals
+src/skills.ts           reads skills/*/SKILL.md, validates the frontmatter, registers them through ctx.skill
 src/handlers/
   index.ts              the handler table: status, probe, events_list
   status.ts             statusAnswer over the manifest, host, aliases and problems
@@ -63,8 +65,9 @@ src/provider/
   index.ts              X's endpoint, scopes and tool names; per-alias executors; failures
   parse.ts              X's user and post answers, and their bill
   errors.ts             ProviderError in the contract's form, the server states
-test/unit/              package, manifest, handlers, feeds, provider, accounts, docs
+test/unit/              package, handlers, feed, provider, accounts, docs, skills
 test/conformance/       the recording of fixtures/conformance.json
+test/host/              the built bundle in the real 2.4.1 host
 test/pack/              build, pack, install and start the tarball
 test/support/           the synthetic X and the handler harness
 fixtures/conformance.json  what the plugin answers, replayed by the kit

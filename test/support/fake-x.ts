@@ -35,7 +35,7 @@ const post = (id: string, created: string, text: string, conversation: string, b
   author: by,
 })
 
-/** Two invented accounts; `work` has two mentions, one bookmark and two timeline posts, `personal` one of each. */
+/** Invented accounts; `work` has two mentions, one bookmark and two timeline posts, `personal` one of each, and `pair` two bookmarks. */
 export const ACCOUNTS: Readonly<Record<string, Account>> = {
   work: {
     user: { id: "1001", username: "AnaWork" },
@@ -69,6 +69,18 @@ export const ACCOUNTS: Readonly<Record<string, Account>> = {
         post("9601", "2026-11-21T09:00:00.000Z", "The earlier post of a shared second.", "7601", WORK),
         post("9602", "2026-11-21T09:00:00.000Z", "The later post of the same shared second.", "7602", KAI),
       ],
+    },
+  },
+  // X lists bookmarks newest first; this account's two bookmarks prove the plugin lists them oldest first.
+  pair: {
+    user: { id: "1004", username: "AnaPair" },
+    feeds: {
+      mentions: [],
+      bookmarks: [
+        post("9802", "2026-11-22T08:20:00.000Z", "The newer of two bookmarks.", "7802", KAI),
+        post("9801", "2026-11-22T08:10:00.000Z", "The older of two bookmarks.", "7801", KAI),
+      ],
+      timeline: [],
     },
   },
 }

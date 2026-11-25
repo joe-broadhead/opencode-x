@@ -12456,6 +12456,11 @@ var FIELDS = {
 var POST_ID = /^\d{1,19}$/;
 var LABELS = { mentions: "mention", bookmarks: "bookmark", timeline: "timeline" };
 var byId = (left, right) => BigInt(left.id) < BigInt(right.id) ? -1 : BigInt(left.id) > BigInt(right.id) ? 1 : 0;
+var byOldest = (left, right) => {
+  const time4 = Date.parse(left.occurred_at) - Date.parse(right.occurred_at);
+  if (time4 !== 0) return time4;
+  return left.external_id < right.external_id ? -1 : left.external_id > right.external_id ? 1 : 0;
+};
 var iso = (time4) => new Date(time4).toISOString();
 var add = (left, right) => ({
   posts: left.posts + right.posts,
@@ -12591,7 +12596,7 @@ async function bookmarks(walk) {
     const page = await provider.page(account, "bookmarks", pageInput(me, size, FIELDS), call);
     reads -= 1;
     cost2 = add(cost2, { posts: page.posts_read, authors: page.authors_read, users: 0 });
-    const events2 = page.posts.filter((post) => post.created >= start).map((post) => postEvent(account, "bookmarks", post));
+    const events2 = page.posts.filter((post) => post.created >= start).map((post) => postEvent(account, "bookmarks", post)).sort(byOldest);
     const k = page.posts.slice(0, KNOWN_BOOKMARKS).map((post) => post.id);
     return answer({ t: state.t, w: now, ...k.length === 0 ? {} : { k } }, events2.slice(0, fitPage(events2, limit, maxBytes)), false);
   }
@@ -12599,10 +12604,11 @@ async function bookmarks(walk) {
   let token = state.r;
   let walked = 0;
   const listed = [];
+  const listedPage = () => [...listed].sort(byOldest);
   const followed = new Set(token === void 0 ? [] : [token]);
   while (reads > 0) {
     const room = limit - listed.length;
-    if (room <= 0) return answer({ ...state, r: token, n: newest, w: state.w }, listed, true);
+    if (room <= 0) return answer({ ...state, r: token, n: newest, w: state.w }, listedPage(), true);
     const size = Math.min(BOOKMARK_PAGE, room);
     const page = await provider.page(account, "bookmarks", pageInput(me, size, { ...FIELDS, ...token === void 0 ? {} : { pagination_token: token } }), call);
     reads -= 1;
@@ -12610,20 +12616,20 @@ async function bookmarks(walk) {
     newest = [...newest ?? [], ...page.posts.map((post) => post.id)].slice(0, KNOWN_BOOKMARKS);
     const stop = page.posts.findIndex((post) => known.includes(post.id));
     const fresh = (stop === -1 ? page.posts : page.posts.slice(0, stop)).filter((post) => post.created >= start);
-    const events2 = fresh.map((post) => postEvent(account, "bookmarks", post));
+    const events2 = fresh.map((post) => postEvent(account, "bookmarks", post)).sort(byOldest);
     const fit = fitPage(events2, limit - listed.length, maxBytes);
-    if (fit < events2.length) return answer({ ...state, r: token, n: newest, w: state.w }, listed, true);
+    if (fit < events2.length) return answer({ ...state, r: token, n: newest, w: state.w }, listedPage(), true);
     listed.push(...events2);
     if (stop !== -1 || page.next === void 0 || followed.has(page.next)) {
       const k = [...newest ?? [], ...known].filter((id2, index, all) => all.indexOf(id2) === index).slice(0, KNOWN_BOOKMARKS);
       const lost = stop === -1 && walked + page.posts.length >= BOOKMARK_REACH - BOOKMARK_MARGIN;
-      return answer({ k, t: state.t, w: now }, listed, false, lost ? { reason: "expired", since: iso(state.w ?? state.t ?? now) } : void 0);
+      return answer({ k, t: state.t, w: now }, listedPage(), false, lost ? { reason: "expired", since: iso(state.w ?? state.t ?? now) } : void 0);
     }
     token = page.next;
     followed.add(token);
     walked += page.posts.length;
   }
-  return answer({ ...state, r: token, n: newest, w: state.w }, listed, true);
+  return answer({ ...state, r: token, n: newest, w: state.w }, listedPage(), true);
 }
 var optional2 = (value, check2) => value === void 0 ? void 0 : check2(value) ?? false;
 var id = (value) => typeof value === "string" && POST_ID.test(value) ? value : void 0;
@@ -12899,6 +12905,68 @@ var manifest = pkg.capabilities;
 var VERSION = pkg.version;
 var PACKAGE = pkg.name;
 
+// src/skills.ts
+import { readFile, readdir } from "node:fs/promises";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { Skill } from "@opencode/plugin";
+var SKILLS_DIR = fileURLToPath(new URL("../skills/", import.meta.url));
+var SkillError = class extends Error {
+};
+var notLoaded = (name, problem) => `The "${name}" skill was not loaded: skills/${name}/SKILL.md ${problem}. Reinstall the plugin.`;
+function parseSkill(name, path, text4) {
+  const fail = (problem) => {
+    throw new SkillError(notLoaded(name, problem));
+  };
+  const match = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(text4.replace(/\r\n/g, "\n"));
+  if (!match) return fail("has no frontmatter");
+  const fields = new Map(
+    match[1].split("\n").flatMap((line) => {
+      const at = line.indexOf(":");
+      if (at <= 0) return [];
+      return [[line.slice(0, at).trim(), line.slice(at + 1).trim().replace(/^(["'])(.*)\1$/, "$2")]];
+    })
+  );
+  if (fields.get("name") !== name) return fail(`must be named "${name}" in its frontmatter`);
+  const description = fields.get("description") ?? "";
+  if (description === "") return fail("has no description");
+  const content = match[2].trim();
+  if (content === "") return fail("has no content");
+  return {
+    id: Skill.ID.make(name),
+    name: Skill.Name.make(name),
+    description,
+    path: Skill.Info.fields.path.make(path),
+    content
+  };
+}
+async function loadSkills(directory = SKILLS_DIR) {
+  const skills = [];
+  const problems = [];
+  let entries;
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch {
+    return { skills, problems: [`The skills directory could not be read: ${directory}. Reinstall the plugin.`] };
+  }
+  for (const entry of entries.filter((item2) => item2.isDirectory()).sort((left, right) => left.name.localeCompare(right.name))) {
+    const name = entry.name;
+    const path = join(directory, name, "SKILL.md");
+    try {
+      skills.push(parseSkill(name, path, await readFile(path, "utf8")));
+    } catch (error2) {
+      const code = error2.code;
+      problems.push(error2 instanceof SkillError ? error2.message : notLoaded(name, code === "ENOENT" ? "is missing" : "cannot be read"));
+    }
+  }
+  return { skills, problems };
+}
+function registerSkills(skill, skills) {
+  return skill.transform((editor) => {
+    for (const info of skills) editor.add(info);
+  });
+}
+
 // src/index.ts
 var index_default = Plugin.define({
   id: manifest.plugin.name,
@@ -12907,6 +12975,8 @@ var index_default = Plugin.define({
     const options = ctx.options ?? {};
     const plan = accountsOf(manifest, options);
     if (!plan.ok) throw optionsError(plan.problems);
+    const loaded = await loadSkills();
+    await registerSkills(ctx.skill, loaded.skills);
     const maxCalls = maxCallsOf(manifest, options);
     const observations = createObservations();
     const accounts = await registerAccounts(ctx, {
@@ -12927,7 +12997,7 @@ var index_default = Plugin.define({
       observations,
       maxCalls,
       now: () => Date.now(),
-      problems: () => accounts.problems
+      problems: () => [...loaded.problems, ...accounts.problems]
     });
     const registration = await register(ctx, manifest, handlers);
     return () => registration.dispose();

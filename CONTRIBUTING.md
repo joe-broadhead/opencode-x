@@ -11,8 +11,8 @@ npm ci --ignore-scripts
 npm run check
 ```
 
-`npm run check` bundles `dist/index.js`, typechecks, runs the unit, conformance-recording and pack tests, then runs
-`npx plugin-kit check` (conformance on the real 2.4.1 host, generated docs, forbidden patterns and the bundled-kit
+`npm run check` bundles `dist/index.js`, typechecks, runs the unit, conformance-recording, host and pack tests, then
+runs `npx plugin-kit check` (conformance on the real 2.4.1 host, generated docs, forbidden patterns and the bundled-kit
 check). A change to the manifest needs `npx plugin-kit docs` in the same commit.
 
 `dist/` is committed. A change under `src/` needs `npm run bundle` and the resulting `dist/index.js` in the same

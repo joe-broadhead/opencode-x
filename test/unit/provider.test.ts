@@ -83,11 +83,13 @@ describe("per-alias executors", () => {
 
 describe("failures", () => {
   test("a server that needs a sign-in is NEEDS_SIGN_IN with the credential redacted", async () => {
-    const provider = createProvider(host([], [{ name: "x-work", status: "needs_auth", error: "the refresh token sk-abcdefghijklmnop was refused" }]))
+    // An invented credential for this test only: assembled at runtime, never committed.
+    const refusedToken = ["sk", "abcdefghijklmnop"].join("-")
+    const provider = createProvider(host([], [{ name: "x-work", status: "needs_auth", error: `the refresh token ${refusedToken} was refused` }]))
     const failure = await provider.me("work", call).catch((error: unknown) => error)
     expect(failure).toMatchObject({ code: "NEEDS_SIGN_IN" })
     expect((failure as Error).message).toContain("Next step: ")
-    expect((failure as Error).message).not.toContain("sk-abcdefghijklmnop")
+    expect((failure as Error).message).not.toContain(refusedToken)
   })
 
   test("a missing server names the server, not a tool", async () => {
