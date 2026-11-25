@@ -62,16 +62,25 @@ describe("the shipped skills in the real host", () => {
     const session = await host.sessions.create({ location: { directory: work }, agent: "build", permissions: [] })
     try {
       await host.sessions.prompt({ sessionID: session.id, text: "activate the conformance plugin", delivery: "queue" }).catch(() => undefined)
-      let skills: { readonly id: string; readonly description?: string }[] = []
+      let skills: { readonly id: string; readonly name?: string; readonly path?: string; readonly content?: string; readonly description?: string }[] = []
       for (let attempt = 0; attempt < 100; attempt++) {
-        const listed = await host.skill.list({ location: { directory: work } }).catch(() => ({ data: [] as { id: string; description?: string }[] }))
-        skills = listed.data.map((entry: { readonly id: string; readonly description?: string }) => ({ id: String(entry.id), ...(typeof entry.description === "string" ? { description: entry.description } : {}) }))
+        const listed = await host.skill.list({ location: { directory: work } }).catch(() => ({ data: [] as { id: string; name?: string; path?: string; content?: string; description?: string }[] }))
+        skills = listed.data.map((entry: { readonly id: string; readonly name?: string; readonly path?: string; readonly content?: string; readonly description?: string }) => ({
+          id: String(entry.id),
+          ...(typeof entry.name === "string" ? { name: entry.name } : {}),
+          ...(typeof entry.path === "string" ? { path: entry.path } : {}),
+          ...(typeof entry.content === "string" ? { content: entry.content } : {}),
+          ...(typeof entry.description === "string" ? { description: entry.description } : {}),
+        }))
         if (directories.every((id) => skills.some((skill) => skill.id === id))) break
         await new Promise((resolve) => setTimeout(resolve, 100))
       }
       for (const id of directories) {
         const skill = skills.find((entry) => entry.id === id)
         expect(skill).toBeDefined()
+        expect(skill?.name).toBe(id)
+        expect(skill?.path).toBe(join(root, "skills", id, "SKILL.md"))
+        expect((skill?.content ?? "").trim().length).toBeGreaterThan(0)
         expect(skill?.description).toBe(expectedDescription(id))
       }
       const servers = (await host.mcp.list({ location: { directory: work } })).data.map((server: { readonly name?: unknown }) => String(server.name)).sort()

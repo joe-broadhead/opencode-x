@@ -60,7 +60,8 @@ describe("the committed bundle", () => {
   test("no lifecycle script makes npm prepare a git install", () => {
     for (const name of ["prepack", "prepare", "preinstall", "install", "postinstall"]) expect(pkg.scripts[name]).toBeUndefined()
     expect(pkg.scripts["build"]).toBeUndefined()
-    expect(pkg.scripts["bundle"]).toContain("esbuild")
+    expect(pkg.scripts["bundle"]).toBe("node scripts/build.mjs")
+    expect(readFileSync(join(root, "scripts", "build.mjs"), "utf8")).toContain("esbuild")
   })
 })
 

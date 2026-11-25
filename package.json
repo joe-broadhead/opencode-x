@@ -995,7 +995,7 @@
     "events": {}
   },
   "scripts": {
-    "bundle": "rm -rf dist && esbuild src/index.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/index.js --external:@opencode/*",
+    "bundle": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "bun test ./test/unit ./test/conformance",
     "test:host": "bun test ./test/host",
@@ -1010,6 +1010,6 @@
     "@we-the-rebel-alliance/plugin-contract": "github:we-the-rebel-alliance/plugin-contract#v0.0.0",
     "esbuild": "0.28.2",
     "typescript": "5.9.3",
-    "yaml": "^2.8.1"
+    "yaml": "2.9.1"
   }
 }

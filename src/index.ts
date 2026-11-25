@@ -11,7 +11,7 @@ import { createObservations, maxCallsOf, optionsError, serverConfig } from "./ac
 import { createHandlers } from "./handlers/index.js"
 import { manifest, VERSION } from "./manifest.js"
 import { createProvider, serverStates } from "./provider/index.js"
-import { loadSkills, registerSkills } from "./skills.js"
+import { registerSkills } from "./skills.js"
 
 export default Plugin.define({
   id: manifest.plugin.name,
@@ -20,8 +20,7 @@ export default Plugin.define({
     const options = (ctx.options ?? {}) as Record<string, unknown>
     const plan = accountsOf(manifest, options)
     if (!plan.ok) throw optionsError(plan.problems)
-    const loaded = await loadSkills()
-    await registerSkills(ctx.skill, loaded.skills)
+    const skills = await registerSkills(ctx)
     const maxCalls = maxCallsOf(manifest, options)
     const observations = createObservations()
     const accounts = await registerAccounts(ctx, {
@@ -42,9 +41,12 @@ export default Plugin.define({
       observations,
       maxCalls,
       now: () => Date.now(),
-      problems: () => [...loaded.problems, ...accounts.problems],
+      problems: () => [...accounts.problems],
     })
     const registration = await register(ctx, manifest, handlers)
-    return () => registration.dispose()
+    return async () => {
+      await skills.dispose().catch(() => undefined)
+      await registration.dispose()
+    }
   },
 })

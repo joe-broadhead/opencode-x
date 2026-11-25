@@ -1,8 +1,8 @@
-// The skills the plugin ships: each directory parses, and a broken file is a status problem rather than a skill.
+// The shipped skills parse as YAML frontmatter and register their real text.
 import { afterAll, describe, expect, test } from "bun:test"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { loadSkills, SKILLS_DIR } from "../../src/skills.js"
+import { readSkills } from "../../src/skills.js"
 
 const made: string[] = []
 const fresh = () => {
@@ -14,42 +14,30 @@ afterAll(() => {
   for (const directory of made) rmSync(directory, { recursive: true, force: true })
 })
 
-const skill = (name: string) => ["---", `name: ${name}`, "description: An invented skill for this test.", "---", `# ${name}`, "Body."].join("\n")
-
 describe("the shipped skills", () => {
-  test("every skills directory parses, with a description and content", async () => {
-    const loaded = await loadSkills(SKILLS_DIR)
-    expect(loaded.problems).toEqual([])
-    expect(loaded.skills.map((entry) => String(entry.id)).sort()).toEqual(["x", "x-write"])
-    for (const entry of loaded.skills) {
-      expect((entry.description ?? "").length).toBeGreaterThan(0)
-      expect(entry.content.length).toBeGreaterThan(0)
+  test("every skills directory parses, with a YAML description and content", () => {
+    const skills = readSkills()
+    expect(skills.map((entry) => entry.id).sort()).toEqual(["x", "x-write"])
+    for (const entry of skills) {
+      expect(entry.name).toBe(entry.id)
+      expect(entry.description.trim().length).toBeGreaterThan(0)
+      expect([" >", ">", "|", ">-", "|-"].includes(entry.description.trim())).toBe(false)
+      expect(entry.content.trim().length).toBeGreaterThan(0)
     }
   })
 
-  test("a broken skill file is a problem and is not registered", async () => {
+  test("a broken skill file throws with the contract code", () => {
     const directory = fresh()
-    const cases: Record<string, string> = {
-      wrongname: skill("other"),
-      nodescription: ["---", "name: nodescription", "---", "Body."].join("\n"),
-      empty: ["---", "name: empty", "description: An invented skill for this test.", "---", "  "].join("\n"),
-      nofrontmatter: "# No frontmatter",
-    }
-    for (const [name, text] of Object.entries(cases)) {
-      mkdirSync(join(directory, name))
-      writeFileSync(join(directory, name, "SKILL.md"), text)
-    }
-    const loaded = await loadSkills(directory)
-    expect(loaded.skills).toEqual([])
-    expect(loaded.problems).toHaveLength(Object.keys(cases).length)
-    for (const problem of loaded.problems) expect(problem).toContain("was not loaded")
+    mkdirSync(join(directory, "broken"))
+    writeFileSync(join(directory, "broken", "SKILL.md"), ["---", "name: other", "description: An invented skill for this test.", "---", "Body."].join("\n"))
+    expect(() => readSkills(directory)).toThrow(/^SCHEMA_VIOLATION: /)
   })
 
-  test("a directory without SKILL.md is a problem", async () => {
+  test("a block-scalar description registers its text, not the marker", () => {
     const directory = fresh()
-    mkdirSync(join(directory, "missing"))
-    const loaded = await loadSkills(directory)
-    expect(loaded.skills).toEqual([])
-    expect(loaded.problems).toEqual([`The "missing" skill was not loaded: skills/missing/SKILL.md is missing. Reinstall the plugin.`])
+    mkdirSync(join(directory, "block"))
+    writeFileSync(join(directory, "block", "SKILL.md"), ["---", "name: block", "description: >", "  A folded description", "  on two lines.", "---", "Body."].join("\n"))
+    const [skill] = readSkills(directory)
+    expect(skill?.description.trim()).toBe("A folded description on two lines.")
   })
 })
