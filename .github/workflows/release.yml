@@ -1,8 +1,11 @@
 name: Release
 
 # A tag v<package.json version> on a master commit whose CI passed creates the GitHub Release. Releases are not
-# published to npm: a consumer pins the tag, github:we-the-rebel-alliance/x-plugin#v<version>, and dist/ is built by
-# this workflow. Only the owner decides a release; an agent never pushes a tag on its own.
+# published to npm: a consumer pins the tag, github:we-the-rebel-alliance/x-plugin#v<version>, and dist/ is committed,
+# so that install runs no build. Only the owner decides a release; an agent never pushes a tag on its own.
+#
+# Least privilege: `build` runs the repository's code and holds no write token; `publish` runs no repository code,
+# checks the files against SHA256SUMS, and creates the Release with contents: write.
 
 on:
   push:
@@ -17,12 +20,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: release
+  build:
+    name: Build the release files
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -39,6 +42,8 @@ jobs:
       - name: Fetch the contract over HTTPS
         run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
       - run: npm ci --ignore-scripts
+      - name: The committed bundle is current
+        run: npm run bundle && git diff --exit-code dist/
       - run: npm run check
       - name: The tag names this package's version
         env:
@@ -54,6 +59,27 @@ jobs:
           npx plugin-kit check --json > release/conformance.json
           npm pack --pack-destination release
           sha256sum release/*.tgz release/conformance.json > release/SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: release/
+          if-no-files-found: error
+
+  publish:
+    name: Publish the GitHub Release
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: release
+      - name: Check the files against SHA256SUMS
+        working-directory: release
+        run: sha256sum -c SHA256SUMS
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
