@@ -59,6 +59,18 @@ export const ACCOUNTS: Readonly<Record<string, Account>> = {
       timeline: [post("9501", "2026-11-17T21:15:00.000Z", "A personal timeline post.", "7501", ROWAN)],
     },
   },
+  // Two posts share a timestamp, on purpose: a page boundary between them must not lose the second.
+  same: {
+    user: { id: "1003", username: "AnaSame" },
+    feeds: {
+      mentions: [post("9701", "2026-11-21T08:00:00.000Z", "A mention for the same-time account.", "7701", KAI)],
+      bookmarks: [post("9702", "2026-11-21T08:10:00.000Z", "A bookmark for the same-time account.", "7702", KAI)],
+      timeline: [
+        post("9601", "2026-11-21T09:00:00.000Z", "The earlier post of a shared second.", "7601", WORK),
+        post("9602", "2026-11-21T09:00:00.000Z", "The later post of the same shared second.", "7602", KAI),
+      ],
+    },
+  },
 }
 
 /** One call the fake answered. */
