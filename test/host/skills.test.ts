@@ -38,7 +38,7 @@ describe("the shipped skills in the real host", () => {
       async setup(context) {
         const proxy = new Proxy(context, {
           get(target, property) {
-            if (property === "options") return { access: "all", accounts: { default: { clientId: "host-test-client" } } }
+            if (property === "options") return { access: "all", accounts: { default: { clientId: "host-test-client" }, work: { clientId: "host-test-work" } } }
             return Reflect.get(target, property)
           },
         })
@@ -74,6 +74,8 @@ describe("the shipped skills in the real host", () => {
         expect(skill).toBeDefined()
         expect(skill?.description).toBe(expectedDescription(id))
       }
+      const servers = (await host.mcp.list({ location: { directory: work } })).data.map((server) => String(server.name)).sort()
+      expect(servers).toEqual(["x", "x-work"])
       expect(caught.every((message) => message.includes('bus: "x" is not a plugin name'))).toBe(true)
     } finally {
       await host.close()
