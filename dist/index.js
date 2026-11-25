@@ -19650,16 +19650,19 @@ var FEED_TOOL = {
 var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var redacted = (value) => redactReason(value instanceof Error ? value.message : String(value));
 var permissionTag = (tag) => typeof tag === "string" && tag.startsWith("Permission.");
-function failure3(tool, error2, state) {
+function failure3(tool, error2, server, state) {
   if (permissionTag(isRecord2(error2) ? error2["_tag"] : void 0)) throw error2;
   if (isRecord2(error2) && error2["_tag"] === "Tool.Error" && error2["error"] !== void 0) throw error2;
   const message2 = redacted(error2);
   const lowered = message2.toLowerCase();
-  const next = (code2) => code2 === "NEEDS_SIGN_IN" ? signInNext(state?.name ?? accountName(PLUGIN, "default")) : code2 === "RATE_LIMITED" ? "Wait a short while, then call the method again." : code2 === "SCOPE_MISSING" ? "Add the scope to the X app and sign in to that account again." : "Read the plugin's status, then call the method again.";
+  const next = (code2) => code2 === "NEEDS_SIGN_IN" ? signInNext(typeof state === "object" ? state.name : server) : code2 === "RATE_LIMITED" ? "Wait a short while, then call the method again." : code2 === "SCOPE_MISSING" ? "Add the scope to the X app and sign in to that account again." : "Read the plugin's status, then call the method again.";
   const code = /(?:^|\D)429\b|rate limit|too many requests/.test(lowered) ? "RATE_LIMITED" : /(?:^|\D)401\b|unauthori[sz]ed|invalid[ _-]?token|token (?:expired|has expired|refresh)|needs[ _-]?auth|sign[ -]?in required|credential/.test(lowered) ? "NEEDS_SIGN_IN" : /(?:^|\D)403\b|forbidden|scope/.test(lowered) ? "SCOPE_MISSING" : "UNAVAILABLE";
   return new ProviderError(code, `X's ${tool} failed: ${message2}`, next(code));
 }
 function unreachable(tool, server, state) {
+  if (state === "unknown") {
+    return new ProviderError("UNAVAILABLE", `OpenCode could not list its MCP servers, so whether X's ${server} is available is unknown`, `Read the plugin's status, then call the method again.`);
+  }
   if (state === void 0) {
     return new ProviderError("UNAVAILABLE", `OpenCode lists no X MCP server named ${server}, so ${tool} cannot run`, `Add the ${server} MCP server, sign in, then read the status.`);
   }
@@ -19682,7 +19685,13 @@ function createProvider(host2) {
   }
   async function stateOf2(account) {
     const name = serverOf2(account);
-    return (await states().catch(() => [])).find((entry) => entry.name === name);
+    let listed;
+    try {
+      listed = await states();
+    } catch {
+      return "unknown";
+    }
+    return listed.find((entry) => entry.name === name);
   }
   async function execute2(account, tool, input, call) {
     const context = call;
@@ -19698,7 +19707,7 @@ function createProvider(host2) {
       return result;
     } catch (error2) {
       if (context.signal.aborted) throw error2;
-      throw failure3(tool, error2, await stateOf2(account));
+      throw failure3(tool, error2, server, await stateOf2(account));
     }
   }
   return {

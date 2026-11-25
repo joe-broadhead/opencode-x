@@ -99,6 +99,14 @@ describe("failures", () => {
     expect((failure as Error).message).toContain("x-work")
   })
 
+  test("a server list that could not be read is unknown, never a missing server", async () => {
+    const provider = createProvider({ tools: { list: async () => [] }, servers: async () => { throw new Error("the host refused") } })
+    const failure = await provider.me("work", call).catch((error: unknown) => error)
+    expect(failure).toMatchObject({ code: "UNAVAILABLE" })
+    expect((failure as Error).message).toContain("could not list its MCP servers")
+    expect((failure as Error).message).not.toContain("lists no X MCP server")
+  })
+
   test("X's own failures map to its rate, scope and sign-in codes", async () => {
     const limited = createProvider(host([executor("x_get_users_me", Object.assign(new Error("429 Too Many Requests"), { _tag: "Tool.Error" }))]))
     expect(await limited.me("default", call).catch((error: unknown) => error)).toMatchObject({ code: "RATE_LIMITED" })

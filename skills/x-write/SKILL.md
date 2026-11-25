@@ -6,7 +6,10 @@ description: "Before any X change: post, reply, quote or edit, bookmark, lists, 
 
 ## The one rule
 
-Make a change only when the person asked for it. For `create_posts`, in the same turn and before the call, your reply
+Tools are named `tools.x.<method>` on the `default` alias's server and `tools["x-work"].<method>` on `work`'s; this
+file writes `tools.x.<method>` for brevity.
+
+Make a change only when the person asked for it. For `tools.x.create_posts`, in the same turn and before the call, your reply
 gives, in this order:
 
 1. the draft text;
@@ -23,20 +26,20 @@ around a decline with another tool, a shell command, a link or a screenshot.
 
 ## Whom each change reaches
 
-- `create_posts`: public. Anyone can read it, not only followers: it appears on the profile and in followers'
+- `tools.x.create_posts`: public. Anyone can read it, not only followers: it appears on the profile and in followers'
   timelines. Use the three steps above. A reply (`reply.in_reply_to_tweet_id`) or a quote (`quote_tweet_id`) only when
   the person explicitly asks for that one reply or quote, and say the author is notified. Editing
   (`edit_options.previous_post_id`) changes a published post: show the new text. One call, never a loop. `nullcast`
   keeps a post out of the public timeline and `for_super_followers_only` limits it: use either only when asked.
-- Bookmarks: `create_users_bookmark`, `delete_users_bookmark` and `create_users_bookmark_folder` reach only the person.
-  Private, reversible, no notification. Say the post's author and opening words.
-- `article_create_draft`: private. Nothing is public. There is no publish tool: it stays a draft, and publishing is done
-  in the X app. Say the title, and keep the returned id.
-- `create_lists`, `update_lists`, `pin_list` and `unpin_list`: the person's lists. A list is public unless `private` is
-  true in the schema; say which it is. Pinning shows it on their profile.
-- `media_upload`: uploads a file and returns its id, which `create_posts` attaches in `media.media_ids`. Nothing is
-  public until that post. It needs the `media.write` scope: if X refuses it, the sign-in predates that scope, so ask
-  them to sign in to that alias again and post without the media only if they agree.
+- Bookmarks: `tools.x.create_users_bookmark`, `tools.x.delete_users_bookmark` and `tools.x.create_users_bookmark_folder`
+  reach only the person. Private, reversible, no notification. Say the post's author and opening words.
+- `tools.x.article_create_draft`: private. Nothing is public. There is no publish tool: it stays a draft, and publishing
+  is done in the X app. Say the title, and keep the returned id.
+- `tools.x.create_lists`, `tools.x.update_lists`, `tools.x.pin_list` and `tools.x.unpin_list`: the person's lists. A list
+  is public unless `private` is true in the schema; say which it is. Pinning shows it on their profile.
+- `tools.x.media_upload`: uploads a file and returns its id, which `tools.x.create_posts` attaches in `media.media_ids`.
+  Nothing is public until that post. It needs the `media.write` scope: if X refuses it, the sign-in predates that scope,
+  so ask them to sign in to that alias again and post without the media only if they agree.
 
 Each call is billed to the X developer account that owns the app: about $0.005 for a bookmark or list change, and a post
 create at $0.015, or $0.200 with a link. X publishes no price for `media_upload`, so its price is unknown: never quote
@@ -51,7 +54,7 @@ the replier.
 
 ## Drafting an Article
 
-`article_create_draft` takes a title and a DraftJS `content_state` (blocks and entities). Write the body from the
+`tools.x.article_create_draft` takes a title and a DraftJS `content_state` (blocks and entities). Write the body from the
 person's material; if the signature does not settle the shape, make one attempt, then stop and say the format is
 unconfirmed rather than trying another. The draft is private and billed; keep its id. There is no publish tool here.
 

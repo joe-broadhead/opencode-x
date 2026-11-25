@@ -21,9 +21,9 @@ more than one alias and none named the call is `ACCOUNT_REQUIRED`, and an alias 
 
 ## Every call costs money
 
-X bills each call to the X developer account that owns the app: about $0.005 a post read, $0.010 a user read, $0.010 an
-author X includes, and about $0.001 for an owned read; a bookmark change is about $0.005 and a post create $0.015, or
-$0.200 with a URL. Reads are automatic: fetch what the question needs, with the `max_results`, page tokens and
+X bills each call to the X developer account that owns the app: a post read is at most $0.005 (an owned read may cost
+less), a user read and an author X includes about $0.010 each; a bookmark change is about $0.005 and a post create
+$0.015, or $0.200 with a URL. Reads are automatic: fetch what the question needs, with the `max_results`, page tokens and
 expansions you judge useful. Never ask whether to spend.
 
 `events_list` and `probe` results carry their own `cost.units`; a model-path tool result does not. When you state a

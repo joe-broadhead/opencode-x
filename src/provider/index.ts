@@ -85,8 +85,11 @@ const redacted = (value: unknown) => redactReason(value instanceof Error ? value
 /** OpenCode's permission refusals, which must reach the register unchanged so it answers PERMISSION_DENIED. */
 const permissionTag = (tag: unknown) => typeof tag === "string" && tag.startsWith("Permission.")
 
+/** What the host says about an alias's server: a state, "unknown" when the list could not be read, or no entry. */
+type ServerLookup = ServerState | "unknown" | undefined
+
 /** The refusal for one tool that could not run, with its first line cut and redacted. */
-function failure(tool: string, error: unknown, state: ServerState | undefined): ProviderError {
+function failure(tool: string, error: unknown, server: string, state: ServerLookup): ProviderError {
   if (permissionTag(isRecord(error) ? error["_tag"] : undefined)) throw error
   // A Tool.Error with a cause is a refused permission check, not X's own failure (4a's host behaviour).
   if (isRecord(error) && error["_tag"] === "Tool.Error" && error["error"] !== undefined) throw error
@@ -94,7 +97,7 @@ function failure(tool: string, error: unknown, state: ServerState | undefined): 
   const lowered = message.toLowerCase()
   const next = (code: ErrorCode): string =>
     code === "NEEDS_SIGN_IN"
-      ? signInNext(state?.name ?? accountName(PLUGIN, "default"))
+      ? signInNext(typeof state === "object" ? state.name : server)
       : code === "RATE_LIMITED"
         ? "Wait a short while, then call the method again."
         : code === "SCOPE_MISSING"
@@ -110,8 +113,11 @@ function failure(tool: string, error: unknown, state: ServerState | undefined): 
   return new ProviderError(code, `X's ${tool} failed: ${message}`, next(code))
 }
 
-/** The refusal for a server that is not there, or one the host says needs attention. */
-function unreachable(tool: string, server: string, state: ServerState | undefined): ProviderError {
+/** The refusal for a server that is not there, one the host cannot list, or one it says needs attention. */
+function unreachable(tool: string, server: string, state: ServerLookup): ProviderError {
+  if (state === "unknown") {
+    return new ProviderError("UNAVAILABLE", `OpenCode could not list its MCP servers, so whether X's ${server} is available is unknown`, `Read the plugin's status, then call the method again.`)
+  }
   if (state === undefined) {
     return new ProviderError("UNAVAILABLE", `OpenCode lists no X MCP server named ${server}, so ${tool} cannot run`, `Add the ${server} MCP server, sign in, then read the status.`)
   }
@@ -136,9 +142,15 @@ export function createProvider(host: ProviderHost): Provider {
     return host.servers()
   }
 
-  async function stateOf(account: string): Promise<ServerState | undefined> {
+  async function stateOf(account: string): Promise<ServerLookup> {
     const name = serverOf(account)
-    return (await states().catch(() => [] as readonly ServerState[])).find((entry) => entry.name === name)
+    let listed: readonly ServerState[]
+    try {
+      listed = await states()
+    } catch {
+      return "unknown"
+    }
+    return listed.find((entry) => entry.name === name)
   }
 
   /** Run one X tool as the caller, through the host's own executor for the alias's server. */
@@ -157,7 +169,7 @@ export function createProvider(host: ProviderHost): Provider {
       return result
     } catch (error) {
       if (context.signal.aborted) throw error
-      throw failure(tool, error, await stateOf(account))
+      throw failure(tool, error, server, await stateOf(account))
     }
   }
 

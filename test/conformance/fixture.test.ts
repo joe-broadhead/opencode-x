@@ -66,7 +66,7 @@ describe("the conformance recording", () => {
         "Recorded from the synthetic X in test/support/fake-x.ts through the plugin's own handlers: two MCP account aliases, the three feeds, a probe per feed, status, and a cursor that another account may not use. Every handle, post and id is invented.",
       plugin: "@we-the-rebel-alliance/x-plugin",
       accounts: {
-        real: true,
+        real: false,
         aliases: ["work", "personal"],
         required: { method: "events_list", code: "ACCOUNT_REQUIRED" },
         unknown: { method: "events_list", account: "nobodyhere", code: "ACCOUNT_UNKNOWN" },
