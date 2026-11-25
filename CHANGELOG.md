@@ -2,30 +2,25 @@
 
 One section per release. `0.0.0` is the first release in the new organization; the old history is not carried over.
 
-## 0.0.0 (unreleased)
+## [0.0.0]
 
-The repository's first release under `we-the-rebel-alliance`, rebuilt on the plugin standard:
+The first release of `@we-the-rebel-alliance/x-plugin`, rebuilt on plugin-contract v0:
 
-- **OpenCode 2.4.1 only.** `@opencode/*` devDependencies are `2.4.1`, `opencode.host` is `>=2.4.1 <2.5.0`, and the
-  only tested host is 2.4.1. The test matrices and code paths for older releases are gone; the host suite runs once,
-  on 2.4.1, and its harness answers the 2.4 `server/discover` probe and waits for the background plugin load.
-- **New name and repository.** The package is `@we-the-rebel-alliance/x-plugin`, version `0.0.0`. Every install line,
-  badge, link and repository URL names the new organization and `blob/master`.
-- **Fixed context.** The Code Mode namespace line is 330 characters and each skill description is within 300. The
-  search window, the cost line, the "never ask whether to spend" rule, the public-post warning, the "only when asked"
-  list and the sensitive-trait rule live in the two skill bodies. Nothing is pinned and there are no per-request tool
-  or context hooks; the tools RPC's permission hook is the one hook.
-- **Three sources.** `x.mentions`, `x.bookmarks` and `x.timeline` remain. The app-only list snapshots
-  `x.bookmarks.list` and `x.posts` are deleted, with their method fields, tests, docs and references.
-- **Billed cost, no hook.** `x_events_list` and `probe` carry `cost.units` on every page, and the tests hold each
-  answer to what X returned. The plugin no longer appends a cost line to model-path or Code Mode results: it registers
-  no `execute.before`/`execute.after` hook. A script's result still carries the tools RPC's line, and the status Scripts
-  row covers the script calls the plugin records.
-- **A failed token rotation is visible.** When X refuses a refresh, the host reports the `x` server as `needs_auth`; the
-  status RPC and `probe` answer `AUTH_REQUIRED`, with the redacted reason cut to 160 characters and the `/connect`
-  next step. Several accounts and the literal `NEEDS_SIGN_IN` code come with the plugin contract.
-- **No app-specific surface.** `docs/jelly.md`, the app-specific sections of the docs and the app-only reads are gone. The
-  `jelly` and `sources` package keys, the copied kit scripts and the source-contract dependency stay until the plugin
-  contract replaces them.
-- **One CI job.** `.github/workflows/ci.yml` has a single `ci` job on Node 24 with read-only contents permission and
-  actions pinned to commit SHAs.
+- **One manifest.** `capabilities` declares the plugin identity, the `mcp` accounts, the options, all 104 callables
+  (three of the plugin's own and 101 pass-through X tools, classified by the inventory), the three events sources, no
+  action and no bus event. `version` is `0.0.0`.
+- **Accounts.** One vendor MCP server per alias, `x` for `default` and `x-work` for `work`; the profile names the X
+  app's OAuth client id and, for a confidential app, the environment variable that holds its secret. A refused token
+  refresh is the alias's `needs_sign_in`, with a redacted reason.
+- **Three sources.** `x.mentions`, `x.bookmarks` and `x.timeline`, all events reads on one billed X service. Every page
+  carries `cost.units` at X's published per-post, per-author and per-user rates; `probe` carries its one user unit.
+  Cursors are bound to the plugin, feed and account.
+- **Doors.** `register` wires every method as an agent tool, a Code Mode entry and an RPC method. X's tools are
+  declared `mcp:<tool>` and owned by the vendor's server; the plugin registers no pass-through handler.
+- **Fixed context.** The namespace line is 294 characters and each skill description is within 300. Nothing is pinned
+  and there are no per-request hooks.
+- **Kit, not copies.** The copied release, drift, capture and forbidden scripts are gone; `plugin-kit` runs
+  conformance, generated docs and the forbidden scan, and the plugin's own commands add typecheck, build, unit and
+  pack. CI is one `ci` job and releases are cut from a tag by `plugin-kit release`.
+- **Tests.** Unit tests for the handlers, the feed walk and the provider; a conformance recording for two synthetic
+  aliases; the kit's real-host T1 on OpenCode 2.4.1; and a pack test that builds, installs and starts the tarball.
