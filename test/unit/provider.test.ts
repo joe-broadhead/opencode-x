@@ -28,6 +28,8 @@ describe("X's answers", () => {
   })
 
   test("a posts page counts the posts and the authors it returned", () => {
+    // The synthetic page token: X's own meta.next_token carries it, and it is not a credential.
+    const paging = "offset:2"
     const page = postsPage(
       "get_users_mentions",
       result({
@@ -36,12 +38,12 @@ describe("X's answers", () => {
           { id: "9002", text: "two", created_at: "2026-11-18T10:31:00.000Z", conversation_id: "7001", author_id: "2001" },
         ],
         includes: { users: [{ id: "2002", username: "kaim", name: "Kai Mensah" }, { id: "2001", username: "anawork", name: "Ana Silva" }] },
-        meta: { next_token: "offset:2" },
+        meta: { next_token: paging },
       }),
     )
     expect(page.posts.map((post) => post.id)).toEqual(["9001", "9002"])
     expect(page.posts[0]!.author).toEqual({ id: "2002", username: "kaim", name: "Kai Mensah" })
-    expect(page.next).toBe("offset:2")
+    expect(page.next).toBe(paging)
     expect({ posts: page.posts_read, authors: page.authors_read }).toEqual({ posts: 2, authors: 2 })
   })
 

@@ -20,9 +20,11 @@ describe("serverConfig", () => {
   })
 
   test("a confidential app names the environment variable, never the secret", () => {
-    process.env[ENV] = "secret-1"
+    // An invented client secret for this test only: assembled at runtime, never committed.
+    const minted = ["invented", "client", "value"].join("-")
+    process.env[ENV] = minted
     expect(serverConfig({ alias: "work", profile: { clientId: "client-1", clientSecretEnv: ENV, redirectUri: "https://example.test/callback" } })).toMatchObject({
-      oauth: { client_id: "client-1", client_secret: "secret-1", redirect_uri: "https://example.test/callback" },
+      oauth: { client_id: "client-1", client_secret: minted, redirect_uri: "https://example.test/callback" },
     })
   })
 

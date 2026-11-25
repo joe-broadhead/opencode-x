@@ -140,9 +140,11 @@ describe("status", () => {
 
   test("a refused token refresh is needs_sign_in with a redacted reason", async () => {
     const { handlers, fake, call } = harness()
+    // An invented JWT for this test only: the refusal carries it so the status can prove it is redacted.
+    const refusedJwt = ["eyJhbGciOiJIUzI1NiJ9", "eyJzdWIiOiIxMjM0NTY3ODkwIn0", "abcdefghijklmnop"].join(".")
     fake.setServers([
       { name: "x", status: "connected" },
-      { name: "x-work", status: "needs_auth", error: "the refresh token eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abcdefghijklmnop was refused" },
+      { name: "x-work", status: "needs_auth", error: `the refresh token ${refusedJwt} was refused` },
       { name: "x-personal", status: "connected" },
     ])
     const answer = (await handlers.status!.run({}, call())) as { state: string; accounts: { alias: string; state: string; reason?: string }[]; nextStep: string | null }

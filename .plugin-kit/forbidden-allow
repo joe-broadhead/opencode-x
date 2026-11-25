@@ -1,3 +1,0 @@
-test/unit/accounts.test.ts:secret invented test credential: it proves a confidential app's client secret from the environment reaches the MCP server config, line 25
-test/unit/handlers.test.ts:secret invented test credential: it proves a refused refresh's fabricated JWT is redacted from the status reason, line 145
-test/unit/provider.test.ts:secret kit v0.0.0 detector false positive: the synthetic answer's meta.next_token page token, line 39

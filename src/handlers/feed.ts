@@ -168,6 +168,8 @@ async function window(walk: FeedWalk): Promise<FeedRead> {
     reads -= 1
     cost = add(cost, { posts: page.posts_read, authors: page.authors_read, users: 0 })
     for (const post of page.posts) {
+      // Every page keeps the first listing's window start, so a post outside it never enters a later page.
+      if (post.created < (state.t ?? 0)) continue
       if (state.p !== undefined && BigInt(post.id) <= BigInt(state.p)) continue
       if (state.u !== undefined && BigInt(post.id) >= BigInt(state.u)) continue
       found.set(post.id, post)
@@ -227,6 +229,7 @@ async function bookmarks(walk: FeedWalk): Promise<FeedRead> {
   let reads = walk.reads
   let cost: ReadCounts = { posts: 0, authors: 0, users: 0 }
   const known = state.k ?? []
+  const start = state.t ?? 0
   const answer = (next: BookmarkState, events: readonly SourceEvent[], more: boolean, gap?: EventsGap): FeedRead => ({
     state: next,
     events,
@@ -242,7 +245,6 @@ async function bookmarks(walk: FeedWalk): Promise<FeedRead> {
     const page = await provider.page(account, "bookmarks", pageInput(me, size, FIELDS), call)
     reads -= 1
     cost = add(cost, { posts: page.posts_read, authors: page.authors_read, users: 0 })
-    const start = state.t ?? 0
     const events = page.posts.filter((post) => post.created >= start).map((post) => postEvent(account, "bookmarks", post))
     const k = page.posts.slice(0, KNOWN_BOOKMARKS).map((post) => post.id)
     return answer({ t: state.t, w: now, ...(k.length === 0 ? {} : { k }) }, events.slice(0, fitPage(events, limit, maxBytes)), false)
@@ -262,7 +264,9 @@ async function bookmarks(walk: FeedWalk): Promise<FeedRead> {
     cost = add(cost, { posts: page.posts_read, authors: page.authors_read, users: 0 })
     newest = [...(newest ?? []), ...page.posts.map((post) => post.id)].slice(0, KNOWN_BOOKMARKS)
     const stop = page.posts.findIndex((post) => known.includes(post.id))
-    const fresh = stop === -1 ? page.posts : page.posts.slice(0, stop)
+    // A post saved after the cursor can have been created before the window start. The cursor keeps `t`, and every
+    // page applies it, so the next page cannot list an event outside the first listing's window.
+    const fresh = (stop === -1 ? page.posts : page.posts.slice(0, stop)).filter((post) => post.created >= start)
     const events = fresh.map((post) => postEvent(account, "bookmarks", post))
     const fit = fitPage(events, limit - listed.length, maxBytes)
     if (fit < events.length) return answer({ ...state, r: token, n: newest, w: state.w }, listed, true)

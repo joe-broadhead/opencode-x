@@ -73,6 +73,13 @@ export const ACCOUNTS: Readonly<Record<string, Account>> = {
   },
 }
 
+/** Add a post to an account's feed, as X does when the person posts or saves one after a read. */
+export function savePost(account: string, feed: Feed, entry: { readonly id: string; readonly created: string; readonly text: string; readonly conversation: string }): void {
+  const held = ACCOUNTS[account]
+  if (held === undefined) throw new Error(`the fake X has no account ${account}`)
+  ;(held.feeds[feed] as FakePost[]).push({ ...entry, author: KAI })
+}
+
 /** One call the fake answered. */
 export interface FakeCall {
   readonly account: string
