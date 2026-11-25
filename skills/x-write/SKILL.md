@@ -42,7 +42,7 @@ around a decline with another tool, a shell command, a link or a screenshot.
   so ask them to sign in to that alias again and post without the media only if they agree.
 
 Each call is billed to the X developer account that owns the app: about $0.005 for a bookmark or list change, and a post
-create at $0.015, or $0.200 with a link. X publishes no price for `media_upload`, so its price is unknown: never quote
+create at $0.015, or $0.200 with a link. X publishes no price for `tools.x.media_upload`, so its price is unknown: never quote
 one, and say so if asked.
 
 ## Posting
