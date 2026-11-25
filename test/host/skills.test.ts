@@ -74,7 +74,7 @@ describe("the shipped skills in the real host", () => {
         expect(skill).toBeDefined()
         expect(skill?.description).toBe(expectedDescription(id))
       }
-      const servers = (await host.mcp.list({ location: { directory: work } })).data.map((server) => String(server.name)).sort()
+      const servers = (await host.mcp.list({ location: { directory: work } })).data.map((server: { readonly name?: unknown }) => String(server.name)).sort()
       expect(servers).toEqual(["x", "x-work"])
       expect(caught.every((message) => message.includes('bus: "x" is not a plugin name'))).toBe(true)
     } finally {
