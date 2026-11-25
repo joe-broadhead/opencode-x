@@ -32,6 +32,7 @@ export function parseSkill(name: string, path: string, text: string): Skill.Info
   if (fields.get("name") !== name) return fail(`must be named "${name}" in its frontmatter`)
   const description = fields.get("description") ?? ""
   if (description === "") return fail("has no description")
+  if (description === ">" || description === "|") return fail("has a block-scalar description; write the description on one line")
   const content = match[2]!.trim()
   if (content === "") return fail("has no content")
   return {

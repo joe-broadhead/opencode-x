@@ -1,16 +1,29 @@
 // The skills the plugin ships are in the real 2.4.1 host's skill list, not only on disk.
 import { afterAll, describe, expect, test } from "bun:test"
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { Plugin } from "@opencode/plugin"
 import { OpenCode } from "@opencode/sdk"
+import { parse } from "yaml"
 
 const root = fileURLToPath(new URL("../..", import.meta.url))
 const directories = readdirSync(join(root, "skills"), { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
   .sort()
+/** The description in a SKILL.md, parsed as YAML, checked to be real text and not a block-scalar marker. */
+function expectedDescription(id: string): string {
+  const text = readFileSync(join(root, "skills", id, "SKILL.md"), "utf8")
+  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1]
+  if (frontmatter === undefined) throw new Error(`${id}: no frontmatter`)
+  const parsed = parse(frontmatter) as { description?: unknown }
+  if (typeof parsed.description !== "string") throw new Error(`${id}: description is not a string`)
+  const description = parsed.description
+  if (description.trim() === "" || description === ">" || description === "|") throw new Error(`${id}: description is empty or a block scalar`)
+  return description
+}
+
 const work = mkdtempSync(join("/tmp", "x-host-skills-"))
 writeFileSync(join(work, "package.json"), JSON.stringify({ name: "x-host-skills", private: true, type: "module" }))
 afterAll(() => rmSync(work, { recursive: true, force: true }))
@@ -49,14 +62,18 @@ describe("the shipped skills in the real host", () => {
     const session = await host.sessions.create({ location: { directory: work }, agent: "build", permissions: [] })
     try {
       await host.sessions.prompt({ sessionID: session.id, text: "activate the conformance plugin", delivery: "queue" }).catch(() => undefined)
-      let ids: string[] = []
+      let skills: { readonly id: string; readonly description?: string }[] = []
       for (let attempt = 0; attempt < 100; attempt++) {
-        const listed = await host.skill.list({ location: { directory: work } }).catch(() => ({ data: [] as { id: string }[] }))
-        ids = listed.data.map((entry: { id: string }) => String(entry.id))
-        if (directories.every((id) => ids.includes(id))) break
+        const listed = await host.skill.list({ location: { directory: work } }).catch(() => ({ data: [] as { id: string; description?: string }[] }))
+        skills = listed.data.map((entry: { readonly id: string; readonly description?: string }) => ({ id: String(entry.id), ...(typeof entry.description === "string" ? { description: entry.description } : {}) }))
+        if (directories.every((id) => skills.some((skill) => skill.id === id))) break
         await new Promise((resolve) => setTimeout(resolve, 100))
       }
-      for (const id of directories) expect(ids).toContain(id)
+      for (const id of directories) {
+        const skill = skills.find((entry) => entry.id === id)
+        expect(skill).toBeDefined()
+        expect(skill?.description).toBe(expectedDescription(id))
+      }
       expect(caught.every((message) => message.includes('bus: "x" is not a plugin name'))).toBe(true)
     } finally {
       await host.close()
