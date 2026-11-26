@@ -68,8 +68,11 @@ describe("generated sections", () => {
     }
   })
 
-  test("the changelog has the release section", () => {
-    expect(read("CHANGELOG.md")).toContain("## 0.0.0 (2026-11-25)")
+  test("the changelog has exactly the one greenfield release section", () => {
+    const changelog = read("CHANGELOG.md")
+    expect(changelog.match(/^## .+$/gm)).toEqual(["## 0.0.0 (2026-11-25)"])
+    expect(changelog).not.toContain("### Removed since")
+    expect(changelog).not.toContain("v0.0.8")
   })
 })
 
