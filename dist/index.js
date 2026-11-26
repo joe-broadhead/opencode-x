@@ -17147,18 +17147,18 @@ function secretKinds(text4) {
   return [...kinds];
 }
 
-// node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-OWUXQ6GV.js
+// node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-CFN5JWUS.js
 var BUS_EVENTS = ["changed", "status", "account"];
 var BUS_STATES = ["ready", "needs_sign_in", "error"];
 var REASON_MAX2 = 160;
-var PLUGIN_NAME = /^[a-z0-9]{2,31}$/;
+var PLUGIN_NAME = /^[a-z0-9]{1,31}$/;
 function isPluginName(value) {
   return typeof value === "string" && PLUGIN_NAME.test(value);
 }
 function assertPluginName(name) {
   if (isPluginName(name)) return;
   const shown = typeof name === "string" ? `"${name}"` : typeof name;
-  throw new Error(`bus: ${shown} is not a plugin name. Next step: use 2 to 31 lowercase letters or digits, with no hyphen (contract \xA73).`);
+  throw new Error(`bus: ${shown} is not a plugin name. Next step: use 1 to 31 lowercase letters or digits, with no hyphen (contract \xA73).`);
 }
 var CAPABILITY_SEGMENT = "[a-z][a-z0-9-]*";
 function capabilityPattern(name) {
@@ -17883,7 +17883,7 @@ function decodeBoundCursor(binding, cursor) {
   return { ok: true, state };
 }
 
-// node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-CQOJNZW4.js
+// node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-4FRULGHN.js
 import { createHash as createHash3 } from "node:crypto";
 var MANIFEST_VERSION = 1;
 var OPENCODE_RANGE = ">=2.4.1 <2.5.0";
@@ -17894,7 +17894,7 @@ function hostInRange(version2) {
   const [major, minor, patch] = [Number(match[1]), Number(match[2]), Number(match[3])];
   return major === 2 && minor === 4 && patch >= 1;
 }
-var PLUGIN_NAME2 = /^[a-z0-9]{2,31}$/;
+var PLUGIN_NAME2 = /^[a-z0-9]{1,31}$/;
 var METHOD_CLASSES = ["read", "write", "send", "share", "delete", "export", "admin"];
 var METHOD_ACCOUNTS = ["optional", "none"];
 var METHOD_EFFECTS = ["ask", "deny"];
@@ -18273,7 +18273,7 @@ function eventsListResult(identity, events2, cursor, more, extras = {}) {
   };
 }
 
-// node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-SWSUBLXW.js
+// node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-PHAILRZF.js
 var text = (max) => string2().max(max);
 var httpsUrl = string2().max(2048).refine((value) => {
   try {
@@ -18415,7 +18415,7 @@ function isExtensionOutput(name) {
   return typeof name === "string" && EXTENSION_NAME.test(name);
 }
 
-// node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-QO4BENAJ.js
+// node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-US3HZZEZ.js
 import { createHash as createHash4 } from "node:crypto";
 function canonicalJson2(value) {
   return write2(value, /* @__PURE__ */ new Set());
@@ -18458,7 +18458,7 @@ function manifestHash(value) {
   return `sha256:${createHash4("sha256").update(canonicalJson2(value)).digest("hex")}`;
 }
 var METHOD_NAME = /^[a-z][a-z0-9_]*$/;
-var MCP_METHOD_NAME = /^mcp:(?:[a-z0-9][a-z0-9_.-]{0,99}|\*)$/;
+var MCP_METHOD_NAME = /^mcp:(?:[A-Za-z0-9][A-Za-z0-9_.-]{0,99}|\*)$/;
 var SOURCE_ID = /^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+$/;
 var SCOPE_KEY = /^[a-z][a-z0-9_]{0,31}$/;
 var OPERATION = /^[A-Za-z][A-Za-z0-9._-]{0,199}$/;
@@ -18488,7 +18488,7 @@ var host = strictObject({
   if (new Set(value.tested).size !== value.tested.length) context.addIssue({ code: "custom", path: ["tested"], message: "must not repeat a release" });
 }).describe("The OpenCode range, and the releases the plugin was tested on.");
 var plugin = strictObject({
-  name: string2().regex(PLUGIN_NAME2, { error: "must be 2 to 31 lowercase letters or digits, with no hyphen" }),
+  name: string2().regex(PLUGIN_NAME2, { error: "must be 1 to 31 lowercase letters or digits, with no hyphen" }),
   title: nonEmpty(80),
   summary: nonEmpty(300),
   vendor,
@@ -18604,7 +18604,7 @@ var events = strictObject({
 }).describe("The bus events the plugin emits. Each is declared with an empty object.");
 var versionField = literal(MANIFEST_VERSION);
 var optionsField = record(string2(), unknown()).describe("JSON Schema 2020-12 of the plugin's options. It must include access.");
-var normalizedMCPTool = (tool) => tool.replace(/[^A-Za-z0-9_-]/g, "_");
+var normalizedMCPTool = (tool) => tool.replace(/[^A-Za-z0-9_-]/g, "_").toLowerCase();
 var methodsField = record(methodName, methodItem).superRefine((methods, context) => {
   const groups = /* @__PURE__ */ new Map();
   for (const name of Object.keys(methods)) {
@@ -18621,7 +18621,7 @@ var methodsField = record(methodName, methodItem).superRefine((methods, context)
       context.addIssue({
         code: "custom",
         path: [name],
-        message: `collides with ${names.filter((other) => other !== name).join(", ")} after OpenCode rewrites both MCP tool names to ${effective}`
+        message: `collides with ${names.filter((other) => other !== name).join(", ")}: OpenCode's tool action is ${effective} (punctuation becomes _, and Windows matches case-insensitively)`
       });
     }
   }
@@ -18646,7 +18646,7 @@ function maxBytesOf(source2) {
   return source2.maxBytes ?? MAX_BYTES_DEFAULT;
 }
 
-// node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-LJBRNDIR.js
+// node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-X3273KH4.js
 var ACCESS_LEVELS = ["all", "ask-changes", "read-only"];
 var DEFAULT_ACCESS = "all";
 function accessLevel(options = {}) {
