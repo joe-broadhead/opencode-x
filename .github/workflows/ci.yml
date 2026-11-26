@@ -1,18 +1,23 @@
-name: ci
+name: CI
+
+# One job, named ci: the org ruleset requires a check with that name, and the merge bot merges only on a green ci. It
+# runs the whole gate, so the required check covers lint, typecheck, build, tests, the pack check, conformance, docs
+# drift, the forbidden scan and the workflows themselves.
+#
+# It runs locally too: npm ci --ignore-scripts && npm run check
 
 on:
-  push:
-    branches: [master]
   pull_request:
-  workflow_dispatch:
+  push:
+    branches:
+      - master
 
 permissions:
   contents: read
 
 concurrency:
-  # The event is part of the group, so a run by hand on master never cancels the push run a release stands on.
-  group: ci-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci:
@@ -26,15 +31,17 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: package-lock.json
+          package-manager-cache: false
+      # The tests run on Bun (bun:test); Node alone cannot execute them.
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.5
-          # No cache: a cache made on a runner with another home restores bun to a path that runner cannot execute.
           no-cache: true
+      - name: Fetch the contract over HTTPS
+        # The contract is a public repository, and npm records its GitHub dependency over ssh. A runner has no key.
+        run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
       # The workflows are tools too: a YAML file GitHub refuses fails the whole run. actionlint parses them as
-      # workflows, not as YAML. It goes on PATH before `npm run check`, whose actionlint stage then runs it.
+      # workflows, not as YAML.
       - name: Install actionlint
         run: |
           set -euo pipefail
@@ -49,4 +56,9 @@ jobs:
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/bin/actionlint" --version
       - run: npm ci --ignore-scripts
+      # A tag install ships the committed dist/, so a stale bundle is the code that would run.
+      - name: The committed bundle is current
+        run: npm run bundle && git diff --exit-code dist/
+      - run: actionlint
       - run: npm run check
+      - run: npx plugin-kit docs --check
