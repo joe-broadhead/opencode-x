@@ -30,7 +30,7 @@ describe("the package", () => {
     expect(pkg.name).toBe("@we-the-rebel-alliance/x-plugin")
     expect(pkg.version).toBe("0.0.0")
     expect(pkg.exports).toEqual({ "./server": "./dist/index.js" })
-    expect(pkg.files).toEqual(["dist", "skills", "assets", "README.md", "LICENSE"])
+    expect(pkg.files).toEqual(["dist", "skills", "assets", "README.md", "LICENSE", "NOTICE"])
     expect(pkg.dependencies).toBeUndefined()
     expect(pkg.peerDependencies).toBeUndefined()
     expect(pkg.devDependencies["@we-the-rebel-alliance/plugin-contract"]).toBe("github:we-the-rebel-alliance/plugin-contract#v0.0.0")
