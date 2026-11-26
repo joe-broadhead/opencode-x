@@ -78,8 +78,7 @@ jobs:
           name: release
           path: release
       - name: Check the files against SHA256SUMS
-        working-directory: release
-        run: sha256sum -c SHA256SUMS
+        run: sha256sum -c release/SHA256SUMS
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
