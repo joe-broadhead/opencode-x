@@ -1,0 +1,6 @@
+# Labels this repository's workflows name that GitHub does not host. `ci.yml` and `release.yml` ask for the org's
+# public scale set, `boxd-public` (decision 0025), and actionlint refuses a label it does not know unless it is named
+# here.
+self-hosted-runner:
+  labels:
+    - boxd-public
